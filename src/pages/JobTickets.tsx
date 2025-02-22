@@ -93,7 +93,7 @@ const JobTickets = () => {
                     <p className="text-sm mt-2">{ticket.description}</p>
                   </div>
                   <div className="text-right">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap
                       ${ticket.status === 'completed' ? 'bg-green-100 text-green-800' :
                         ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                         ticket.status === 'pending_parts' ? 'bg-yellow-100 text-yellow-800' :
