@@ -92,7 +92,7 @@ const JobTickets = () => {
                     )}
                     <p className="text-sm mt-2">{ticket.description}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col gap-2">
                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap
                       ${ticket.status === 'completed' ? 'bg-green-100 text-green-800' :
                         ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
@@ -103,9 +103,9 @@ const JobTickets = () => {
                     >
                       {ticket.status.replace('_', ' ').charAt(0).toUpperCase() + ticket.status.slice(1).replace('_', ' ')}
                     </span>
-                    <p className="text-sm mt-1 text-gray-500">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800">
                       Priority: {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-                    </p>
+                    </span>
                   </div>
                 </div>
               </div>
