@@ -1,18 +1,20 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/Navbar";
 import { useToast } from "@/components/ui/use-toast";
-
-interface UserRole {
-  role: string;
-}
+import { Sidebar } from "@/components/layout/Sidebar";
+import { 
+  Wrench, 
+  Calendar, 
+  Clock, 
+  Users, 
+  ActivitySquare,
+  Car
+} from "lucide-react";
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -44,78 +46,94 @@ const Dashboard = () => {
     fetchUserRole();
   }, [user, toast]);
 
+  const metrics = [
+    {
+      title: "Active Repairs",
+      value: "12",
+      change: "+2",
+      icon: Wrench,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+    },
+    {
+      title: "Today's Appointments",
+      value: "8",
+      change: "-1",
+      icon: Calendar,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+    },
+    {
+      title: "Pending Orders",
+      value: "5",
+      change: "+3",
+      icon: Clock,
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50",
+    },
+    {
+      title: "Total Clients",
+      value: "246",
+      change: "+12",
+      icon: Users,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+    },
+  ];
+
+  const recentActivity = [
+    { id: 1, type: "repair", description: "Oil change completed", time: "10 min ago", icon: Car },
+    { id: 2, type: "appointment", description: "New booking for brake inspection", time: "25 min ago", icon: Calendar },
+    { id: 3, type: "repair", description: "Tire rotation in progress", time: "1 hour ago", icon: Wrench },
+    { id: 4, type: "client", description: "New client registration", time: "2 hours ago", icon: Users },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
-        <div className="bg-white shadow-sm rounded-lg p-6">
-          <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-            Welcome to your Dashboard
-          </h1>
-          
-          {userRole && (
-            <div className="bg-primary/5 rounded-md p-4 mb-6">
-              <p className="text-primary font-medium">
-                Current Role: {userRole}
-              </p>
+      <main className="flex-1 ml-64 p-8">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900">Dashboard Overview</h1>
+          <p className="text-gray-500">Welcome back! Here's what's happening today.</p>
+        </div>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {metrics.map((metric) => (
+            <div key={metric.title} className="bg-white rounded-lg shadow-sm p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`${metric.bgColor} p-3 rounded-lg`}>
+                  <metric.icon className={`h-6 w-6 ${metric.color}`} />
+                </div>
+                <span className={`text-sm font-medium ${metric.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                  {metric.change}
+                </span>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900">{metric.title}</h3>
+              <p className="text-2xl font-semibold text-gray-900 mt-2">{metric.value}</p>
             </div>
-          )}
+          ))}
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Administrator Section */}
-            {userRole === 'administrator' && (
-              <>
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-semibold text-blue-900 mb-2">User Management</h3>
-                  <p className="text-blue-700">Manage user roles and permissions</p>
+        {/* Recent Activity */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+            <ActivitySquare className="h-5 w-5 text-gray-400" />
+          </div>
+          <div className="space-y-4">
+            {recentActivity.map((activity) => (
+              <div key={activity.id} className="flex items-center space-x-4">
+                <div className="bg-gray-100 p-2 rounded-lg">
+                  <activity.icon className="h-5 w-5 text-gray-600" />
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h3 className="font-semibold text-green-900 mb-2">System Settings</h3>
-                  <p className="text-green-700">Configure system-wide settings</p>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">{activity.description}</p>
+                  <p className="text-sm text-gray-500">{activity.time}</p>
                 </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <h3 className="font-semibold text-purple-900 mb-2">Analytics</h3>
-                  <p className="text-purple-700">View system analytics and reports</p>
-                </div>
-              </>
-            )}
-
-            {/* Technician Section */}
-            {userRole === 'technician' && (
-              <>
-                <div className="p-4 bg-yellow-50 rounded-lg">
-                  <h3 className="font-semibold text-yellow-900 mb-2">Active Repairs</h3>
-                  <p className="text-yellow-700">View and manage current repair jobs</p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h3 className="font-semibold text-green-900 mb-2">Parts Inventory</h3>
-                  <p className="text-green-700">Check and manage parts inventory</p>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h3 className="font-semibold text-blue-900 mb-2">Work Orders</h3>
-                  <p className="text-blue-700">View assigned work orders</p>
-                </div>
-              </>
-            )}
-
-            {/* Front Desk Section */}
-            {userRole === 'front_desk' && (
-              <>
-                <div className="p-4 bg-indigo-50 rounded-lg">
-                  <h3 className="font-semibold text-indigo-900 mb-2">Appointments</h3>
-                  <p className="text-indigo-700">Manage customer appointments</p>
-                </div>
-                <div className="p-4 bg-pink-50 rounded-lg">
-                  <h3 className="font-semibold text-pink-900 mb-2">Customer Service</h3>
-                  <p className="text-pink-700">Handle customer inquiries and requests</p>
-                </div>
-                <div className="p-4 bg-orange-50 rounded-lg">
-                  <h3 className="font-semibold text-orange-900 mb-2">Scheduling</h3>
-                  <p className="text-orange-700">Manage daily service schedule</p>
-                </div>
-              </>
-            )}
+              </div>
+            ))}
           </div>
         </div>
       </main>
