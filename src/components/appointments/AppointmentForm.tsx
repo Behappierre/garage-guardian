@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -22,14 +21,20 @@ interface AppointmentFormProps {
 export const AppointmentForm = ({ initialData, selectedDate, onClose }: AppointmentFormProps) => {
   const queryClient = useQueryClient();
   const defaultDate = selectedDate || new Date();
+
+  const formatDateTimeForInput = (dateString: string) => {
+    return format(new Date(dateString), "yyyy-MM-dd'T'HH:mm");
+  };
+
   const [formData, setFormData] = useState({
     client_id: initialData?.client_id || "",
     service_type: initialData?.service_type || "",
-    start_time: initialData?.start_time || format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
-    end_time: initialData?.end_time || format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
+    start_time: initialData?.start_time ? formatDateTimeForInput(initialData.start_time) : format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
+    end_time: initialData?.end_time ? formatDateTimeForInput(initialData.end_time) : format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
     notes: initialData?.notes || "",
     status: initialData?.status || "scheduled" as const,
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
 
