@@ -1,28 +1,65 @@
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+import { format } from "date-fns";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, TicketPlus } from "lucide-react";
-import { JobTicketList } from "@/components/tickets/JobTicketList";
-import { JobTicketForm } from "@/components/tickets/JobTicketForm";
+import { Plus, Calendar as CalendarIcon, ListBullet } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import { AppointmentList } from "@/components/appointments/AppointmentList";
+import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
-  client: {
-    first_name: string;
-    last_name: string;
-  };
+type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
+  job_ticket?: Database["public"]["Tables"]["job_tickets"]["Row"];
+  client: Database["public"]["Tables"]["clients"]["Row"];
 };
 
 const Appointments = () => {
-  const [showTicketForm, setShowTicketForm] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const handleSelectTicket = (ticket: JobTicket) => {
-    setSelectedTicket(ticket);
-    setShowTicketForm(true);
+  const { data: appointments, isLoading } = useQuery({
+    queryKey: ["appointments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          client:clients(*),
+          job_ticket:job_tickets(*)
+        `)
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+      return data as Appointment[];
+    },
+  });
+
+  const handleDateSelect = (arg: { start: Date; end: Date }) => {
+    setSelectedDate(arg.start);
+    setShowAppointmentForm(true);
   };
+
+  const handleEventClick = (arg: { event: { extendedProps: Appointment } }) => {
+    setSelectedAppointment(arg.event.extendedProps);
+    setShowAppointmentForm(true);
+  };
+
+  const calendarEvents = appointments?.map(appointment => ({
+    id: appointment.id,
+    title: `${appointment.client.first_name} ${appointment.client.last_name} - ${appointment.service_type}`,
+    start: appointment.start_time,
+    end: appointment.end_time,
+    extendedProps: appointment,
+  })) || [];
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -32,32 +69,83 @@ const Appointments = () => {
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Job Tickets</h1>
-              <p className="text-gray-500">Manage service requests and work orders</p>
+              <h1 className="text-2xl font-semibold text-gray-900">Appointments</h1>
+              <p className="text-gray-500">Manage service appointments and schedules</p>
             </div>
             <Button
               size="lg"
-              onClick={() => setShowTicketForm(true)}
+              onClick={() => {
+                setSelectedAppointment(null);
+                setSelectedDate(null);
+                setShowAppointmentForm(true);
+              }}
               className="gap-2"
             >
-              <TicketPlus className="h-5 w-5" />
-              Create Job Ticket
+              <Plus className="h-5 w-5" />
+              New Appointment
             </Button>
           </div>
         </div>
 
-        <JobTicketList onSelectTicket={handleSelectTicket} />
+        <Tabs defaultValue="calendar" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="calendar" className="gap-2">
+              <CalendarIcon className="h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="list" className="gap-2">
+              <ListBullet className="h-4 w-4" />
+              List
+            </TabsTrigger>
+          </TabsList>
 
-        <Dialog open={showTicketForm} onOpenChange={setShowTicketForm}>
-          <DialogContent className="sm:max-w-[425px]">
+          <TabsContent value="calendar" className="bg-white p-4 rounded-lg border">
+            <FullCalendar
+              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+              initialView="timeGridWeek"
+              headerToolbar={{
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+              }}
+              height="auto"
+              events={calendarEvents}
+              selectable={true}
+              select={handleDateSelect}
+              eventClick={(arg: any) => handleEventClick(arg)}
+              slotMinTime="08:00:00"
+              slotMaxTime="18:00:00"
+              allDaySlot={false}
+              slotDuration="00:30:00"
+            />
+          </TabsContent>
+
+          <TabsContent value="list">
+            <AppointmentList 
+              appointments={appointments || []}
+              onSelectAppointment={(appointment) => {
+                setSelectedAppointment(appointment);
+                setShowAppointmentForm(true);
+              }}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>{selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}</DialogTitle>
+              <DialogTitle>
+                {selectedAppointment ? "Edit Appointment" : "Create New Appointment"}
+              </DialogTitle>
             </DialogHeader>
-            <JobTicketForm
-              initialData={selectedTicket || undefined}
+            <AppointmentForm
+              initialData={selectedAppointment}
+              selectedDate={selectedDate}
               onClose={() => {
-                setShowTicketForm(false);
-                setSelectedTicket(null);
+                setShowAppointmentForm(false);
+                setSelectedAppointment(null);
+                setSelectedDate(null);
               }}
             />
           </DialogContent>
