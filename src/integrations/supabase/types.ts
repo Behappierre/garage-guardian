@@ -45,6 +45,67 @@ export type Database = {
         }
         Relationships: []
       }
+      job_tickets: {
+        Row: {
+          assigned_technician_id: string | null
+          client_id: string | null
+          created_at: string
+          description: string
+          id: string
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          status: Database["public"]["Enums"]["ticket_status"]
+          ticket_number: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          assigned_technician_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          ticket_number: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          assigned_technician_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          status?: Database["public"]["Enums"]["ticket_status"]
+          ticket_number?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_tickets_assigned_technician_id_fkey"
+            columns: ["assigned_technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_tickets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_tickets_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -203,6 +264,13 @@ export type Database = {
     }
     Enums: {
       app_role: "administrator" | "technician" | "front_desk"
+      ticket_priority: "low" | "normal" | "high" | "urgent"
+      ticket_status:
+        | "received"
+        | "in_progress"
+        | "completed"
+        | "pending_parts"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
