@@ -37,11 +37,7 @@ const Auth = () => {
               navigate("/dashboard");
           }
         } catch (error: any) {
-          toast({
-            title: "Error fetching user role",
-            description: error.message,
-            variant: "destructive"
-          });
+          toast.error("Error fetching user role: " + error.message);
           // Default to dashboard if role fetch fails
           navigate("/dashboard");
         }
