@@ -6,7 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   LogOut,
-  Tool,
+  Wrench,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export const Sidebar = () => {
                   )
                 }
               >
-                <Tool className="w-5 h-5" />
+                <Wrench className="w-5 h-5" />
                 Job Tickets
               </NavLink>
             </li>
