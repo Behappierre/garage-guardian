@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -33,6 +69,60 @@ export type Database = {
         }
         Relationships: []
       }
+      service_history: {
+        Row: {
+          client_id: string | null
+          cost: number | null
+          created_at: string
+          description: string | null
+          id: string
+          service_date: string
+          service_type: string
+          status: string
+          updated_at: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          service_date?: string
+          service_type: string
+          status: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          service_date?: string
+          service_type?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_history_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -53,6 +143,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vehicles: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          id: string
+          license_plate: string | null
+          make: string
+          model: string
+          updated_at: string
+          vin: string | null
+          year: number
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          license_plate?: string | null
+          make: string
+          model: string
+          updated_at?: string
+          vin?: string | null
+          year: number
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          id?: string
+          license_plate?: string | null
+          make?: string
+          model?: string
+          updated_at?: string
+          vin?: string | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
