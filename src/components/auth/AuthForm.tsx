@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type AuthMode = "signin" | "signup";
+type Role = "administrator" | "technician" | "front_desk";
 
 export const AuthForm = () => {
   const [mode, setMode] = useState<AuthMode>("signin");
@@ -15,6 +17,7 @@ export const AuthForm = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState<Role>("front_desk");
   const { toast } = useToast();
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -23,7 +26,7 @@ export const AuthForm = () => {
 
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -33,7 +36,16 @@ export const AuthForm = () => {
             },
           },
         });
-        if (error) throw error;
+        if (signUpError) throw signUpError;
+
+        // Insert the user role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([
+            { role: role }
+          ]);
+        if (roleError) throw roleError;
+
         toast({
           title: "Success!",
           description: "Please check your email to confirm your account.",
@@ -67,28 +79,48 @@ export const AuthForm = () => {
 
       <form onSubmit={handleAuth} className="mt-8 space-y-6">
         {mode === "signup" && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-              />
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-              />
+              <Label>Select Your Role</Label>
+              <RadioGroup value={role} onValueChange={(value) => setRole(value as Role)} className="grid grid-cols-1 gap-2">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="administrator" id="admin" />
+                  <Label htmlFor="admin">Administrator</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="technician" id="technician" />
+                  <Label htmlFor="technician">Technician</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="front_desk" id="front_desk" />
+                  <Label htmlFor="front_desk">Front Desk</Label>
+                </div>
+              </RadioGroup>
             </div>
-          </div>
+          </>
         )}
 
         <div className="space-y-2">

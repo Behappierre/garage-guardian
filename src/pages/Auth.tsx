@@ -34,6 +34,7 @@ const Auth = () => {
               navigate("/dashboard/appointments");
               break;
             default:
+              // If no role is found, redirect to dashboard
               navigate("/dashboard");
           }
         } catch (error: any) {
