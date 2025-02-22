@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,17 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
-type JobTicketInsert = Omit<Database["public"]["Tables"]["job_tickets"]["Insert"], 'ticket_number'>;
 type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
+
+interface JobTicketInsert {
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  assigned_technician_id: string | null;
+  client_id: string | null;
+  vehicle_id: string | null;
+}
 
 interface JobTicketFormProps {
   clientId?: string;
@@ -23,7 +30,7 @@ interface JobTicketFormProps {
 
 export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: JobTicketFormProps) => {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<JobTicketInsert>({
     description: initialData?.description || "",
     status: (initialData?.status || "received") as TicketStatus,
     priority: (initialData?.priority || "normal") as TicketPriority,
@@ -86,32 +93,15 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
       if (initialData?.id) {
         const { error } = await supabase
           .from("job_tickets")
-          .update({
-            description: formData.description,
-            status: formData.status,
-            priority: formData.priority,
-            assigned_technician_id: formData.assigned_technician_id,
-            client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id
-          })
+          .update(formData)
           .eq("id", initialData.id);
 
         if (error) throw error;
         toast.success("Job ticket updated successfully");
       } else {
-        // Create a new ticket using the Insert type without ticket_number
-        const insertData: JobTicketInsert = {
-          description: formData.description,
-          status: formData.status,
-          priority: formData.priority,
-          assigned_technician_id: formData.assigned_technician_id,
-          client_id: formData.client_id,
-          vehicle_id: formData.vehicle_id
-        };
-
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
-          .insert(insertData)
+          .insert([formData])
           .select()
           .single();
 
