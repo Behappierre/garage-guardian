@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
-type JobTicketInsert = Database["public"]["Tables"]["job_tickets"]["Insert"];
+type JobTicketInsert = Omit<Database["public"]["Tables"]["job_tickets"]["Insert"], 'ticket_number'>;
 type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
@@ -99,7 +99,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         if (error) throw error;
         toast.success("Job ticket updated successfully");
       } else {
-        // Create a new ticket using the Insert type
+        // Create a new ticket using the Insert type without ticket_number
         const insertData: JobTicketInsert = {
           description: formData.description,
           status: formData.status,
