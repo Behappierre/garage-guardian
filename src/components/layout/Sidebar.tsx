@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Settings,
   LogOut,
+  Tool,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,20 @@ export const Sidebar = () => {
               >
                 <Users className="w-5 h-5" />
                 Clients
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/dashboard/job-tickets"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                    isActive && "bg-primary/5 text-primary hover:bg-primary/5"
+                  )
+                }
+              >
+                <Tool className="w-5 h-5" />
+                Job Tickets
               </NavLink>
             </li>
           </ul>
