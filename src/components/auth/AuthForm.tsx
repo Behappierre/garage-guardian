@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
 
 export const AuthForm = () => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -57,11 +59,41 @@ export const AuthForm = () => {
           description: "Please check your email to confirm your account.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
+
+        // After successful sign in, fetch user role and redirect
+        if (signInData.user) {
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', signInData.user.id)
+            .single();
+
+          if (roleError) {
+            toast.error("Error fetching user role");
+            navigate("/dashboard");
+            return;
+          }
+
+          // Redirect based on role
+          switch (roleData?.role) {
+            case 'administrator':
+              navigate("/dashboard");
+              break;
+            case 'technician':
+              navigate("/dashboard/job-tickets");
+              break;
+            case 'front_desk':
+              navigate("/dashboard/appointments");
+              break;
+            default:
+              navigate("/dashboard");
+          }
+        }
       }
     } catch (error: any) {
       toast({
