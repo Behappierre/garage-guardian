@@ -8,12 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
-type Appointment = Database["public"]["Tables"]["appointments"]["Row"];
+type Appointment = {
+  id: string;
+  client_id: string;
+  job_ticket_id: string | null;
+  service_type: string;
+  start_time: string;
+  end_time: string;
+  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 interface AppointmentFormProps {
-  initialData?: Appointment;
+  initialData?: Appointment | null;
   selectedDate?: Date | null;
   onClose: () => void;
 }
@@ -28,6 +38,7 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     start_time: initialData?.start_time || format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
     end_time: initialData?.end_time || format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
     notes: initialData?.notes || "",
+    status: initialData?.status || "scheduled" as const,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -67,7 +78,15 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
       if (initialData?.id) {
         const { error } = await supabase
           .from("appointments")
-          .update(formData)
+          .update({
+            client_id: formData.client_id,
+            job_ticket_id: formData.job_ticket_id,
+            service_type: formData.service_type,
+            start_time: formData.start_time,
+            end_time: formData.end_time,
+            notes: formData.notes,
+            status: formData.status,
+          })
           .eq("id", initialData.id);
 
         if (error) throw error;
@@ -75,7 +94,15 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
       } else {
         const { error } = await supabase
           .from("appointments")
-          .insert(formData);
+          .insert({
+            client_id: formData.client_id,
+            job_ticket_id: formData.job_ticket_id,
+            service_type: formData.service_type,
+            start_time: formData.start_time,
+            end_time: formData.end_time,
+            notes: formData.notes,
+            status: formData.status,
+          });
 
         if (error) throw error;
         toast.success("Appointment created successfully");

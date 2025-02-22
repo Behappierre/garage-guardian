@@ -9,16 +9,26 @@ import { format } from "date-fns";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, ListBullet } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
-  job_ticket?: Database["public"]["Tables"]["job_tickets"]["Row"];
+type Appointment = {
+  id: string;
+  client_id: string;
+  job_ticket_id: string | null;
+  service_type: string;
+  start_time: string;
+  end_time: string;
+  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
   client: Database["public"]["Tables"]["clients"]["Row"];
+  job_ticket?: Database["public"]["Tables"]["job_tickets"]["Row"];
 };
 
 const Appointments = () => {
@@ -94,7 +104,7 @@ const Appointments = () => {
               Calendar
             </TabsTrigger>
             <TabsTrigger value="list" className="gap-2">
-              <ListBullet className="h-4 w-4" />
+              <List className="h-4 w-4" />
               List
             </TabsTrigger>
           </TabsList>

@@ -1,10 +1,24 @@
 
 import { format } from "date-fns";
-import type { Database } from "@/integrations/supabase/types";
 
-type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
-  job_ticket?: Database["public"]["Tables"]["job_tickets"]["Row"];
-  client: Database["public"]["Tables"]["clients"]["Row"];
+type Appointment = {
+  id: string;
+  client_id: string;
+  job_ticket_id: string | null;
+  service_type: string;
+  start_time: string;
+  end_time: string;
+  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  client: {
+    first_name: string;
+    last_name: string;
+  };
+  job_ticket?: {
+    ticket_number: string;
+  };
 };
 
 interface AppointmentListProps {

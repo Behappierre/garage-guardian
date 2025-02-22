@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          end_time: string
+          id: string
+          job_ticket_id: string | null
+          notes: string | null
+          service_type: string
+          start_time: string
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          end_time: string
+          id?: string
+          job_ticket_id?: string | null
+          notes?: string | null
+          service_type: string
+          start_time: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          end_time?: string
+          id?: string
+          job_ticket_id?: string | null
+          notes?: string | null
+          service_type?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_job_ticket_id_fkey"
+            columns: ["job_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "job_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -264,6 +318,7 @@ export type Database = {
     }
     Enums: {
       app_role: "administrator" | "technician" | "front_desk"
+      appointment_status: "scheduled" | "confirmed" | "cancelled" | "completed"
       ticket_priority: "low" | "normal" | "high" | "urgent"
       ticket_status:
         | "received"
