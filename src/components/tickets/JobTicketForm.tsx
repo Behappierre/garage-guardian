@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
+type JobTicketInsert = Database["public"]["Tables"]["job_tickets"]["Insert"];
 type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
@@ -97,16 +99,19 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         if (error) throw error;
         toast.success("Job ticket updated successfully");
       } else {
+        // Create a new ticket using the Insert type
+        const insertData: JobTicketInsert = {
+          description: formData.description,
+          status: formData.status,
+          priority: formData.priority,
+          assigned_technician_id: formData.assigned_technician_id,
+          client_id: formData.client_id,
+          vehicle_id: formData.vehicle_id
+        };
+
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
-          .insert({
-            description: formData.description,
-            status: formData.status,
-            priority: formData.priority,
-            assigned_technician_id: formData.assigned_technician_id,
-            client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id
-          })
+          .insert(insertData)
           .select()
           .single();
 
