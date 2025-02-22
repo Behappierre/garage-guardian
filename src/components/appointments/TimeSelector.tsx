@@ -24,6 +24,7 @@ export const TimeSelector = ({
           type="datetime-local"
           value={startTime}
           onChange={(e) => onStartTimeChange(e.target.value)}
+          step="900"
           required
         />
       </div>
@@ -34,6 +35,7 @@ export const TimeSelector = ({
           type="datetime-local"
           value={endTime}
           onChange={(e) => onEndTimeChange(e.target.value)}
+          step="900"
           required
         />
       </div>
