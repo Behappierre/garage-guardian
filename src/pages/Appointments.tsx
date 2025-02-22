@@ -18,7 +18,9 @@ import type { Database } from "@/integrations/supabase/types";
 
 export type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
 export type DBClient = Database["public"]["Tables"]["clients"]["Row"];
-export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
+export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
+  vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
+};
 
 export interface AppointmentWithRelations extends DBAppointment {
   client: DBClient;
@@ -50,7 +52,10 @@ const Appointments = () => {
         .from("appointment_job_tickets")
         .select(`
           appointment_id,
-          job_ticket:job_tickets(*)
+          job_ticket:job_tickets(
+            *,
+            vehicle:vehicles(*)
+          )
         `);
 
       if (ticketsError) throw ticketsError;
@@ -89,9 +94,20 @@ const Appointments = () => {
     navigate(`/dashboard/job-tickets?id=${ticketId}`);
   };
 
+  const getEventTitle = (appointment: AppointmentWithRelations) => {
+    const clientName = `${appointment.client.first_name} ${appointment.client.last_name}`;
+    const vehicle = appointment.job_tickets?.[0]?.vehicle;
+    
+    if (vehicle) {
+      return `${clientName} - ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.license_plate ? ` (${vehicle.license_plate})` : ''} - ${appointment.service_type}`;
+    }
+    
+    return `${clientName} - ${appointment.service_type}`;
+  };
+
   const calendarEvents = appointments?.map(appointment => ({
     id: appointment.id,
-    title: `${appointment.client.first_name} ${appointment.client.last_name} - ${appointment.service_type}`,
+    title: getEventTitle(appointment),
     start: appointment.start_time,
     end: appointment.end_time,
     extendedProps: appointment,
