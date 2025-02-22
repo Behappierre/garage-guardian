@@ -8,11 +8,12 @@ import interactionPlugin from "@fullcalendar/interaction";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, List, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import type { Database } from "@/integrations/supabase/types";
 
 export type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
@@ -21,10 +22,11 @@ export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
 
 export interface AppointmentWithRelations extends DBAppointment {
   client: DBClient;
-  job_ticket?: DBJobTicket | null;
+  job_tickets?: DBJobTicket[];
 }
 
 const Appointments = () => {
+  const navigate = useNavigate();
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -32,17 +34,43 @@ const Appointments = () => {
   const { data: appointments, isLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get all appointments with their clients
+      const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
           *,
-          client:clients(*),
-          job_ticket:job_tickets(*)
+          client:clients(*)
         `)
         .order('start_time', { ascending: true });
 
-      if (error) throw error;
-      return data as AppointmentWithRelations[];
+      if (appointmentsError) throw appointmentsError;
+
+      // Then, get all job tickets associated with these appointments
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from("appointment_job_tickets")
+        .select(`
+          appointment_id,
+          job_ticket:job_tickets(*)
+        `);
+
+      if (ticketsError) throw ticketsError;
+
+      // Organize job tickets by appointment
+      const ticketsByAppointment = ticketsData.reduce((acc: Record<string, DBJobTicket[]>, curr) => {
+        if (curr.appointment_id && curr.job_ticket) {
+          if (!acc[curr.appointment_id]) {
+            acc[curr.appointment_id] = [];
+          }
+          acc[curr.appointment_id].push(curr.job_ticket);
+        }
+        return acc;
+      }, {});
+
+      // Merge appointments with their job tickets
+      return appointmentsData.map(appointment => ({
+        ...appointment,
+        job_tickets: ticketsByAppointment[appointment.id] || []
+      })) as AppointmentWithRelations[];
     },
   });
 
@@ -54,6 +82,11 @@ const Appointments = () => {
   const handleEventClick = (arg: { event: { extendedProps: AppointmentWithRelations } }) => {
     setSelectedAppointment(arg.event.extendedProps);
     setShowAppointmentForm(true);
+  };
+
+  const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/dashboard/job-tickets?id=${ticketId}`);
   };
 
   const calendarEvents = appointments?.map(appointment => ({
@@ -130,6 +163,7 @@ const Appointments = () => {
                 setSelectedAppointment(appointment);
                 setShowAppointmentForm(true);
               }}
+              onTicketClick={handleTicketClick}
               isLoading={isLoading}
             />
           </TabsContent>

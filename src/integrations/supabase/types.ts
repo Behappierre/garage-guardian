@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointment_job_tickets: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          id: string
+          job_ticket_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          job_ticket_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          job_ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_job_tickets_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_job_tickets_job_ticket_id_fkey"
+            columns: ["job_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "job_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           client_id: string | null

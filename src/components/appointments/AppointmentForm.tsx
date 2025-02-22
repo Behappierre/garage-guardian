@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     status: initialData?.status || "scheduled" as const,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
@@ -70,6 +71,26 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     },
   });
 
+  const { data: appointmentTickets } = useQuery({
+    queryKey: ["appointment-tickets", initialData?.id],
+    enabled: !!initialData?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointment_job_tickets")
+        .select("job_ticket_id")
+        .eq("appointment_id", initialData?.id);
+      
+      if (error) throw error;
+      return data.map(t => t.job_ticket_id);
+    },
+  });
+
+  useEffect(() => {
+    if (appointmentTickets) {
+      setSelectedTickets(appointmentTickets);
+    }
+  }, [appointmentTickets]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -80,7 +101,6 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
           .from("appointments")
           .update({
             client_id: formData.client_id,
-            job_ticket_id: formData.job_ticket_id,
             service_type: formData.service_type,
             start_time: formData.start_time,
             end_time: formData.end_time,
@@ -90,21 +110,57 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
           .eq("id", initialData.id);
 
         if (error) throw error;
+
+        const { error: deleteError } = await supabase
+          .from("appointment_job_tickets")
+          .delete()
+          .eq("appointment_id", initialData.id);
+
+        if (deleteError) throw deleteError;
+
+        if (selectedTickets.length > 0) {
+          const { error: insertError } = await supabase
+            .from("appointment_job_tickets")
+            .insert(
+              selectedTickets.map(ticketId => ({
+                appointment_id: initialData.id,
+                job_ticket_id: ticketId
+              }))
+            );
+
+          if (insertError) throw insertError;
+        }
+
         toast.success("Appointment updated successfully");
       } else {
-        const { error } = await supabase
+        const { data: appointment, error } = await supabase
           .from("appointments")
           .insert({
             client_id: formData.client_id,
-            job_ticket_id: formData.job_ticket_id,
             service_type: formData.service_type,
             start_time: formData.start_time,
             end_time: formData.end_time,
             notes: formData.notes,
             status: formData.status,
-          });
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+
+        if (selectedTickets.length > 0 && appointment) {
+          const { error: ticketError } = await supabase
+            .from("appointment_job_tickets")
+            .insert(
+              selectedTickets.map(ticketId => ({
+                appointment_id: appointment.id,
+                job_ticket_id: ticketId
+              }))
+            );
+
+          if (ticketError) throw ticketError;
+        }
+
         toast.success("Appointment created successfully");
       }
 

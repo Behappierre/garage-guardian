@@ -1,14 +1,17 @@
 
 import { format } from "date-fns";
+import { ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AppointmentWithRelations } from "@/pages/Appointments";
 
 interface AppointmentListProps {
   appointments: AppointmentWithRelations[];
   onSelectAppointment: (appointment: AppointmentWithRelations) => void;
+  onTicketClick: (ticketId: string, e: React.MouseEvent) => void;
   isLoading: boolean;
 }
 
-export const AppointmentList = ({ appointments, onSelectAppointment, isLoading }: AppointmentListProps) => {
+export const AppointmentList = ({ appointments, onSelectAppointment, onTicketClick, isLoading }: AppointmentListProps) => {
   if (isLoading) {
     return <div className="text-center py-4">Loading appointments...</div>;
   }
@@ -31,10 +34,22 @@ export const AppointmentList = ({ appointments, onSelectAppointment, isLoading }
                 {appointment.client.first_name} {appointment.client.last_name}
               </h3>
               <p className="text-sm text-gray-600">{appointment.service_type}</p>
-              {appointment.job_ticket && (
-                <p className="text-sm text-gray-500">
-                  Ticket: {appointment.job_ticket.ticket_number}
-                </p>
+              {appointment.job_tickets && appointment.job_tickets.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-gray-500 font-medium">Job Tickets:</p>
+                  {appointment.job_tickets.map(ticket => (
+                    <Button
+                      key={ticket.id}
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 p-2 text-xs"
+                      onClick={(e) => onTicketClick(ticket.id, e)}
+                    >
+                      {ticket.ticket_number}
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </Button>
+                  ))}
+                </div>
               )}
             </div>
             <div className="text-right">
