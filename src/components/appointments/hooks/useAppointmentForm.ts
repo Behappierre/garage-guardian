@@ -31,6 +31,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
@@ -51,7 +52,12 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     queryFn: async () => {
       const { data, error } = await supabase
         .from("job_tickets")
-        .select("id, ticket_number, description")
+        .select(`
+          id, 
+          ticket_number, 
+          description,
+          vehicle:vehicles(*)
+        `)
         .eq("client_id", formData.client_id)
         .not("status", "eq", "completed");
       
@@ -79,6 +85,18 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
       setSelectedTickets(appointmentTickets);
     }
   }, [appointmentTickets]);
+
+  // Update vehicle ID when tickets are selected
+  useEffect(() => {
+    if (jobTickets && selectedTickets.length > 0) {
+      const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);
+      if (firstSelectedTicket?.vehicle) {
+        setSelectedVehicleId(firstSelectedTicket.vehicle.id);
+      }
+    } else {
+      setSelectedVehicleId(null);
+    }
+  }, [selectedTickets, jobTickets]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,6 +188,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     setSelectedTickets,
     clients,
     jobTickets,
+    selectedVehicleId,
     handleSubmit
   };
 };

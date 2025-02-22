@@ -23,8 +23,13 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     setSelectedTickets,
     clients,
     jobTickets,
+    selectedVehicleId,
     handleSubmit
   } = useAppointmentForm({ initialData, selectedDate, onClose });
+
+  const selectedVehicle = jobTickets?.find(ticket => 
+    ticket.id === selectedTickets[0]
+  )?.vehicle;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -41,6 +46,18 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
         appointmentId={initialData?.id}
         onTicketSelectionChange={setSelectedTickets}
       />
+
+      {selectedVehicle && (
+        <div className="p-3 bg-gray-50 rounded-md">
+          <p className="text-sm font-medium text-gray-700">Selected Vehicle:</p>
+          <p className="text-sm text-gray-600">
+            {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
+            {selectedVehicle.license_plate && (
+              <span className="ml-1">({selectedVehicle.license_plate})</span>
+            )}
+          </p>
+        </div>
+      )}
 
       <ServiceTypeInput
         value={formData.service_type}
