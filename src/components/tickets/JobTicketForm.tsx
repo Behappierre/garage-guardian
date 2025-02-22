@@ -30,6 +30,31 @@ interface JobTicketFormProps {
   initialData?: JobTicket;
 }
 
+const sendEmailNotification = async (
+  jobTicketId: string,
+  notificationType: string,
+  recipientEmail: string,
+  clientName: string,
+  ticketNumber: string,
+  status: string
+) => {
+  const { error } = await supabase.functions.invoke('send-job-ticket-notification', {
+    body: {
+      jobTicketId,
+      notificationType,
+      recipientEmail,
+      clientName,
+      ticketNumber,
+      status
+    },
+  });
+
+  if (error) {
+    console.error('Error sending notification:', error);
+    throw error;
+  }
+};
+
 export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: JobTicketFormProps) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<JobTicketForm>({
@@ -99,6 +124,28 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
           .eq("id", initialData.id);
 
         if (error) throw error;
+
+        // Get client details for email notification
+        if (formData.client_id && (formData.status === 'completed' || initialData.status !== formData.status)) {
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('first_name, last_name, email')
+            .eq('id', formData.client_id)
+            .single();
+
+          if (clientData?.email) {
+            const notificationType = formData.status === 'completed' ? 'completion' : 'status_update';
+            await sendEmailNotification(
+              initialData.id,
+              notificationType,
+              clientData.email,
+              `${clientData.first_name} ${clientData.last_name}`,
+              initialData.ticket_number,
+              formData.status
+            );
+          }
+        }
+
         toast.success("Job ticket updated successfully");
       } else {
         // When inserting, we need to provide a temporary ticket_number that will be overwritten by the trigger
