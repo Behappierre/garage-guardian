@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -8,19 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentWithRelations } from "@/pages/Appointments";
-
-type Appointment = {
-  id: string;
-  client_id: string;
-  job_ticket_id: string | null;
-  service_type: string;
-  start_time: string;
-  end_time: string;
-  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-};
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface AppointmentFormProps {
   initialData?: AppointmentWithRelations | null;
@@ -33,7 +22,6 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
   const defaultDate = selectedDate || new Date();
   const [formData, setFormData] = useState({
     client_id: initialData?.client_id || "",
-    job_ticket_id: initialData?.job_ticket_id || null,
     service_type: initialData?.service_type || "",
     start_time: initialData?.start_time || format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
     end_time: initialData?.end_time || format(defaultDate, "yyyy-MM-dd'T'HH:mm"),
@@ -57,7 +45,7 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
   });
 
   const { data: jobTickets } = useQuery({
-    queryKey: ["job_tickets"],
+    queryKey: ["job_tickets", formData.client_id],
     enabled: !!formData.client_id,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -97,7 +85,8 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
     try {
       if (initialData?.id) {
-        const { error } = await supabase
+        // Update appointment
+        const { error: updateError } = await supabase
           .from("appointments")
           .update({
             client_id: formData.client_id,
@@ -109,8 +98,9 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
           })
           .eq("id", initialData.id);
 
-        if (error) throw error;
+        if (updateError) throw updateError;
 
+        // Delete existing ticket associations
         const { error: deleteError } = await supabase
           .from("appointment_job_tickets")
           .delete()
@@ -118,6 +108,7 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
         if (deleteError) throw deleteError;
 
+        // Insert new ticket associations if any tickets are selected
         if (selectedTickets.length > 0) {
           const { error: insertError } = await supabase
             .from("appointment_job_tickets")
@@ -133,7 +124,8 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
         toast.success("Appointment updated successfully");
       } else {
-        const { data: appointment, error } = await supabase
+        // Create new appointment
+        const { data: newAppointment, error: createError } = await supabase
           .from("appointments")
           .insert({
             client_id: formData.client_id,
@@ -146,14 +138,15 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
           .select()
           .single();
 
-        if (error) throw error;
+        if (createError) throw createError;
 
-        if (selectedTickets.length > 0 && appointment) {
+        // Insert ticket associations for the new appointment if any tickets are selected
+        if (selectedTickets.length > 0 && newAppointment) {
           const { error: ticketError } = await supabase
             .from("appointment_job_tickets")
             .insert(
               selectedTickets.map(ticketId => ({
-                appointment_id: appointment.id,
+                appointment_id: newAppointment.id,
                 job_ticket_id: ticketId
               }))
             );
@@ -195,20 +188,31 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
       {formData.client_id && jobTickets?.length > 0 && (
         <div className="space-y-2">
-          <Label htmlFor="job_ticket">Related Job Ticket (Optional)</Label>
-          <select
-            id="job_ticket"
-            className="w-full border border-input rounded-md h-10 px-3"
-            value={formData.job_ticket_id || ""}
-            onChange={(e) => setFormData(prev => ({ ...prev, job_ticket_id: e.target.value || null }))}
-          >
-            <option value="">None</option>
+          <Label>Job Tickets</Label>
+          <div className="border rounded-md p-3 space-y-2">
             {jobTickets.map((ticket) => (
-              <option key={ticket.id} value={ticket.id}>
-                {ticket.ticket_number} - {ticket.description}
-              </option>
+              <div key={ticket.id} className="flex items-start gap-2">
+                <Checkbox
+                  id={`ticket-${ticket.id}`}
+                  checked={selectedTickets.includes(ticket.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedTickets([...selectedTickets, ticket.id]);
+                    } else {
+                      setSelectedTickets(selectedTickets.filter(id => id !== ticket.id));
+                    }
+                  }}
+                />
+                <label
+                  htmlFor={`ticket-${ticket.id}`}
+                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  <div className="font-medium">{ticket.ticket_number}</div>
+                  <div className="text-gray-500">{ticket.description}</div>
+                </label>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
       )}
 
