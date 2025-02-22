@@ -1,6 +1,11 @@
 
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Brain } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { JobTicketFormData, TicketPriority, TicketStatus } from "@/types/job-ticket";
 
 interface JobTicketFormFieldsProps {
@@ -22,6 +27,42 @@ export const JobTicketFormFields = ({
   selectedAppointmentId,
   setSelectedAppointmentId,
 }: JobTicketFormFieldsProps) => {
+  const [isEnhancing, setIsEnhancing] = useState(false);
+
+  const handleEnhanceDescription = async () => {
+    if (!formData.description.trim()) {
+      toast.error("Please enter a description first");
+      return;
+    }
+
+    setIsEnhancing(true);
+    try {
+      const selectedVehicle = clientVehicles?.find(v => v.id === formData.vehicle_id);
+      const vehicleString = selectedVehicle 
+        ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
+        : null;
+
+      const { data, error } = await supabase.functions.invoke('enhance-job-description', {
+        body: {
+          description: formData.description,
+          vehicle: vehicleString,
+        },
+      });
+
+      if (error) throw error;
+      
+      if (data.enhancedDescription) {
+        setFormData({ ...formData, description: data.enhancedDescription });
+        toast.success("Description enhanced with AI");
+      }
+    } catch (error) {
+      toast.error("Failed to enhance description");
+      console.error(error);
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   return (
     <>
       <div className="space-y-2">
@@ -88,7 +129,20 @@ export const JobTicketFormFields = ({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <div className="flex justify-between items-center">
+          <Label htmlFor="description">Description</Label>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleEnhanceDescription}
+            disabled={isEnhancing}
+            className="h-8"
+          >
+            <Brain className="mr-2 h-4 w-4" />
+            {isEnhancing ? "Enhancing..." : "Enhance with AI"}
+          </Button>
+        </div>
         <Textarea
           id="description"
           required
