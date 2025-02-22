@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -12,14 +13,15 @@ type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
 type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
-interface JobTicketInsert {
+// Define only the fields we want to manage in the form
+type JobTicketForm = {
   description: string;
   status: TicketStatus;
   priority: TicketPriority;
   assigned_technician_id: string | null;
   client_id: string | null;
   vehicle_id: string | null;
-}
+};
 
 interface JobTicketFormProps {
   clientId?: string;
@@ -30,7 +32,7 @@ interface JobTicketFormProps {
 
 export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: JobTicketFormProps) => {
   const queryClient = useQueryClient();
-  const [formData, setFormData] = useState<JobTicketInsert>({
+  const [formData, setFormData] = useState<JobTicketForm>({
     description: initialData?.description || "",
     status: (initialData?.status || "received") as TicketStatus,
     priority: (initialData?.priority || "normal") as TicketPriority,
@@ -99,9 +101,13 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         if (error) throw error;
         toast.success("Job ticket updated successfully");
       } else {
+        // When inserting, we need to provide a temporary ticket_number that will be overwritten by the trigger
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
-          .insert([formData])
+          .insert({
+            ...formData,
+            ticket_number: 'TEMP' // This will be overwritten by the database trigger
+          })
           .select()
           .single();
 
