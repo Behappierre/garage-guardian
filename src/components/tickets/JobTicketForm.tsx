@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -31,6 +30,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
     vehicle_id: initialData?.vehicle_id || vehicleId || null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
@@ -67,8 +67,8 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("client_id", formData.client_id)
-        .is("job_ticket_id", null) // Only get appointments not linked to a job ticket
-        .gte("start_time", new Date().toISOString()) // Only future appointments
+        .is("job_ticket_id", null)
+        .gte("start_time", new Date().toISOString())
         .order("start_time");
       
       if (error) throw error;
@@ -97,25 +97,22 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         if (error) throw error;
         toast.success("Job ticket updated successfully");
       } else {
-        // For new tickets, we only need to provide required fields
-        // ticket_number is generated automatically by the database trigger
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
-          .insert([{
+          .insert({
             description: formData.description,
             status: formData.status,
             priority: formData.priority,
             assigned_technician_id: formData.assigned_technician_id,
             client_id: formData.client_id,
             vehicle_id: formData.vehicle_id
-          }])
+          })
           .select()
           .single();
 
         if (ticketError) throw ticketError;
 
-        // Update the selected appointment with the job ticket id
-        if (selectedAppointmentId) {
+        if (selectedAppointmentId && ticket) {
           const { error: appointmentError } = await supabase
             .from("appointments")
             .update({ job_ticket_id: ticket.id })
@@ -137,8 +134,6 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
     }
   };
 
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
@@ -151,9 +146,9 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
             setFormData(prev => ({ 
               ...prev, 
               client_id: e.target.value || null,
-              vehicle_id: null // Reset vehicle when client changes
+              vehicle_id: null
             }));
-            setSelectedAppointmentId(null); // Reset appointment when client changes
+            setSelectedAppointmentId(null);
           }}
           required
         >
