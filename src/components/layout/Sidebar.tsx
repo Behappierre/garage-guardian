@@ -1,56 +1,103 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard,
   Calendar,
   Users,
-  History,
-  ChevronLeft,
-  ChevronRight,
+  LayoutDashboard,
+  Settings,
+  LogOut,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const Sidebar = () => {
-  const navigate = useNavigate();
-  const [collapsed, setCollapsed] = useState(false);
-
-  const navigationItems = [
-    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-    { label: "Appointments", icon: Calendar, path: "/dashboard/appointments" },
-    { label: "Clients", icon: Users, path: "/dashboard/clients" },
-    { label: "History", icon: History, path: "/dashboard/history" },
-  ];
+  const { signOut } = useAuth();
 
   return (
-    <div className={`${collapsed ? "w-16" : "w-64"} h-screen bg-white border-r border-gray-200 fixed left-0 top-0 transition-all duration-300 ease-in-out`}>
-      <div className="flex items-center justify-between p-4 border-b border-gray-200">
-        {!collapsed && (
-          <span className="text-xl font-semibold text-primary">GarageGuardian</span>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className={`${collapsed ? "mx-auto" : ""}`}
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+    <div className="fixed left-0 top-0 w-64 h-screen bg-white border-r border-gray-200">
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-200">
+          <img src="/placeholder.svg" alt="Logo" className="w-8 h-8" />
+          <span className="font-semibold text-xl">AutoPro</span>
+        </div>
+
+        <nav className="flex-1 p-4">
+          <ul className="space-y-1">
+            <li>
+              <NavLink
+                to="/dashboard"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                    isActive && "bg-primary/5 text-primary hover:bg-primary/5"
+                  )
+                }
+              >
+                <LayoutDashboard className="w-5 h-5" />
+                Dashboard
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/dashboard/appointments"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                    isActive && "bg-primary/5 text-primary hover:bg-primary/5"
+                  )
+                }
+              >
+                <Calendar className="w-5 h-5" />
+                Appointments
+              </NavLink>
+            </li>
+            <li>
+              <NavLink
+                to="/dashboard/clients"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                    isActive && "bg-primary/5 text-primary hover:bg-primary/5"
+                  )
+                }
+              >
+                <Users className="w-5 h-5" />
+                Clients
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+
+        <div className="p-4 border-t border-gray-200">
+          <ul className="space-y-1">
+            <li>
+              <NavLink
+                to="/dashboard/settings"
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                    isActive && "bg-primary/5 text-primary hover:bg-primary/5"
+                  )
+                }
+              >
+                <Settings className="w-5 h-5" />
+                Settings
+              </NavLink>
+            </li>
+            <li>
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-2"
+                onClick={() => signOut()}
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </Button>
+            </li>
+          </ul>
+        </div>
       </div>
-      
-      <nav className="p-4 space-y-2">
-        {navigationItems.map((item) => (
-          <Button
-            key={item.path}
-            variant="ghost"
-            className={`w-full justify-start ${collapsed ? "px-2" : "px-4"}`}
-            onClick={() => navigate(item.path)}
-          >
-            <item.icon className="h-5 w-5" />
-            {!collapsed && <span className="ml-2">{item.label}</span>}
-          </Button>
-        ))}
-      </nav>
     </div>
   );
 };
