@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
-  client: Database["public"]["Tables"]["clients"]["Row"];
+  client?: Database["public"]["Tables"]["clients"]["Row"] | null;
   vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
 };
 
@@ -78,9 +78,13 @@ const JobTickets = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-medium text-lg">{ticket.ticket_number}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {ticket.client.first_name} {ticket.client.last_name}
-                    </p>
+                    {ticket.client ? (
+                      <p className="text-sm text-gray-600 mt-1">
+                        {ticket.client.first_name} {ticket.client.last_name}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-600 mt-1 italic">No client assigned</p>
+                    )}
                     {ticket.vehicle && (
                       <p className="text-sm text-gray-500">
                         {ticket.vehicle.year} {ticket.vehicle.make} {ticket.vehicle.model}
