@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { AppointmentWithRelations } from "@/pages/Appointments";
 
 type Appointment = {
   id: string;
@@ -23,7 +23,7 @@ type Appointment = {
 };
 
 interface AppointmentFormProps {
-  initialData?: Appointment | null;
+  initialData?: AppointmentWithRelations | null;
   selectedDate?: Date | null;
   onClose: () => void;
 }

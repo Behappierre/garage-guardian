@@ -1,29 +1,10 @@
 
 import { format } from "date-fns";
-
-type Appointment = {
-  id: string;
-  client_id: string;
-  job_ticket_id: string | null;
-  service_type: string;
-  start_time: string;
-  end_time: string;
-  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  client: {
-    first_name: string;
-    last_name: string;
-  };
-  job_ticket?: {
-    ticket_number: string;
-  };
-};
+import { AppointmentWithRelations } from "@/pages/Appointments";
 
 interface AppointmentListProps {
-  appointments: Appointment[];
-  onSelectAppointment: (appointment: Appointment) => void;
+  appointments: AppointmentWithRelations[];
+  onSelectAppointment: (appointment: AppointmentWithRelations) => void;
   isLoading: boolean;
 }
 

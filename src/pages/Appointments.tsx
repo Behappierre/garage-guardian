@@ -15,18 +15,18 @@ import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
-type DBClient = Database["public"]["Tables"]["clients"]["Row"];
-type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
+export type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
+export type DBClient = Database["public"]["Tables"]["clients"]["Row"];
+export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
 
-type Appointment = DBAppointment & {
+export interface AppointmentWithRelations extends DBAppointment {
   client: DBClient;
   job_ticket?: DBJobTicket | null;
-};
+}
 
 const Appointments = () => {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const { data: appointments, isLoading } = useQuery({
@@ -42,7 +42,7 @@ const Appointments = () => {
         .order('start_time', { ascending: true });
 
       if (error) throw error;
-      return data as Appointment[];
+      return data as AppointmentWithRelations[];
     },
   });
 
@@ -51,7 +51,7 @@ const Appointments = () => {
     setShowAppointmentForm(true);
   };
 
-  const handleEventClick = (arg: { event: { extendedProps: Appointment } }) => {
+  const handleEventClick = (arg: { event: { extendedProps: AppointmentWithRelations } }) => {
     setSelectedAppointment(arg.event.extendedProps);
     setShowAppointmentForm(true);
   };
