@@ -25,11 +25,12 @@ const JobTickets = () => {
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [registrationFilter, setRegistrationFilter] = useState("");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, dateFilter, sortField, sortOrder],
+    queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, sortField, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from("job_tickets")
@@ -56,9 +57,15 @@ const JobTickets = () => {
       if (error) throw error;
 
       let sortedData = (data as JobTicket[]).filter(ticket => {
-        if (!nameFilter) return true;
-        const clientName = `${ticket.client?.first_name} ${ticket.client?.last_name}`.toLowerCase();
-        return clientName.includes(nameFilter.toLowerCase());
+        const matchesName = nameFilter 
+          ? `${ticket.client?.first_name} ${ticket.client?.last_name}`.toLowerCase().includes(nameFilter.toLowerCase())
+          : true;
+        
+        const matchesRegistration = registrationFilter
+          ? ticket.vehicle?.license_plate?.toLowerCase().includes(registrationFilter.toLowerCase())
+          : true;
+
+        return matchesName && matchesRegistration;
       });
 
       // Sort the data
@@ -122,7 +129,7 @@ const JobTickets = () => {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
             <div className="space-y-2">
               <Label htmlFor="nameFilter">Filter by Customer Name</Label>
               <Input
@@ -130,6 +137,15 @@ const JobTickets = () => {
                 placeholder="Enter customer name..."
                 value={nameFilter}
                 onChange={(e) => setNameFilter(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="registrationFilter">Filter by Registration</Label>
+              <Input
+                id="registrationFilter"
+                placeholder="Enter vehicle registration..."
+                value={registrationFilter}
+                onChange={(e) => setRegistrationFilter(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -194,6 +210,9 @@ const JobTickets = () => {
                     {ticket.vehicle && (
                       <p className="text-sm text-gray-500">
                         {ticket.vehicle.year} {ticket.vehicle.make} {ticket.vehicle.model}
+                        {ticket.vehicle.license_plate && (
+                          <span className="ml-2 text-gray-600">({ticket.vehicle.license_plate})</span>
+                        )}
                       </p>
                     )}
                     <p className="text-sm mt-2">{ticket.description}</p>
