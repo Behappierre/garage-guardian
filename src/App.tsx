@@ -8,6 +8,7 @@ import Dashboard from "@/pages/Dashboard";
 import Clients from "@/pages/Clients";
 import Auth from "@/pages/Auth";
 import Appointments from "@/pages/Appointments";
+import JobTickets from "@/pages/JobTickets";
 import NotFound from "@/pages/NotFound";
 import Index from "@/pages/Index";
 
@@ -42,6 +43,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Appointments />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/job-tickets"
+              element={
+                <ProtectedRoute>
+                  <JobTickets />
                 </ProtectedRoute>
               }
             />
