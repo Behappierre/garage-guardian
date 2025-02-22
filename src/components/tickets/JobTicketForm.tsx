@@ -7,19 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
+type TicketStatus = Database["public"]["Enums"]["ticket_status"];
+type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
 interface JobTicketFormProps {
   clientId?: string;
   vehicleId?: string;
   onClose: () => void;
-  initialData?: {
-    id: string;
-    ticket_number: string;
-    description: string;
-    status: string;
-    priority: string;
-    assigned_technician_id: string;
-  };
+  initialData?: Pick<JobTicket, "id" | "ticket_number" | "description" | "status" | "priority" | "assigned_technician_id">;
 }
 
 export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: JobTicketFormProps) => {
@@ -27,9 +25,9 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     description: initialData?.description || "",
-    status: initialData?.status || "received",
-    priority: initialData?.priority || "normal",
-    assigned_technician_id: initialData?.assigned_technician_id || "",
+    status: (initialData?.status || "received") as TicketStatus,
+    priority: (initialData?.priority || "normal") as TicketPriority,
+    assigned_technician_id: initialData?.assigned_technician_id || null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,11 +51,11 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
       } else {
         const { error } = await supabase
           .from("job_tickets")
-          .insert([{
+          .insert({
             ...formData,
-            client_id: clientId,
-            vehicle_id: vehicleId,
-          }]);
+            client_id: clientId || null,
+            vehicle_id: vehicleId || null,
+          });
 
         if (error) throw error;
 
@@ -99,7 +97,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
             id="priority"
             className="w-full border border-input rounded-md h-10 px-3"
             value={formData.priority}
-            onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as TicketPriority }))}
           >
             <option value="low">Low</option>
             <option value="normal">Normal</option>
@@ -113,7 +111,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
             id="status"
             className="w-full border border-input rounded-md h-10 px-3"
             value={formData.status}
-            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as TicketStatus }))}
           >
             <option value="received">Received</option>
             <option value="in_progress">In Progress</option>
@@ -128,8 +126,8 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         <Label htmlFor="assigned_technician_id">Assigned Technician</Label>
         <Input
           id="assigned_technician_id"
-          value={formData.assigned_technician_id}
-          onChange={(e) => setFormData(prev => ({ ...prev, assigned_technician_id: e.target.value }))}
+          value={formData.assigned_technician_id || ""}
+          onChange={(e) => setFormData(prev => ({ ...prev, assigned_technician_id: e.target.value || null }))}
         />
       </div>
 

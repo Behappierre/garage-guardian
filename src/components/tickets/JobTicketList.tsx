@@ -1,21 +1,15 @@
-
 import { AlertCircle, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import type { Database } from "@/integrations/supabase/types";
 
-interface JobTicket {
-  id: string;
-  ticket_number: string;
-  description: string;
-  status: string;
-  priority: string;
-  created_at: string;
+type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client: {
     first_name: string;
     last_name: string;
   };
-}
+};
 
 interface JobTicketListProps {
   onSelectTicket: (ticket: JobTicket) => void;

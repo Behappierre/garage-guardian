@@ -6,19 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { JobTicketList } from "@/components/tickets/JobTicketList";
 import { JobTicketForm } from "@/components/tickets/JobTicketForm";
+import type { Database } from "@/integrations/supabase/types";
 
-interface JobTicket {
-  id: string;
-  ticket_number: string;
-  description: string;
-  status: string;
-  priority: string;
-  created_at: string;
+type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client: {
     first_name: string;
     last_name: string;
   };
-}
+};
 
 const Appointments = () => {
   const [showTicketForm, setShowTicketForm] = useState(false);
