@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,6 @@ import {
   Clock, 
   Users, 
   ActivitySquare,
-  Car
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -56,42 +54,31 @@ const Dashboard = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const [
-        { data: activeRepairs },
-        { data: todayAppointments },
-        { data: pendingTickets },
-        { data: totalClients }
-      ] = await Promise.all([
-        // Active repairs (job tickets with status 'in_progress')
-        supabase
-          .from('job_tickets')
-          .select('id', { count: 'exact' })
-          .eq('status', 'in_progress'),
-        
-        // Today's appointments
-        supabase
-          .from('appointments')
-          .select('id', { count: 'exact' })
-          .gte('start_time', today.toISOString())
-          .lt('start_time', new Date(today.getTime() + 24*60*60*1000).toISOString()),
-        
-        // Pending job tickets
-        supabase
-          .from('job_tickets')
-          .select('id', { count: 'exact' })
-          .eq('status', 'received'),
-        
-        // Total clients
-        supabase
-          .from('clients')
-          .select('id', { count: 'exact' })
-      ]);
+      const { count: activeRepairs } = await supabase
+        .from('job_tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'in_progress');
+
+      const { count: todayAppointments } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .gte('start_time', today.toISOString())
+        .lt('start_time', new Date(today.getTime() + 24*60*60*1000).toISOString());
+
+      const { count: pendingTickets } = await supabase
+        .from('job_tickets')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'received');
+
+      const { count: totalClients } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
 
       return {
-        activeRepairs: activeRepairs?.count || 0,
-        todayAppointments: todayAppointments?.count || 0,
-        pendingTickets: pendingTickets?.count || 0,
-        totalClients: totalClients?.count || 0
+        activeRepairs: activeRepairs || 0,
+        todayAppointments: todayAppointments || 0,
+        pendingTickets: pendingTickets || 0,
+        totalClients: totalClients || 0
       };
     }
   });
