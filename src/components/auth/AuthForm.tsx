@@ -26,7 +26,8 @@ export const AuthForm = () => {
 
     try {
       if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
+        // First, sign up the user
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -38,13 +39,18 @@ export const AuthForm = () => {
         });
         if (signUpError) throw signUpError;
 
-        // Insert the user role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert([
-            { role: role }
-          ]);
-        if (roleError) throw roleError;
+        // If we have the user data, insert the role
+        if (signUpData.user) {
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert([
+              { 
+                user_id: signUpData.user.id,
+                role: role
+              }
+            ]);
+          if (roleError) throw roleError;
+        }
 
         toast({
           title: "Success!",
