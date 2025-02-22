@@ -35,6 +35,14 @@ const JobTickets = () => {
     },
   });
 
+  const formatStatus = (status: string | undefined) => {
+    if (!status) return '';
+    return status.replace('_', ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Sidebar />
@@ -101,7 +109,7 @@ const JobTickets = () => {
                         'bg-gray-100 text-gray-800'
                       }`}
                     >
-                      {ticket.status.replace('_', ' ').charAt(0).toUpperCase() + ticket.status.slice(1).replace('_', ' ')}
+                      {formatStatus(ticket.status)}
                     </span>
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800">
                       Priority: {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
