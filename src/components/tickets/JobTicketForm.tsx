@@ -63,6 +63,8 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         if (error) throw error;
         toast.success("Job ticket updated successfully");
       } else {
+        // For new tickets, we only need to provide required fields
+        // ticket_number is generated automatically by the database trigger
         const { error } = await supabase
           .from("job_tickets")
           .insert({

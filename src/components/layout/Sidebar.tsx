@@ -10,9 +10,14 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Sidebar = () => {
-  const { signOut } = useAuth();
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <div className="fixed left-0 top-0 w-64 h-screen bg-white border-r border-gray-200">
@@ -89,7 +94,7 @@ export const Sidebar = () => {
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-2"
-                onClick={() => signOut()}
+                onClick={handleSignOut}
               >
                 <LogOut className="w-5 h-5" />
                 Logout

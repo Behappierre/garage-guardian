@@ -1,11 +1,9 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { format } from "date-fns";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -16,19 +14,13 @@ import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type Appointment = {
-  id: string;
-  client_id: string;
-  job_ticket_id: string | null;
-  service_type: string;
-  start_time: string;
-  end_time: string;
-  status: 'scheduled' | 'confirmed' | 'cancelled' | 'completed';
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  client: Database["public"]["Tables"]["clients"]["Row"];
-  job_ticket?: Database["public"]["Tables"]["job_tickets"]["Row"];
+type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
+type DBClient = Database["public"]["Tables"]["clients"]["Row"];
+type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
+
+type Appointment = DBAppointment & {
+  client: DBClient;
+  job_ticket?: DBJobTicket;
 };
 
 const Appointments = () => {
