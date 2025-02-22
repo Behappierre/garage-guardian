@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -10,6 +9,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentWithRelations } from "@/pages/Appointments";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AppointmentFormProps {
   initialData?: AppointmentWithRelations | null;
@@ -18,6 +19,7 @@ interface AppointmentFormProps {
 }
 
 export const AppointmentForm = ({ initialData, selectedDate, onClose }: AppointmentFormProps) => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const defaultDate = selectedDate || new Date();
   const [formData, setFormData] = useState({
@@ -78,6 +80,36 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
       setSelectedTickets(appointmentTickets);
     }
   }, [appointmentTickets]);
+
+  const handleCreateNewTicket = () => {
+    const params = new URLSearchParams({
+      client_id: formData.client_id,
+      return_to: 'appointments'
+    });
+    navigate(`/dashboard/job-tickets?${params.toString()}`);
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    try {
+      if (initialData?.id) {
+        const { error } = await supabase
+          .from("appointment_job_tickets")
+          .delete()
+          .match({ 
+            appointment_id: initialData.id,
+            job_ticket_id: ticketId 
+          });
+
+        if (error) throw error;
+
+        setSelectedTickets(prev => prev.filter(id => id !== ticketId));
+        await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+        toast.success("Job ticket removed from appointment");
+      }
+    } catch (error: any) {
+      toast.error("Failed to remove job ticket");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,35 +218,70 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
         </select>
       </div>
 
-      {formData.client_id && jobTickets?.length > 0 && (
-        <div className="space-y-2">
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
           <Label>Job Tickets</Label>
+          {formData.client_id && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleCreateNewTicket}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              New Ticket
+            </Button>
+          )}
+        </div>
+        {formData.client_id && jobTickets?.length > 0 ? (
           <div className="border rounded-md p-3 space-y-2">
             {jobTickets.map((ticket) => (
-              <div key={ticket.id} className="flex items-start gap-2">
-                <Checkbox
-                  id={`ticket-${ticket.id}`}
-                  checked={selectedTickets.includes(ticket.id)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedTickets([...selectedTickets, ticket.id]);
-                    } else {
-                      setSelectedTickets(selectedTickets.filter(id => id !== ticket.id));
-                    }
-                  }}
-                />
-                <label
-                  htmlFor={`ticket-${ticket.id}`}
-                  className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  <div className="font-medium">{ticket.ticket_number}</div>
-                  <div className="text-gray-500">{ticket.description}</div>
-                </label>
+              <div key={ticket.id} className="flex items-start justify-between gap-2 group">
+                <div className="flex items-start gap-2 flex-1">
+                  <Checkbox
+                    id={`ticket-${ticket.id}`}
+                    checked={selectedTickets.includes(ticket.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedTickets([...selectedTickets, ticket.id]);
+                      } else {
+                        setSelectedTickets(selectedTickets.filter(id => id !== ticket.id));
+                      }
+                    }}
+                  />
+                  <label
+                    htmlFor={`ticket-${ticket.id}`}
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
+                  >
+                    <div className="font-medium">{ticket.ticket_number}</div>
+                    <div className="text-gray-500">{ticket.description}</div>
+                  </label>
+                </div>
+                {selectedTickets.includes(ticket.id) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteTicket(ticket.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : formData.client_id ? (
+          <div className="text-center py-4 text-gray-500 border rounded-md">
+            No job tickets available for this client
+          </div>
+        ) : (
+          <div className="text-center py-4 text-gray-500 border rounded-md">
+            Select a client to view available job tickets
+          </div>
+        )}
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="service_type">Service Type</Label>
