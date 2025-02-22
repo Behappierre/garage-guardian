@@ -1,9 +1,9 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, TicketPlus } from "lucide-react";
 import { JobTicketList } from "@/components/tickets/JobTicketList";
 import { JobTicketForm } from "@/components/tickets/JobTicketForm";
 import type { Database } from "@/integrations/supabase/types";
@@ -29,21 +29,30 @@ const Appointments = () => {
       <Sidebar />
       
       <main className="flex-1 ml-64 p-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Job Tickets</h1>
-            <p className="text-gray-500">Manage service requests and work orders</p>
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">Job Tickets</h1>
+              <p className="text-gray-500">Manage service requests and work orders</p>
+            </div>
+            <Button
+              size="lg"
+              onClick={() => setShowTicketForm(true)}
+              className="gap-2"
+            >
+              <TicketPlus className="h-5 w-5" />
+              Create Job Ticket
+            </Button>
           </div>
-          <Button onClick={() => setShowTicketForm(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Ticket
-          </Button>
         </div>
 
         <JobTicketList onSelectTicket={handleSelectTicket} />
 
         <Dialog open={showTicketForm} onOpenChange={setShowTicketForm}>
           <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}</DialogTitle>
+            </DialogHeader>
             <JobTicketForm
               initialData={selectedTicket || undefined}
               onClose={() => {
