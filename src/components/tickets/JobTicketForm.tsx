@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,8 +26,22 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
     status: (initialData?.status || "received") as TicketStatus,
     priority: (initialData?.priority || "normal") as TicketPriority,
     assigned_technician_id: initialData?.assigned_technician_id || null,
+    client_id: initialData?.client_id || clientId || null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: clients } = useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, first_name, last_name")
+        .order("first_name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +56,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
             status: formData.status,
             priority: formData.priority,
             assigned_technician_id: formData.assigned_technician_id,
+            client_id: formData.client_id,
           })
           .eq("id", initialData.id);
 
@@ -55,7 +70,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
             status: formData.status,
             priority: formData.priority,
             assigned_technician_id: formData.assigned_technician_id,
-            client_id: clientId || null,
+            client_id: formData.client_id,
             vehicle_id: vehicleId || null,
           });
 
@@ -74,6 +89,23 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="client">Client</Label>
+        <select
+          id="client"
+          className="w-full border border-input rounded-md h-10 px-3"
+          value={formData.client_id || ""}
+          onChange={(e) => setFormData(prev => ({ ...prev, client_id: e.target.value || null }))}
+        >
+          <option value="">Select a client</option>
+          {clients?.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.first_name} {client.last_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
         <Textarea
