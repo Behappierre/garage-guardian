@@ -99,6 +99,47 @@ export type Database = {
         }
         Relationships: []
       }
+      email_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          job_ticket_id: string | null
+          notification_type: string
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          job_ticket_id?: string | null
+          notification_type: string
+          recipient_email: string
+          sent_at?: string | null
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          job_ticket_id?: string | null
+          notification_type?: string
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notifications_job_ticket_id_fkey"
+            columns: ["job_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "job_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_tickets: {
         Row: {
           assigned_technician_id: string | null
