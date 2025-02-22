@@ -3,18 +3,52 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const checkAuthAndRole = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/dashboard");
+      if (session?.user) {
+        try {
+          // Fetch user role
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .single();
+
+          if (roleError) throw roleError;
+
+          // Redirect based on role
+          switch (roleData?.role) {
+            case 'administrator':
+              navigate("/dashboard");
+              break;
+            case 'technician':
+              navigate("/dashboard/job-tickets");
+              break;
+            case 'front_desk':
+              navigate("/dashboard/appointments");
+              break;
+            default:
+              navigate("/dashboard");
+          }
+        } catch (error: any) {
+          toast({
+            title: "Error fetching user role",
+            description: error.message,
+            variant: "destructive"
+          });
+          // Default to dashboard if role fetch fails
+          navigate("/dashboard");
+        }
       }
     };
-    checkAuth();
+
+    checkAuthAndRole();
   }, [navigate]);
 
   return (
