@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -8,9 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppointmentWithRelations } from "@/pages/Appointments";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ClientSelector } from "./ClientSelector";
+import { TicketSelector } from "./TicketSelector";
+import { TimeSelector } from "./TimeSelector";
 
 interface AppointmentFormProps {
   initialData?: AppointmentWithRelations | null;
@@ -19,7 +20,6 @@ interface AppointmentFormProps {
 }
 
 export const AppointmentForm = ({ initialData, selectedDate, onClose }: AppointmentFormProps) => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const defaultDate = selectedDate || new Date();
   const [formData, setFormData] = useState({
@@ -81,43 +81,12 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     }
   }, [appointmentTickets]);
 
-  const handleCreateNewTicket = () => {
-    const params = new URLSearchParams({
-      client_id: formData.client_id,
-      return_to: 'appointments'
-    });
-    navigate(`/dashboard/job-tickets?${params.toString()}`);
-  };
-
-  const handleDeleteTicket = async (ticketId: string) => {
-    try {
-      if (initialData?.id) {
-        const { error } = await supabase
-          .from("appointment_job_tickets")
-          .delete()
-          .match({ 
-            appointment_id: initialData.id,
-            job_ticket_id: ticketId 
-          });
-
-        if (error) throw error;
-
-        setSelectedTickets(prev => prev.filter(id => id !== ticketId));
-        await queryClient.invalidateQueries({ queryKey: ["appointments"] });
-        toast.success("Job ticket removed from appointment");
-      }
-    } catch (error: any) {
-      toast.error("Failed to remove job ticket");
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       if (initialData?.id) {
-        // Update appointment
         const { error: updateError } = await supabase
           .from("appointments")
           .update({
@@ -132,7 +101,6 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
         if (updateError) throw updateError;
 
-        // Delete existing ticket associations
         const { error: deleteError } = await supabase
           .from("appointment_job_tickets")
           .delete()
@@ -140,7 +108,6 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
         if (deleteError) throw deleteError;
 
-        // Insert new ticket associations if any tickets are selected
         if (selectedTickets.length > 0) {
           const { error: insertError } = await supabase
             .from("appointment_job_tickets")
@@ -156,7 +123,6 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
         toast.success("Appointment updated successfully");
       } else {
-        // Create new appointment
         const { data: newAppointment, error: createError } = await supabase
           .from("appointments")
           .insert({
@@ -172,7 +138,6 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
         if (createError) throw createError;
 
-        // Insert ticket associations for the new appointment if any tickets are selected
         if (selectedTickets.length > 0 && newAppointment) {
           const { error: ticketError } = await supabase
             .from("appointment_job_tickets")
@@ -200,88 +165,19 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="client">Client</Label>
-        <select
-          id="client"
-          className="w-full border border-input rounded-md h-10 px-3"
-          value={formData.client_id}
-          onChange={(e) => setFormData(prev => ({ ...prev, client_id: e.target.value }))}
-          required
-        >
-          <option value="">Select a client</option>
-          {clients?.map((client) => (
-            <option key={client.id} value={client.id}>
-              {client.first_name} {client.last_name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <ClientSelector
+        clients={clients}
+        selectedClientId={formData.client_id}
+        onClientChange={(clientId) => setFormData(prev => ({ ...prev, client_id: clientId }))}
+      />
 
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <Label>Job Tickets</Label>
-          {formData.client_id && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCreateNewTicket}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              New Ticket
-            </Button>
-          )}
-        </div>
-        {formData.client_id && jobTickets?.length > 0 ? (
-          <div className="border rounded-md p-3 space-y-2">
-            {jobTickets.map((ticket) => (
-              <div key={ticket.id} className="flex items-start justify-between gap-2 group">
-                <div className="flex items-start gap-2 flex-1">
-                  <Checkbox
-                    id={`ticket-${ticket.id}`}
-                    checked={selectedTickets.includes(ticket.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedTickets([...selectedTickets, ticket.id]);
-                      } else {
-                        setSelectedTickets(selectedTickets.filter(id => id !== ticket.id));
-                      }
-                    }}
-                  />
-                  <label
-                    htmlFor={`ticket-${ticket.id}`}
-                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1"
-                  >
-                    <div className="font-medium">{ticket.ticket_number}</div>
-                    <div className="text-gray-500">{ticket.description}</div>
-                  </label>
-                </div>
-                {selectedTickets.includes(ticket.id) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteTicket(ticket.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : formData.client_id ? (
-          <div className="text-center py-4 text-gray-500 border rounded-md">
-            No job tickets available for this client
-          </div>
-        ) : (
-          <div className="text-center py-4 text-gray-500 border rounded-md">
-            Select a client to view available job tickets
-          </div>
-        )}
-      </div>
+      <TicketSelector
+        clientId={formData.client_id}
+        tickets={jobTickets}
+        selectedTickets={selectedTickets}
+        appointmentId={initialData?.id}
+        onTicketSelectionChange={setSelectedTickets}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="service_type">Service Type</Label>
@@ -293,28 +189,12 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="start_time">Start Time</Label>
-          <Input
-            id="start_time"
-            type="datetime-local"
-            value={formData.start_time}
-            onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="end_time">End Time</Label>
-          <Input
-            id="end_time"
-            type="datetime-local"
-            value={formData.end_time}
-            onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-            required
-          />
-        </div>
-      </div>
+      <TimeSelector
+        startTime={formData.start_time}
+        endTime={formData.end_time}
+        onStartTimeChange={(time) => setFormData(prev => ({ ...prev, start_time: time }))}
+        onEndTimeChange={(time) => setFormData(prev => ({ ...prev, end_time: time }))}
+      />
 
       <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
