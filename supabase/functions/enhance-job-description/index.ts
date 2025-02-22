@@ -26,11 +26,17 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an expert automotive technician. Enhance the job ticket description to be more detailed and professional, while keeping it concise.'
+            content: `You are an expert automotive technician. Your task is to:
+1. Review the job ticket description
+2. Based on the vehicle details and description, suggest a list of parts that might be needed
+3. Format the response as:
+   - First paragraph: Enhanced, professional description of the issue
+   - Second section: "Suggested Parts:" followed by a numbered list of parts with common part numbers where applicable
+Keep the response concise but thorough.`
           },
           {
             role: 'user',
-            content: `Please enhance this job ticket description${vehicle ? ` for a ${vehicle}` : ''}: ${description}`
+            content: `Please analyze this job ticket description${vehicle ? ` for a ${vehicle}` : ''}: ${description}`
           }
         ],
       }),
@@ -43,6 +49,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    console.error('Error in enhance-job-description function:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
