@@ -74,7 +74,11 @@ export const AuthForm = () => {
             .single();
 
           if (roleError) {
-            toast.error("Error fetching user role");
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Error fetching user role",
+            });
             navigate("/dashboard");
             return;
           }
