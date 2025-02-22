@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
@@ -20,7 +21,7 @@ type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
 
 type Appointment = DBAppointment & {
   client: DBClient;
-  job_ticket?: DBJobTicket;
+  job_ticket?: DBJobTicket | null;
 };
 
 const Appointments = () => {

@@ -27,6 +27,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
     priority: (initialData?.priority || "normal") as TicketPriority,
     assigned_technician_id: initialData?.assigned_technician_id || null,
     client_id: initialData?.client_id || clientId || null,
+    vehicle_id: initialData?.vehicle_id || vehicleId || null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,6 +58,7 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
             priority: formData.priority,
             assigned_technician_id: formData.assigned_technician_id,
             client_id: formData.client_id,
+            vehicle_id: formData.vehicle_id
           })
           .eq("id", initialData.id);
 
@@ -67,14 +69,14 @@ export const JobTicketForm = ({ clientId, vehicleId, onClose, initialData }: Job
         // ticket_number is generated automatically by the database trigger
         const { error } = await supabase
           .from("job_tickets")
-          .insert({
+          .insert([{
             description: formData.description,
             status: formData.status,
             priority: formData.priority,
             assigned_technician_id: formData.assigned_technician_id,
             client_id: formData.client_id,
-            vehicle_id: vehicleId || null,
-          });
+            vehicle_id: formData.vehicle_id
+          }] as any); // Using 'any' here because the trigger will handle ticket_number
 
         if (error) throw error;
         toast.success("Job ticket created successfully");
