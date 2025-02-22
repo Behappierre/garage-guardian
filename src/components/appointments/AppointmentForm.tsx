@@ -6,6 +6,7 @@ import { TicketSelector } from "./TicketSelector";
 import { TimeSelector } from "./TimeSelector";
 import { ServiceTypeInput } from "./ServiceTypeInput";
 import { NotesInput } from "./NotesInput";
+import { VehicleSelector } from "./VehicleSelector";
 import { useAppointmentForm } from "./hooks/useAppointmentForm";
 
 interface AppointmentFormProps {
@@ -22,21 +23,31 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     selectedTickets,
     setSelectedTickets,
     clients,
+    vehicles,
     jobTickets,
     selectedVehicleId,
+    setSelectedVehicleId,
     handleSubmit
   } = useAppointmentForm({ initialData, selectedDate, onClose });
 
-  const selectedVehicle = jobTickets?.find(ticket => 
-    ticket.id === selectedTickets[0]
-  )?.vehicle;
+  const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId) || 
+    jobTickets?.find(ticket => ticket.id === selectedTickets[0])?.vehicle;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <ClientSelector
         clients={clients}
         selectedClientId={formData.client_id}
-        onClientChange={(clientId) => setFormData(prev => ({ ...prev, client_id: clientId }))}
+        onClientChange={(clientId) => {
+          setFormData(prev => ({ ...prev, client_id: clientId }));
+          setSelectedVehicleId(null);
+        }}
+      />
+
+      <VehicleSelector
+        vehicles={vehicles}
+        selectedVehicleId={selectedVehicleId}
+        onVehicleChange={setSelectedVehicleId}
       />
 
       <TicketSelector

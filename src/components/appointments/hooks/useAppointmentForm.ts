@@ -46,6 +46,20 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     },
   });
 
+  const { data: vehicles } = useQuery({
+    queryKey: ["vehicles", formData.client_id],
+    enabled: !!formData.client_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("*")
+        .eq("client_id", formData.client_id);
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: jobTickets } = useQuery({
     queryKey: ["job_tickets", formData.client_id],
     enabled: !!formData.client_id,
@@ -93,8 +107,6 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
       if (firstSelectedTicket?.vehicle) {
         setSelectedVehicleId(firstSelectedTicket.vehicle.id);
       }
-    } else {
-      setSelectedVehicleId(null);
     }
   }, [selectedTickets, jobTickets]);
 
@@ -187,8 +199,10 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     selectedTickets,
     setSelectedTickets,
     clients,
+    vehicles,
     jobTickets,
     selectedVehicleId,
+    setSelectedVehicleId,
     handleSubmit
   };
 };
