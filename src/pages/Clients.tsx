@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,44 +80,55 @@ const Clients = () => {
     }
   };
 
+  const refreshClientData = async (clientId: string) => {
+    const { data } = await supabase
+      .from("clients")
+      .select("id, first_name, last_name, email, phone, notes, created_at")
+      .eq("id", clientId)
+      .single();
+    
+    if (data) {
+      setSelectedClient(data);
+    }
+  };
+
   const handleCloseClientDialog = async () => {
     setShowClientDialog(false);
     await queryClient.invalidateQueries({ queryKey: ["clients"] });
+    if (selectedClient) {
+      await refreshClientData(selectedClient.id);
+    }
   };
 
   const handleCloseVehicleDialog = async () => {
     setShowVehicleDialog(false);
-    await queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClient?.id] });
+    if (selectedClient) {
+      await queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClient.id] });
+    }
   };
 
   const handleCloseServiceDialog = async () => {
     setShowServiceDialog(false);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient?.id] }),
-      queryClient.invalidateQueries({ queryKey: ["clients"] })
-    ]);
-    
     if (selectedClient) {
-      const { data } = await supabase
-        .from("clients")
-        .select("id, first_name, last_name, email, phone, notes, created_at")
-        .eq("id", selectedClient.id)
-        .single();
-      
-      if (data) {
-        setSelectedClient(data);
-      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient.id] }),
+        queryClient.invalidateQueries({ queryKey: ["clients"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointments"] })
+      ]);
+      await refreshClientData(selectedClient.id);
     }
   };
 
+  // Update selected client when clients data changes
   useEffect(() => {
-    if (selectedClient && clients) {
-      const updatedClient = clients.find(c => c.id === selectedClient.id);
-      if (updatedClient && JSON.stringify(updatedClient) !== JSON.stringify(selectedClient)) {
-        setSelectedClient(updatedClient);
+    const updateSelectedClient = async () => {
+      if (selectedClient) {
+        await refreshClientData(selectedClient.id);
       }
-    }
-  }, [clients, selectedClient]);
+    };
+
+    updateSelectedClient();
+  }, [clients]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -178,11 +190,12 @@ const Clients = () => {
         </Dialog>
 
         <Dialog open={showServiceDialog} onOpenChange={handleCloseServiceDialog}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[600px]">
             {selectedClient && (
               <ServiceForm
                 clientId={selectedClient.id}
                 onClose={handleCloseServiceDialog}
+                vehicles={clientVehicles}
               />
             )}
           </DialogContent>

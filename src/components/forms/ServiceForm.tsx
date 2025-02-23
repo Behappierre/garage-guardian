@@ -8,9 +8,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  license_plate: string;
+}
+
 interface ServiceFormProps {
   clientId: string;
-  vehicleId?: string;
+  vehicles?: Vehicle[];
   onClose: () => void;
   initialData?: {
     id: string;
@@ -22,7 +30,7 @@ interface ServiceFormProps {
   };
 }
 
-export const ServiceForm = ({ clientId, vehicleId, onClose, initialData }: ServiceFormProps) => {
+export const ServiceForm = ({ clientId, vehicles, onClose, initialData }: ServiceFormProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -31,6 +39,7 @@ export const ServiceForm = ({ clientId, vehicleId, onClose, initialData }: Servi
     cost: initialData?.cost || 0,
     status: initialData?.status || "pending",
     service_date: initialData?.service_date || new Date().toISOString().split('T')[0],
+    vehicle_id: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,7 +49,6 @@ export const ServiceForm = ({ clientId, vehicleId, onClose, initialData }: Servi
 
     try {
       if (initialData?.id) {
-        // Update existing service record
         const { error } = await supabase
           .from("service_history")
           .update(formData)
@@ -53,13 +61,12 @@ export const ServiceForm = ({ clientId, vehicleId, onClose, initialData }: Servi
           description: "Service record updated successfully",
         });
       } else {
-        // Create new service record
         const { error } = await supabase
           .from("service_history")
           .insert([{
             ...formData,
             client_id: clientId,
-            vehicle_id: vehicleId,
+            vehicle_id: formData.vehicle_id || null,
           }]);
 
         if (error) throw error;
@@ -70,8 +77,8 @@ export const ServiceForm = ({ clientId, vehicleId, onClose, initialData }: Servi
         });
       }
 
-      // Refresh service history data
       await queryClient.invalidateQueries({ queryKey: ["service_history", clientId] });
+      await queryClient.invalidateQueries({ queryKey: ["client-appointments", clientId] });
       onClose();
     } catch (error: any) {
       toast({
@@ -95,6 +102,25 @@ export const ServiceForm = ({ clientId, vehicleId, onClose, initialData }: Servi
           onChange={(e) => setFormData(prev => ({ ...prev, service_type: e.target.value }))}
         />
       </div>
+
+      {vehicles && vehicles.length > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="vehicle_id">Vehicle</Label>
+          <select
+            id="vehicle_id"
+            className="w-full border border-input rounded-md h-10 px-3"
+            value={formData.vehicle_id}
+            onChange={(e) => setFormData(prev => ({ ...prev, vehicle_id: e.target.value }))}
+          >
+            <option value="">Select a vehicle</option>
+            {vehicles.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {vehicle.year} {vehicle.make} {vehicle.model} {vehicle.license_plate && `(${vehicle.license_plate})`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
