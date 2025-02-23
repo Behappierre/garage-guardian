@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 interface Client {
   id: string;
@@ -45,6 +45,7 @@ export const ClientDetails = ({
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
 
+  // Main appointments query
   const { data: appointments } = useQuery({
     queryKey: ["client-appointments", client.id],
     queryFn: async () => {
@@ -71,10 +72,7 @@ export const ClientDetails = ({
       })) as AppointmentWithRelations[];
 
       return formattedAppointments;
-    },
-    staleTime: 5000, // Keep data fresh for 5 seconds
-    refetchOnMount: true,
-    refetchOnWindowFocus: false // Don't refetch on window focus to prevent unnecessary updates
+    }
   });
 
   const now = new Date();
@@ -85,24 +83,26 @@ export const ClientDetails = ({
     app => new Date(app.start_time) < now
   ) || [];
 
-  const handleAppointmentClick = (appointment: AppointmentWithRelations) => {
+  const handleAppointmentClick = useCallback((appointment: AppointmentWithRelations) => {
     setSelectedAppointment(appointment);
     setShowAppointmentDialog(true);
-  };
+  }, []);
 
-  const handleDialogClose = () => {
-    setShowAppointmentDialog(false);
-    // Only invalidate the appointments query for this specific client
+  const handleDialogClose = useCallback(() => {
+    // First, invalidate the query
     queryClient.invalidateQueries({ 
       queryKey: ["client-appointments", client.id],
       exact: true 
     });
-    setTimeout(() => {
-      setSelectedAppointment(null);
-    }, 100);
-  };
 
-  const renderAppointment = (appointment: AppointmentWithRelations) => (
+    // Then close the dialog
+    setShowAppointmentDialog(false);
+
+    // Finally, clear the selected appointment
+    setSelectedAppointment(null);
+  }, [queryClient, client.id]);
+
+  const renderAppointment = useCallback((appointment: AppointmentWithRelations) => (
     <div 
       key={appointment.id} 
       className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
@@ -135,7 +135,7 @@ export const ClientDetails = ({
         </span>
       </div>
     </div>
-  );
+  ), []);
 
   return (
     <div className="col-span-2 space-y-6">
@@ -222,7 +222,14 @@ export const ClientDetails = ({
       <Dialog 
         open={showAppointmentDialog} 
         onOpenChange={(open) => {
-          if (!open) handleDialogClose();
+          if (!open) {
+            queryClient.invalidateQueries({ 
+              queryKey: ["client-appointments", client.id],
+              exact: true 
+            });
+            setShowAppointmentDialog(false);
+            setSelectedAppointment(null);
+          }
         }}
       >
         <DialogContent className="sm:max-w-[600px]">
