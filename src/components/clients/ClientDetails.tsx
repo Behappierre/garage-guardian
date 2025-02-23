@@ -1,4 +1,3 @@
-
 import { Car, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -89,13 +88,11 @@ export const ClientDetails = ({
 
   const handleDialogClose = async () => {
     setShowAppointmentDialog(false);
-    // Only invalidate the appointments query
     await queryClient.invalidateQueries({ 
       queryKey: ["client-appointments", client.id],
-      exact: true
+      exact: true 
     });
-    // Clear the selected appointment after the dialog is closed
-    setTimeout(() => setSelectedAppointment(null), 100);
+    setSelectedAppointment(null);
   };
 
   const renderAppointment = (appointment: AppointmentWithRelations) => (
@@ -135,7 +132,6 @@ export const ClientDetails = ({
 
   return (
     <div className="col-span-2 space-y-6">
-      {/* Client Info */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           {client.first_name} {client.last_name}
@@ -161,7 +157,6 @@ export const ClientDetails = ({
         </div>
       </div>
 
-      {/* Vehicles */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Vehicles</h3>
@@ -184,7 +179,6 @@ export const ClientDetails = ({
         </div>
       </div>
 
-      {/* Upcoming Appointments */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h3>
@@ -202,7 +196,6 @@ export const ClientDetails = ({
         </div>
       </div>
 
-      {/* Previous Appointments */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Previous Appointments</h3>
@@ -216,7 +209,6 @@ export const ClientDetails = ({
         </div>
       </div>
 
-      {/* Appointment Edit Dialog */}
       <Dialog open={showAppointmentDialog} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[600px]">
           {selectedAppointment && (

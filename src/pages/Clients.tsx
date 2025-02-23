@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +34,6 @@ const Clients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
-  // Dialog states
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
   const [showServiceDialog, setShowServiceDialog] = useState(false);
@@ -79,30 +79,9 @@ const Clients = () => {
     }
   };
 
-  const refreshClientData = async (clientId: string) => {
-    const { data } = await supabase
-      .from("clients")
-      .select("id, first_name, last_name, email, phone, notes, created_at")
-      .eq("id", clientId)
-      .single();
-    
-    if (data) {
-      setSelectedClient(data);
-      queryClient.setQueryData(["clients"], (oldData: any) => {
-        if (!oldData) return oldData;
-        return oldData.map((client: Client) => 
-          client.id === data.id ? data : client
-        );
-      });
-    }
-  };
-
   const handleCloseClientDialog = async () => {
     setShowClientDialog(false);
     await queryClient.invalidateQueries({ queryKey: ["clients"] });
-    if (selectedClient) {
-      await refreshClientData(selectedClient.id);
-    }
   };
 
   const handleCloseVehicleDialog = async () => {
@@ -112,26 +91,16 @@ const Clients = () => {
     }
   };
 
-  const handleCloseServiceDialog = async () => {
+  const handleCloseServiceDialog = () => {
     setShowServiceDialog(false);
-    if (selectedClient) {
-      await refreshClientData(selectedClient.id);
-      await queryClient.invalidateQueries({ 
-        queryKey: ["client-appointments", selectedClient.id],
-        exact: true
-      });
-      await queryClient.invalidateQueries({ 
-        queryKey: ["appointments"],
-        exact: true
-      });
-    }
   };
 
+  // Update selected client when clients data changes
   useEffect(() => {
     if (selectedClient && clients) {
-      const currentClient = clients.find(c => c.id === selectedClient.id);
-      if (currentClient) {
-        setSelectedClient(currentClient);
+      const updatedClient = clients.find(c => c.id === selectedClient.id);
+      if (updatedClient && JSON.stringify(updatedClient) !== JSON.stringify(selectedClient)) {
+        setSelectedClient(updatedClient);
       }
     }
   }, [clients, selectedClient]);
