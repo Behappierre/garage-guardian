@@ -3,7 +3,7 @@ import { Car, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import type { AppointmentWithRelations } from "@/types/appointment";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
