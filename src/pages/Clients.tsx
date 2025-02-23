@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -116,19 +116,14 @@ const Clients = () => {
   };
 
   // Update selected client when clients data changes
-  const updateSelectedClient = () => {
+  useEffect(() => {
     if (selectedClient && clients) {
       const updatedClient = clients.find(c => c.id === selectedClient.id);
       if (updatedClient && JSON.stringify(updatedClient) !== JSON.stringify(selectedClient)) {
         setSelectedClient(updatedClient);
       }
     }
-  };
-
-  // Call updateSelectedClient whenever clients data changes
-  useState(() => {
-    updateSelectedClient();
-  }, [clients]);
+  }, [clients, selectedClient]);
 
   return (
     <div className="min-h-screen bg-gray-50">
