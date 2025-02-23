@@ -115,24 +115,19 @@ const Clients = () => {
   const handleCloseServiceDialog = async () => {
     setShowServiceDialog(false);
     if (selectedClient) {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient.id] }),
-        queryClient.invalidateQueries({ queryKey: ["clients"] }),
-        queryClient.invalidateQueries({ queryKey: ["appointments"] })
-      ]);
-      await refreshClientData(selectedClient.id);
+      await queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient.id] });
+      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
     }
   };
 
   useEffect(() => {
-    const updateSelectedClient = async () => {
-      if (selectedClient) {
-        await refreshClientData(selectedClient.id);
+    if (selectedClient && clients) {
+      const currentClient = clients.find(c => c.id === selectedClient.id);
+      if (currentClient && JSON.stringify(currentClient) !== JSON.stringify(selectedClient)) {
+        setSelectedClient(currentClient);
       }
-    };
-
-    updateSelectedClient();
-  }, [clients]);
+    }
+  }, [clients, selectedClient]);
 
   return (
     <div className="min-h-screen bg-gray-50">
