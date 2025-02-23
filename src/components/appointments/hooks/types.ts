@@ -14,4 +14,5 @@ export interface AppointmentFormData {
   end_time: string;
   notes: string;
   status: "scheduled" | "confirmed" | "cancelled" | "completed";
+  vehicle_id: string | null;
 }

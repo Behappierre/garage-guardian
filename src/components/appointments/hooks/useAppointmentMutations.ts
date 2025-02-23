@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AppointmentFormData } from "./types";
@@ -12,17 +11,20 @@ export const useAppointmentMutations = () => {
     onClose: () => void
   ) => {
     try {
+      const appointmentData = {
+        client_id: formData.client_id,
+        service_type: formData.service_type,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        notes: formData.notes,
+        status: formData.status,
+        vehicle_id: formData.vehicle_id
+      };
+
       if (appointmentId) {
         const { error: updateError } = await supabase
           .from("appointments")
-          .update({
-            client_id: formData.client_id,
-            service_type: formData.service_type,
-            start_time: formData.start_time,
-            end_time: formData.end_time,
-            notes: formData.notes,
-            status: formData.status,
-          })
+          .update(appointmentData)
           .eq("id", appointmentId);
 
         if (updateError) throw updateError;
@@ -51,14 +53,7 @@ export const useAppointmentMutations = () => {
       } else {
         const { data: newAppointment, error: createError } = await supabase
           .from("appointments")
-          .insert({
-            client_id: formData.client_id,
-            service_type: formData.service_type,
-            start_time: formData.start_time,
-            end_time: formData.end_time,
-            notes: formData.notes,
-            status: formData.status,
-          })
+          .insert(appointmentData)
           .select()
           .single();
 

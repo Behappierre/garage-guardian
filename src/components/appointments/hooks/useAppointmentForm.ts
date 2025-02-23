@@ -18,12 +18,13 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     end_time: initialData?.end_time ? formatDateTimeForInput(initialData.end_time) : formatDefaultDate(defaultDate),
     notes: initialData?.notes || "",
     status: initialData?.status || "scheduled",
+    vehicle_id: initialData?.vehicle_id || null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(initialData?.vehicle_id || null);
 
   const { 
     clients,
@@ -40,12 +41,15 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     if (appointmentTicketsLoaded && appointmentTickets) {
       setSelectedTickets(appointmentTickets.map(t => t.job_ticket_id));
       
-      const ticketWithVehicle = appointmentTickets.find(t => t.job_tickets?.vehicle);
-      if (ticketWithVehicle?.job_tickets?.vehicle?.id) {
-        setSelectedVehicleId(ticketWithVehicle.job_tickets.vehicle.id);
+      if (!selectedVehicleId) {
+        const ticketWithVehicle = appointmentTickets.find(t => t.job_tickets?.vehicle);
+        if (ticketWithVehicle?.job_tickets?.vehicle?.id) {
+          setSelectedVehicleId(ticketWithVehicle.job_tickets.vehicle.id);
+          setFormData(prev => ({ ...prev, vehicle_id: ticketWithVehicle.job_tickets.vehicle.id }));
+        }
       }
     }
-  }, [appointmentTickets, appointmentTicketsLoaded]);
+  }, [appointmentTickets, appointmentTicketsLoaded, selectedVehicleId]);
 
   // Update vehicle when tickets change
   useEffect(() => {
@@ -53,9 +57,15 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
       const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);
       if (firstSelectedTicket?.vehicle) {
         setSelectedVehicleId(firstSelectedTicket.vehicle.id);
+        setFormData(prev => ({ ...prev, vehicle_id: firstSelectedTicket.vehicle.id }));
       }
     }
   }, [selectedTickets, jobTickets, selectedVehicleId]);
+
+  // Update form data when vehicle changes
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, vehicle_id: selectedVehicleId }));
+  }, [selectedVehicleId]);
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
