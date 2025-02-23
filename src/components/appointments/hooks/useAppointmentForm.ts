@@ -31,9 +31,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
-    initialData?.job_tickets?.[0]?.vehicle?.id || null
-  );
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
@@ -111,6 +109,12 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     }
   }, [selectedTickets, jobTickets, selectedVehicleId]);
 
+  useEffect(() => {
+    if (initialData?.job_tickets?.[0]?.vehicle?.id) {
+      setSelectedVehicleId(initialData.job_tickets[0].vehicle.id);
+    }
+  }, [initialData]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -184,7 +188,6 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
         toast.success("Appointment created successfully");
       }
 
-      // Invalidate all relevant queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["appointments"] }),
         queryClient.invalidateQueries({ queryKey: ["client-appointments"] }),
@@ -211,7 +214,6 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
 
       if (error) throw error;
 
-      // Invalidate all relevant queries
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["appointments"] }),
         queryClient.invalidateQueries({ queryKey: ["client-appointments"] }),
