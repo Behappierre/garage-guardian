@@ -41,6 +41,7 @@ export const ClientDetails = ({
   onAddVehicle,
   onAddService,
 }: ClientDetailsProps) => {
+  const queryClient = useQueryClient();
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
 
@@ -66,11 +67,11 @@ export const ClientDetails = ({
 
       const formattedAppointments = appointmentsData.map(appointment => ({
         ...appointment,
-        job_tickets: appointment.job_tickets.map((t: any) => t.job_ticket)
+        job_tickets: appointment.job_tickets.map((t: any) => t.job_ticket).filter(Boolean)
       })) as AppointmentWithRelations[];
 
       return formattedAppointments;
-    }
+    },
   });
 
   const now = new Date();
@@ -88,6 +89,7 @@ export const ClientDetails = ({
 
   const handleDialogClose = () => {
     setShowAppointmentDialog(false);
+    queryClient.invalidateQueries({ queryKey: ["client-appointments", client.id] });
     // Clear the selected appointment after the dialog is closed
     setTimeout(() => setSelectedAppointment(null), 100);
   };

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -32,7 +31,9 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
+    initialData?.job_tickets?.[0]?.vehicle?.id || null
+  );
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
@@ -104,11 +105,11 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
   useEffect(() => {
     if (jobTickets && selectedTickets.length > 0) {
       const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);
-      if (firstSelectedTicket?.vehicle) {
+      if (firstSelectedTicket?.vehicle && !selectedVehicleId) {
         setSelectedVehicleId(firstSelectedTicket.vehicle.id);
       }
     }
-  }, [selectedTickets, jobTickets]);
+  }, [selectedTickets, jobTickets, selectedVehicleId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

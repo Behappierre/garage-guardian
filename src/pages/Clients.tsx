@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,6 +88,12 @@ const Clients = () => {
     
     if (data) {
       setSelectedClient(data);
+      queryClient.setQueryData(["clients"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((client: Client) => 
+          client.id === data.id ? data : client
+        );
+      });
     }
   };
 
@@ -119,7 +124,6 @@ const Clients = () => {
     }
   };
 
-  // Update selected client when clients data changes
   useEffect(() => {
     const updateSelectedClient = async () => {
       if (selectedClient) {
