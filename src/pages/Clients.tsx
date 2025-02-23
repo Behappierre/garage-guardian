@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,8 @@ const Clients = () => {
 
       if (error) throw error;
       return data as Client[];
-    }
+    },
+    staleTime: 10000
   });
 
   const selectedClient = clients?.find(c => c.id === selectedClientId) || null;
@@ -80,16 +80,16 @@ const Clients = () => {
     }
   };
 
-  const handleCloseClientDialog = async () => {
+  const handleCloseClientDialog = () => {
     setShowClientDialog(false);
-    await queryClient.invalidateQueries({ queryKey: ["clients"] });
     setEditingClient(null);
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
   };
 
-  const handleCloseVehicleDialog = async () => {
+  const handleCloseVehicleDialog = () => {
     setShowVehicleDialog(false);
     if (selectedClientId) {
-      await queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClientId] });
+      queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClientId] });
     }
   };
 
@@ -136,7 +136,12 @@ const Clients = () => {
           )}
         </div>
 
-        <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+        <Dialog 
+          open={showClientDialog} 
+          onOpenChange={(open) => {
+            if (!open) handleCloseClientDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             <ClientForm
               initialData={editingClient || undefined}
@@ -145,7 +150,12 @@ const Clients = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showVehicleDialog} onOpenChange={setShowVehicleDialog}>
+        <Dialog 
+          open={showVehicleDialog}
+          onOpenChange={(open) => {
+            if (!open) handleCloseVehicleDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[425px]">
             {selectedClient && (
               <VehicleForm
@@ -156,7 +166,12 @@ const Clients = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
+        <Dialog 
+          open={showServiceDialog}
+          onOpenChange={(open) => {
+            if (!open) handleCloseServiceDialog();
+          }}
+        >
           <DialogContent className="sm:max-w-[600px]">
             {selectedClient && (
               <ServiceForm
