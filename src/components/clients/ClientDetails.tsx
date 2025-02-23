@@ -71,6 +71,7 @@ export const ClientDetails = ({
 
       return formattedAppointments;
     },
+    staleTime: 0,
   });
 
   const now = new Date();
@@ -86,12 +87,8 @@ export const ClientDetails = ({
     setShowAppointmentDialog(true);
   };
 
-  const handleDialogClose = async () => {
+  const handleDialogClose = () => {
     setShowAppointmentDialog(false);
-    await queryClient.invalidateQueries({ 
-      queryKey: ["client-appointments", client.id],
-      exact: true 
-    });
     setSelectedAppointment(null);
   };
 
@@ -209,7 +206,14 @@ export const ClientDetails = ({
         </div>
       </div>
 
-      <Dialog open={showAppointmentDialog} onOpenChange={handleDialogClose}>
+      <Dialog 
+        open={showAppointmentDialog} 
+        onOpenChange={(open) => {
+          if (!open) {
+            handleDialogClose();
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[600px]">
           {selectedAppointment && (
             <AppointmentForm

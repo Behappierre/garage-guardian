@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { AppointmentFormData } from "./types";
@@ -75,11 +76,11 @@ export const useAppointmentMutations = () => {
         toast.success("Appointment created successfully");
       }
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["client-appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["clients"] })
-      ]);
+      // Only invalidate appointment-related queries
+      await queryClient.invalidateQueries({ 
+        queryKey: ["client-appointments", formData.client_id],
+        exact: true
+      });
       
       onClose();
     } catch (error: any) {
@@ -101,11 +102,11 @@ export const useAppointmentMutations = () => {
 
       if (error) throw error;
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["client-appointments"] }),
-        queryClient.invalidateQueries({ queryKey: ["clients"] })
-      ]);
+      // Only invalidate the appointments query
+      await queryClient.invalidateQueries({ 
+        queryKey: ["client-appointments"],
+        type: 'all'
+      });
 
       toast.success("Appointment cancelled successfully");
       onClose();
