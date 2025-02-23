@@ -20,7 +20,16 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing environment variables');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Server configuration error',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseKey, {
@@ -30,11 +39,19 @@ serve(async (req: Request) => {
       },
     });
 
-    // Get and validate the request body
     const { email, password, firstName, lastName, role } = await req.json();
     
     if (!email || !password || !firstName || !lastName || !role) {
-      throw new Error('Missing required fields');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Missing required fields',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
     }
 
     console.log('Creating user with email:', email);
@@ -52,14 +69,30 @@ serve(async (req: Request) => {
 
     if (createUserError) {
       console.error('Error creating user:', createUserError);
-      throw createUserError;
+      return new Response(
+        JSON.stringify({ 
+          error: createUserError.message,
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
     }
 
     if (!userData?.user) {
-      throw new Error('User creation failed - no user data returned');
+      return new Response(
+        JSON.stringify({ 
+          error: 'User creation failed - no user data returned',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
     }
-
-    console.log('User created successfully:', userData.user.id);
 
     // Assign the role
     const { error: roleError } = await supabaseClient
@@ -68,39 +101,42 @@ serve(async (req: Request) => {
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
-      throw roleError;
+      return new Response(
+        JSON.stringify({ 
+          error: roleError.message,
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
     }
 
-    console.log('Role assigned successfully');
+    console.log('User created and role assigned successfully');
 
     return new Response(
       JSON.stringify({ 
-        message: 'User created successfully', 
+        message: 'User created successfully',
         userId: userData.user.id,
         status: 'success'
       }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 201,
       }
     );
 
   } catch (error) {
-    console.error('Error in create-user function:', error);
+    console.error('Unexpected error in create-user function:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error.message || 'An unexpected error occurred',
         status: 'error'
       }),
       { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
       }
     );
   }
