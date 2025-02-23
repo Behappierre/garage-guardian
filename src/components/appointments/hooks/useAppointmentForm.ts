@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -32,9 +31,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
-    initialData?.job_tickets?.[0]?.vehicle?.id || null
-  );
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   // Get clients
   const { data: clients } = useQuery({
@@ -87,7 +84,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
   });
 
   // Get appointment tickets with vehicle information
-  const { data: appointmentTickets } = useQuery({
+  const { data: appointmentTickets, isSuccess: appointmentTicketsLoaded } = useQuery({
     queryKey: ["appointment-tickets", initialData?.id],
     enabled: !!initialData?.id,
     queryFn: async () => {
@@ -97,31 +94,32 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
           job_ticket_id,
           job_tickets (
             id,
+            ticket_number,
+            description,
             vehicle:vehicles(*)
           )
         `)
         .eq("appointment_id", initialData?.id);
       
       if (error) throw error;
-
-      // Set the vehicle ID from the first ticket that has a vehicle
-      const ticketWithVehicle = data.find(t => t.job_tickets?.vehicle);
-      if (ticketWithVehicle?.job_tickets?.vehicle?.id) {
-        setSelectedVehicleId(ticketWithVehicle.job_tickets.vehicle.id);
-      }
-      
-      return data.map(t => t.job_ticket_id);
+      return data;
     },
   });
 
-  // Set initial selected tickets from appointment
+  // Set initial selected tickets and vehicle from appointment
   useEffect(() => {
-    if (appointmentTickets) {
-      setSelectedTickets(appointmentTickets);
+    if (appointmentTicketsLoaded && appointmentTickets) {
+      setSelectedTickets(appointmentTickets.map(t => t.job_ticket_id));
+      
+      // Find first ticket with a vehicle and set it
+      const ticketWithVehicle = appointmentTickets.find(t => t.job_tickets?.vehicle);
+      if (ticketWithVehicle?.job_tickets?.vehicle?.id) {
+        setSelectedVehicleId(ticketWithVehicle.job_tickets.vehicle.id);
+      }
     }
-  }, [appointmentTickets]);
+  }, [appointmentTickets, appointmentTicketsLoaded]);
 
-  // Set vehicle ID from tickets if not already set
+  // Update vehicle when tickets change
   useEffect(() => {
     if (jobTickets && selectedTickets.length > 0 && !selectedVehicleId) {
       const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);
