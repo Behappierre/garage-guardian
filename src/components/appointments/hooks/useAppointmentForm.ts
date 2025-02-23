@@ -183,7 +183,13 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
         toast.success("Appointment created successfully");
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      // Invalidate all relevant queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["client-appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["clients"] })
+      ]);
+      
       onClose();
     } catch (error: any) {
       toast.error(error.message);
@@ -204,8 +210,14 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
 
       if (error) throw error;
 
+      // Invalidate all relevant queries
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["client-appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["clients"] })
+      ]);
+
       toast.success("Appointment cancelled successfully");
-      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
       onClose();
     } catch (error: any) {
       toast.error(error.message);
