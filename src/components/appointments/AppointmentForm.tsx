@@ -20,6 +20,7 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     formData,
     setFormData,
     isSubmitting,
+    isCancelling,
     selectedTickets,
     setSelectedTickets,
     clients,
@@ -27,7 +28,8 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     jobTickets,
     selectedVehicleId,
     setSelectedVehicleId,
-    handleSubmit
+    handleSubmit,
+    handleCancel
   } = useAppointmentForm({ initialData, selectedDate, onClose });
 
   const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId) || 
@@ -88,12 +90,24 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
       />
 
       <div className="flex justify-end gap-2">
+        {initialData && initialData.status !== 'cancelled' && (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleCancel}
+            disabled={isCancelling}
+          >
+            {isCancelling ? "Cancelling..." : "Cancel Appointment"}
+          </Button>
+        )}
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          Close
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : initialData ? "Update Appointment" : "Create Appointment"}
-        </Button>
+        {initialData?.status !== 'cancelled' && (
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : initialData ? "Update Appointment" : "Create Appointment"}
+          </Button>
+        )}
       </div>
     </form>
   );
