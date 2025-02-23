@@ -72,7 +72,7 @@ export const ClientDetails = ({
       return formattedAppointments;
     },
     staleTime: 0,
-    cacheTime: 0,
+    gcTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
