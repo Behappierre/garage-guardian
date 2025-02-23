@@ -43,12 +43,12 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
       if (error) {
         console.error('Error from create-user function:', error);
-        throw error;
+        throw new Error(error.message || 'Failed to create user');
       }
       
-      if (!data) {
-        console.error('No data returned from create-user function');
-        throw new Error('No response data from server');
+      if (!data || data.status === 'error') {
+        console.error('Error response from create-user function:', data);
+        throw new Error(data?.error || 'Failed to create user');
       }
 
       return data;
