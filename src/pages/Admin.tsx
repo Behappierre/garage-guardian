@@ -32,40 +32,65 @@ const Admin = () => {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading, error } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      // First get profiles data
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name");
+      try {
+        console.log('Fetching users data...');
 
-      if (profilesError) throw profilesError;
+        // First get profiles data
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name");
 
-      // Then get roles data
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
+        console.log('Profiles data:', profiles);
+        console.log('Profiles error:', profilesError);
 
-      if (rolesError) throw rolesError;
+        if (profilesError) throw profilesError;
 
-      // Finally get users data using the Edge Function
-      const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
-      
-      if (usersError) throw usersError;
+        // Then get roles data
+        const { data: roles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("user_id, role");
 
-      if (!usersResponse || !usersResponse.users) {
-        throw new Error('Failed to fetch users');
+        console.log('Roles data:', roles);
+        console.log('Roles error:', rolesError);
+
+        if (rolesError) throw rolesError;
+
+        // Finally get users data using the Edge Function
+        console.log('Calling get-users function...');
+        const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
+        
+        console.log('Users response:', usersResponse);
+        console.log('Users error:', usersError);
+
+        if (usersError) throw usersError;
+
+        if (!usersResponse || !usersResponse.users) {
+          throw new Error('Failed to fetch users: No users data returned');
+        }
+
+        // Map the data together
+        const mappedUsers = usersResponse.users.map((user: User) => {
+          const userProfile = profiles?.find((p: any) => p.id === user.id);
+          const userRole = roles?.find((r: any) => r.user_id === user.id);
+          
+          return {
+            id: user.id,
+            email: user.email || '',
+            role: userRole?.role || "none",
+            first_name: userProfile?.first_name || null,
+            last_name: userProfile?.last_name || null,
+          };
+        });
+
+        console.log('Mapped users data:', mappedUsers);
+        return mappedUsers;
+      } catch (error) {
+        console.error('Error in queryFn:', error);
+        throw error;
       }
-
-      // Map the data together
-      return usersResponse.users.map((user: User) => ({
-        id: user.id,
-        email: user.email || '',
-        role: roles.find((r: any) => r.user_id === user.id)?.role || "none",
-        first_name: profiles.find((p: any) => p.id === user.id)?.first_name || null,
-        last_name: profiles.find((p: any) => p.id === user.id)?.last_name || null,
-      }));
     },
   });
 
@@ -86,7 +111,32 @@ const Admin = () => {
     },
   });
 
-  if (isLoading) return <div>Loading...</div>;
+  if (error) {
+    console.error('Query error:', error);
+    return <div>Error loading users: {error.message}</div>;
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!users || users.length === 0) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+            Create User
+          </Button>
+        </div>
+        <div className="text-center py-8">No users found</div>
+        <CreateUserDialog
+          open={isCreateUserDialogOpen}
+          onOpenChange={setIsCreateUserDialogOpen}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6">
@@ -106,7 +156,7 @@ const Admin = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users?.map((user: UserData) => (
+          {users.map((user: UserData) => (
             <TableRow key={user.id}>
               <TableCell>{user.email}</TableCell>
               <TableCell>
