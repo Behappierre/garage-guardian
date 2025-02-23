@@ -4,15 +4,11 @@ import type { AppointmentWithRelations } from "@/types/appointment";
 
 interface AppointmentItemProps {
   appointment: AppointmentWithRelations;
-  onClick: () => void;
 }
 
-export const AppointmentItem = ({ appointment, onClick }: AppointmentItemProps) => {
+export const AppointmentItem = ({ appointment }: AppointmentItemProps) => {
   return (
-    <div 
-      className="border rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors"
-      onClick={onClick}
-    >
+    <div className="border rounded-lg p-4">
       <div className="flex justify-between items-start">
         <div>
           <h4 className="font-medium">{appointment.service_type}</h4>
