@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -31,8 +32,11 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
-  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(
+    initialData?.job_tickets?.[0]?.vehicle?.id || null
+  );
 
+  // Get clients
   const { data: clients } = useQuery({
     queryKey: ["clients"],
     queryFn: async () => {
@@ -46,6 +50,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     },
   });
 
+  // Get vehicles for selected client
   const { data: vehicles } = useQuery({
     queryKey: ["vehicles", formData.client_id],
     enabled: !!formData.client_id,
@@ -60,6 +65,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     },
   });
 
+  // Get job tickets for selected client
   const { data: jobTickets } = useQuery({
     queryKey: ["job_tickets", formData.client_id],
     enabled: !!formData.client_id,
@@ -80,6 +86,7 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     },
   });
 
+  // Get appointment tickets
   const { data: appointmentTickets } = useQuery({
     queryKey: ["appointment-tickets", initialData?.id],
     enabled: !!initialData?.id,
@@ -94,16 +101,18 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     },
   });
 
+  // Set initial selected tickets from appointment
   useEffect(() => {
     if (appointmentTickets) {
       setSelectedTickets(appointmentTickets);
     }
   }, [appointmentTickets]);
 
+  // Set vehicle ID from tickets if not already set
   useEffect(() => {
-    if (jobTickets && selectedTickets.length > 0) {
+    if (jobTickets && selectedTickets.length > 0 && !selectedVehicleId) {
       const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);
-      if (firstSelectedTicket?.vehicle && !selectedVehicleId) {
+      if (firstSelectedTicket?.vehicle) {
         setSelectedVehicleId(firstSelectedTicket.vehicle.id);
       }
     }
