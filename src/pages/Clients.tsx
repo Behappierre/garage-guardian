@@ -115,15 +115,21 @@ const Clients = () => {
   const handleCloseServiceDialog = async () => {
     setShowServiceDialog(false);
     if (selectedClient) {
-      await queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient.id] });
-      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      await queryClient.invalidateQueries({ 
+        queryKey: ["client-appointments", selectedClient.id],
+        exact: true
+      });
+      await queryClient.invalidateQueries({ 
+        queryKey: ["appointments"],
+        exact: true
+      });
     }
   };
 
   useEffect(() => {
     if (selectedClient && clients) {
       const currentClient = clients.find(c => c.id === selectedClient.id);
-      if (currentClient && JSON.stringify(currentClient) !== JSON.stringify(selectedClient)) {
+      if (currentClient) {
         setSelectedClient(currentClient);
       }
     }
