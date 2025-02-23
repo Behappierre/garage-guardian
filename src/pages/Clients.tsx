@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Sidebar } from "@/components/layout/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { UserPlus } from "lucide-react";
@@ -28,15 +27,6 @@ interface Vehicle {
   model: string;
   year: number;
   license_plate: string;
-}
-
-interface ServiceRecord {
-  id: string;
-  service_date: string;
-  service_type: string;
-  description: string;
-  cost: number;
-  status: string;
 }
 
 const Clients = () => {
@@ -77,22 +67,6 @@ const Clients = () => {
     enabled: !!selectedClient
   });
 
-  const { data: serviceHistory } = useQuery({
-    queryKey: ["service_history", selectedClient?.id],
-    queryFn: async () => {
-      if (!selectedClient) return [];
-      const { data, error } = await supabase
-        .from("service_history")
-        .select("*")
-        .eq("client_id", selectedClient.id)
-        .order("service_date", { ascending: false });
-
-      if (error) throw error;
-      return data as ServiceRecord[];
-    },
-    enabled: !!selectedClient
-  });
-
   const handleAddClient = () => {
     setEditingClient(null);
     setShowClientDialog(true);
@@ -111,7 +85,7 @@ const Clients = () => {
         <div className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
-            <p className="text-gray-500">Manage your client records and service history</p>
+            <p className="text-gray-500">Manage your client records and appointments</p>
           </div>
           <Button onClick={handleAddClient}>
             <UserPlus className="mr-2 h-4 w-4" />
@@ -133,7 +107,6 @@ const Clients = () => {
             <ClientDetails
               client={selectedClient}
               vehicles={clientVehicles}
-              serviceHistory={serviceHistory}
               onEditClient={handleEditClient}
               onAddVehicle={() => setShowVehicleDialog(true)}
               onAddService={() => setShowServiceDialog(true)}
