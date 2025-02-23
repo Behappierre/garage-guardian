@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -30,6 +30,7 @@ interface Vehicle {
 }
 
 const Clients = () => {
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   
@@ -64,7 +65,7 @@ const Clients = () => {
       if (error) throw error;
       return data as Vehicle[];
     },
-    enabled: !!selectedClient
+    enabled: !!selectedClient,
   });
 
   const handleAddClient = () => {
@@ -76,6 +77,28 @@ const Clients = () => {
     if (selectedClient) {
       setEditingClient(selectedClient);
       setShowClientDialog(true);
+    }
+  };
+
+  const handleCloseClientDialog = () => {
+    setShowClientDialog(false);
+    // Refresh clients data when dialog closes
+    queryClient.invalidateQueries({ queryKey: ["clients"] });
+  };
+
+  const handleCloseVehicleDialog = () => {
+    setShowVehicleDialog(false);
+    // Refresh vehicles data when dialog closes
+    if (selectedClient) {
+      queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClient.id] });
+    }
+  };
+
+  const handleCloseServiceDialog = () => {
+    setShowServiceDialog(false);
+    // Refresh client appointments when dialog closes
+    if (selectedClient) {
+      queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient.id] });
     }
   };
 
@@ -119,34 +142,34 @@ const Clients = () => {
         </div>
 
         {/* Client Dialog */}
-        <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
+        <Dialog open={showClientDialog} onOpenChange={handleCloseClientDialog}>
           <DialogContent className="sm:max-w-[425px]">
             <ClientForm
               initialData={editingClient || undefined}
-              onClose={() => setShowClientDialog(false)}
+              onClose={handleCloseClientDialog}
             />
           </DialogContent>
         </Dialog>
 
         {/* Vehicle Dialog */}
-        <Dialog open={showVehicleDialog} onOpenChange={setShowVehicleDialog}>
+        <Dialog open={showVehicleDialog} onOpenChange={handleCloseVehicleDialog}>
           <DialogContent className="sm:max-w-[425px]">
             {selectedClient && (
               <VehicleForm
                 clientId={selectedClient.id}
-                onClose={() => setShowVehicleDialog(false)}
+                onClose={handleCloseVehicleDialog}
               />
             )}
           </DialogContent>
         </Dialog>
 
         {/* Service Dialog */}
-        <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
+        <Dialog open={showServiceDialog} onOpenChange={handleCloseServiceDialog}>
           <DialogContent className="sm:max-w-[425px]">
             {selectedClient && (
               <ServiceForm
                 clientId={selectedClient.id}
-                onClose={() => setShowServiceDialog(false)}
+                onClose={handleCloseServiceDialog}
               />
             )}
           </DialogContent>
