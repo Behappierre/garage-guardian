@@ -10,4 +10,5 @@ export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
 export interface AppointmentWithRelations extends DBAppointment {
   client: DBClient;
   job_tickets?: DBJobTicket[];
+  vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
 }

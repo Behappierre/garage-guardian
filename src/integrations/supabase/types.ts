@@ -57,6 +57,7 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["appointment_status"]
           updated_at: string
+          vehicle_id: string | null
         }
         Insert: {
           client_id?: string | null
@@ -69,6 +70,7 @@ export type Database = {
           start_time: string
           status?: Database["public"]["Enums"]["appointment_status"]
           updated_at?: string
+          vehicle_id?: string | null
         }
         Update: {
           client_id?: string | null
@@ -81,6 +83,7 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["appointment_status"]
           updated_at?: string
+          vehicle_id?: string | null
         }
         Relationships: [
           {
@@ -95,6 +98,13 @@ export type Database = {
             columns: ["job_ticket_id"]
             isOneToOne: false
             referencedRelation: "job_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
         ]

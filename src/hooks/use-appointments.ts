@@ -11,7 +11,8 @@ export const useAppointments = () => {
         .from("appointments")
         .select(`
           *,
-          client:clients(*)
+          client:clients(*),
+          vehicle:vehicles(*)
         `)
         .order('start_time', { ascending: true });
 

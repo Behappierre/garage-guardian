@@ -36,6 +36,7 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
   const [isEditingVehicle, setIsEditingVehicle] = useState(false);
 
   const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId) || 
+    initialData?.vehicle ||
     jobTickets?.find(ticket => ticket.id === selectedTickets[0])?.vehicle;
 
   return (
