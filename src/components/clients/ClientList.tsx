@@ -53,7 +53,7 @@ export const ClientList = ({
   }, [clients, selectedClient, onSelectClient]);
 
   return (
-    <div className="col-span-1 bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="col-span-1 bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-148px)]">
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-900">Client List</h2>
       </div>
@@ -74,7 +74,7 @@ export const ClientList = ({
           </Button>
         </div>
       </div>
-      <div className="divide-y divide-gray-200 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <div className="divide-y divide-gray-200 overflow-y-auto h-[calc(100vh-264px)]">
         {isLoading ? (
           <div className="p-4 text-center text-gray-500">Loading...</div>
         ) : filteredClients && filteredClients.length > 0 ? (
