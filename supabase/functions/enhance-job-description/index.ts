@@ -26,19 +26,17 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert automotive technician and service writer. Your task is to enhance the job ticket description by:
-1. Expanding any abbreviations or technical terms
-2. Adding relevant diagnostic steps that should be checked
-3. Including any safety considerations
-4. Suggesting potential related issues to inspect
-5. If a vehicle is provided, include any model-specific considerations
-
-Format the response as a professional service description. Keep it concise but thorough, focusing on technical accuracy and completeness.
-Use proper automotive terminology but ensure it's understandable to customers.`
+            content: `You are an expert automotive technician. Your task is to:
+1. Review the job ticket description
+2. Based on the vehicle details and description, suggest a list of parts that might be needed
+3. Format the response as:
+   - First paragraph: Enhanced, professional description of the issue
+   - Second section: "Suggested Parts:" followed by a numbered list of parts, only add part numbers where there is a clear source
+Keep the response concise but thorough.`
           },
           {
             role: 'user',
-            content: `Please enhance this job ticket description${vehicle ? ` for a ${vehicle}` : ''}: ${description}`
+            content: `Please analyze this job ticket description${vehicle ? ` for a ${vehicle}` : ''}: ${description}`
           }
         ],
         temperature: 0.7,
