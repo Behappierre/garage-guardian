@@ -1,29 +1,15 @@
+
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, List, ExternalLink } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
-import { supabase } from "@/integrations/supabase/client";
+import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
 import { useNavigate } from "react-router-dom";
-import type { Database } from "@/integrations/supabase/types";
-
-export type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
-export type DBClient = Database["public"]["Tables"]["clients"]["Row"];
-export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
-  vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
-};
-
-export interface AppointmentWithRelations extends DBAppointment {
-  client: DBClient;
-  job_tickets?: DBJobTicket[];
-}
+import { useAppointments } from "@/hooks/use-appointments";
+import type { AppointmentWithRelations } from "@/types/appointment";
 
 const Appointments = () => {
   const navigate = useNavigate();
@@ -31,47 +17,7 @@ const Appointments = () => {
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  const { data: appointments, isLoading } = useQuery({
-    queryKey: ["appointments"],
-    queryFn: async () => {
-      const { data: appointmentsData, error: appointmentsError } = await supabase
-        .from("appointments")
-        .select(`
-          *,
-          client:clients(*)
-        `)
-        .order('start_time', { ascending: true });
-
-      if (appointmentsError) throw appointmentsError;
-
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from("appointment_job_tickets")
-        .select(`
-          appointment_id,
-          job_ticket:job_tickets(
-            *,
-            vehicle:vehicles(*)
-          )
-        `);
-
-      if (ticketsError) throw ticketsError;
-
-      const ticketsByAppointment = ticketsData.reduce((acc: Record<string, DBJobTicket[]>, curr) => {
-        if (curr.appointment_id && curr.job_ticket) {
-          if (!acc[curr.appointment_id]) {
-            acc[curr.appointment_id] = [];
-          }
-          acc[curr.appointment_id].push(curr.job_ticket);
-        }
-        return acc;
-      }, {});
-
-      return appointmentsData.map(appointment => ({
-        ...appointment,
-        job_tickets: ticketsByAppointment[appointment.id] || []
-      })) as AppointmentWithRelations[];
-    },
-  });
+  const { data: appointments, isLoading } = useAppointments();
 
   const handleDateSelect = (arg: { start: Date; end: Date }) => {
     setSelectedDate(arg.start);
@@ -87,25 +33,6 @@ const Appointments = () => {
     e.stopPropagation();
     navigate(`/dashboard/job-tickets?id=${ticketId}`);
   };
-
-  const getEventTitle = (appointment: AppointmentWithRelations) => {
-    const clientName = `${appointment.client.first_name} ${appointment.client.last_name}`;
-    const vehicle = appointment.job_tickets?.[0]?.vehicle;
-    
-    if (vehicle) {
-      return `${clientName} - ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.license_plate ? ` (${vehicle.license_plate})` : ''} - ${appointment.service_type}`;
-    }
-    
-    return `${clientName} - ${appointment.service_type}`;
-  };
-
-  const calendarEvents = appointments?.map(appointment => ({
-    id: appointment.id,
-    title: getEventTitle(appointment),
-    start: appointment.start_time,
-    end: appointment.end_time,
-    extendedProps: appointment,
-  })) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -143,24 +70,11 @@ const Appointments = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="calendar" className="bg-white p-4 rounded-lg border">
-            <FullCalendar
-              plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-              initialView="timeGridWeek"
-              headerToolbar={{
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-              }}
-              height="auto"
-              events={calendarEvents}
-              selectable={true}
-              select={handleDateSelect}
-              eventClick={(arg: any) => handleEventClick(arg)}
-              slotMinTime="08:00:00"
-              slotMaxTime="18:00:00"
-              allDaySlot={false}
-              slotDuration="00:30:00"
+          <TabsContent value="calendar">
+            <AppointmentCalendar
+              appointments={appointments || []}
+              onDateSelect={handleDateSelect}
+              onEventClick={handleEventClick}
             />
           </TabsContent>
 

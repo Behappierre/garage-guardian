@@ -1,0 +1,13 @@
+
+import type { Database } from "@/integrations/supabase/types";
+
+export type DBAppointment = Database["public"]["Tables"]["appointments"]["Row"];
+export type DBClient = Database["public"]["Tables"]["clients"]["Row"];
+export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
+  vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
+};
+
+export interface AppointmentWithRelations extends DBAppointment {
+  client: DBClient;
+  job_tickets?: DBJobTicket[];
+}
