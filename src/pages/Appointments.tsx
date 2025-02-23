@@ -24,8 +24,8 @@ const Appointments = () => {
     setShowAppointmentForm(true);
   };
 
-  const handleEventClick = (arg: { event: { extendedProps: AppointmentWithRelations } }) => {
-    setSelectedAppointment(arg.event.extendedProps);
+  const handleEventClick = (appointment: AppointmentWithRelations) => {
+    setSelectedAppointment(appointment);
     setShowAppointmentForm(true);
   };
 

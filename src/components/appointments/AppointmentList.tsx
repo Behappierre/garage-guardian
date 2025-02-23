@@ -1,6 +1,6 @@
 
 import { format } from "date-fns";
-import type { AppointmentWithRelations } from "@/pages/Appointments";
+import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
 
 interface AppointmentListProps {

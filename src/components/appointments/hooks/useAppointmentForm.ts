@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AppointmentWithRelations } from "@/pages/Appointments";
+import type { AppointmentWithRelations } from "@/types/appointment";
 
 interface UseAppointmentFormProps {
   initialData?: AppointmentWithRelations | null;
@@ -100,7 +99,6 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     }
   }, [appointmentTickets]);
 
-  // Update vehicle ID when tickets are selected
   useEffect(() => {
     if (jobTickets && selectedTickets.length > 0) {
       const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);

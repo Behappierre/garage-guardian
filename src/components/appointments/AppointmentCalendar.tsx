@@ -3,12 +3,13 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { EventClickArg } from "@fullcalendar/core";
 import type { AppointmentWithRelations } from "@/types/appointment";
 
 interface AppointmentCalendarProps {
   appointments: AppointmentWithRelations[];
   onDateSelect: (arg: { start: Date; end: Date }) => void;
-  onEventClick: (arg: { event: { extendedProps: AppointmentWithRelations } }) => void;
+  onEventClick: (appointment: AppointmentWithRelations) => void;
 }
 
 export const AppointmentCalendar = ({
@@ -35,6 +36,10 @@ export const AppointmentCalendar = ({
     extendedProps: appointment,
   })) || [];
 
+  const handleEventClick = (clickInfo: EventClickArg) => {
+    onEventClick(clickInfo.event.extendedProps as AppointmentWithRelations);
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg border">
       <FullCalendar
@@ -49,7 +54,7 @@ export const AppointmentCalendar = ({
         events={calendarEvents}
         selectable={true}
         select={onDateSelect}
-        eventClick={onEventClick}
+        eventClick={handleEventClick}
         slotMinTime="08:00:00"
         slotMaxTime="18:00:00"
         allDaySlot={false}

@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { AppointmentWithRelations } from "@/pages/Appointments";
+import type { AppointmentWithRelations } from "@/types/appointment";
 import { ClientSelector } from "./ClientSelector";
 import { TicketSelector } from "./TicketSelector";
 import { TimeSelector } from "./TimeSelector";
