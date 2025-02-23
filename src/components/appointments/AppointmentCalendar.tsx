@@ -19,7 +19,7 @@ export const AppointmentCalendar = ({
 }: AppointmentCalendarProps) => {
   const getEventTitle = (appointment: AppointmentWithRelations) => {
     const clientName = `${appointment.client.first_name} ${appointment.client.last_name}`;
-    const vehicle = appointment.job_tickets?.[0]?.vehicle;
+    const vehicle = appointment.vehicle || appointment.job_tickets?.[0]?.vehicle;
     
     if (vehicle) {
       return `${clientName} - ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.license_plate ? ` (${vehicle.license_plate})` : ''} - ${appointment.service_type}`;
@@ -28,13 +28,15 @@ export const AppointmentCalendar = ({
     return `${clientName} - ${appointment.service_type}`;
   };
 
-  const calendarEvents = appointments?.map(appointment => ({
-    id: appointment.id,
-    title: getEventTitle(appointment),
-    start: appointment.start_time,
-    end: appointment.end_time,
-    extendedProps: appointment,
-  })) || [];
+  const calendarEvents = appointments
+    ?.filter(appointment => appointment.status !== 'cancelled')
+    .map(appointment => ({
+      id: appointment.id,
+      title: getEventTitle(appointment),
+      start: appointment.start_time,
+      end: appointment.end_time,
+      extendedProps: appointment,
+    })) || [];
 
   const handleEventClick = (clickInfo: EventClickArg) => {
     onEventClick(clickInfo.event.extendedProps as AppointmentWithRelations);
