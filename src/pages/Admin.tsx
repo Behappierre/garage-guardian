@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { PasswordResetDialog } from "@/components/admin/PasswordResetDialog";
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { User } from '@supabase/supabase-js';
 
 interface UserData {
@@ -28,6 +29,7 @@ const Admin = () => {
   const [selectedUser, setSelectedUser] = useState<UserData | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: users, isLoading } = useQuery({
@@ -80,7 +82,12 @@ const Admin = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <h1 className="text-2xl font-bold mb-6">User Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">User Management</h1>
+        <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+          Create User
+        </Button>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
@@ -147,6 +154,11 @@ const Admin = () => {
           />
         </>
       )}
+      
+      <CreateUserDialog
+        open={isCreateUserDialogOpen}
+        onOpenChange={setIsCreateUserDialogOpen}
+      />
     </div>
   );
 };
