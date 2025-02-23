@@ -7,14 +7,31 @@ import {
   Settings,
   LogOut,
   Wrench,
+  UserCog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export const Sidebar = () => {
   const { user } = useAuth();
+
+  const { data: isAdmin } = useQuery({
+    queryKey: ["userRole", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (error) throw error;
+      return data?.role === "administrator";
+    },
+    enabled: !!user,
+  });
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -90,6 +107,22 @@ export const Sidebar = () => {
                 Job Tickets
               </NavLink>
             </li>
+            {isAdmin && (
+              <li>
+                <NavLink
+                  to="/dashboard/admin"
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                      isActive && "bg-primary/5 text-primary hover:bg-primary/5"
+                    )
+                  }
+                >
+                  <UserCog className="w-5 h-5" />
+                  Admin
+                </NavLink>
+              </li>
+            )}
           </ul>
         </nav>
 
