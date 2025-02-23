@@ -1,3 +1,4 @@
+
 import { Car, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -71,10 +72,9 @@ export const ClientDetails = ({
 
       return formattedAppointments;
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 5000, // Keep data fresh for 5 seconds
     refetchOnMount: true,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: false // Don't refetch on window focus to prevent unnecessary updates
   });
 
   const now = new Date();
@@ -92,6 +92,11 @@ export const ClientDetails = ({
 
   const handleDialogClose = () => {
     setShowAppointmentDialog(false);
+    // Only invalidate the appointments query for this specific client
+    queryClient.invalidateQueries({ 
+      queryKey: ["client-appointments", client.id],
+      exact: true 
+    });
     setTimeout(() => {
       setSelectedAppointment(null);
     }, 100);
@@ -141,11 +146,11 @@ export const ClientDetails = ({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm text-gray-500">Email</p>
-            <p className="font-medium">{client.email}</p>
+            <p className="font-medium">{client.email || "No email"}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Phone</p>
-            <p className="font-medium">{client.phone}</p>
+            <p className="font-medium">{client.phone || "No phone"}</p>
           </div>
           <div className="col-span-2">
             <p className="text-sm text-gray-500">Notes</p>
@@ -174,10 +179,13 @@ export const ClientDetails = ({
                 {vehicle.year} {vehicle.make} {vehicle.model}
               </h4>
               <p className="text-sm text-gray-500">
-                License: {vehicle.license_plate}
+                License: {vehicle.license_plate || "No plate"}
               </p>
             </div>
           ))}
+          {(!vehicles || vehicles.length === 0) && (
+            <div className="col-span-2 text-gray-500">No vehicles added</div>
+          )}
         </div>
       </div>
 
@@ -214,9 +222,7 @@ export const ClientDetails = ({
       <Dialog 
         open={showAppointmentDialog} 
         onOpenChange={(open) => {
-          if (!open) {
-            handleDialogClose();
-          }
+          if (!open) handleDialogClose();
         }}
       >
         <DialogContent className="sm:max-w-[600px]">
