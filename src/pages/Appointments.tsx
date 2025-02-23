@@ -1,11 +1,9 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { Sidebar } from "@/components/layout/Sidebar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, List, ExternalLink } from "lucide-react";
@@ -36,7 +34,6 @@ const Appointments = () => {
   const { data: appointments, isLoading } = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
-      // First, get all appointments with their clients
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
@@ -47,7 +44,6 @@ const Appointments = () => {
 
       if (appointmentsError) throw appointmentsError;
 
-      // Then, get all job tickets associated with these appointments
       const { data: ticketsData, error: ticketsError } = await supabase
         .from("appointment_job_tickets")
         .select(`
@@ -60,7 +56,6 @@ const Appointments = () => {
 
       if (ticketsError) throw ticketsError;
 
-      // Organize job tickets by appointment
       const ticketsByAppointment = ticketsData.reduce((acc: Record<string, DBJobTicket[]>, curr) => {
         if (curr.appointment_id && curr.job_ticket) {
           if (!acc[curr.appointment_id]) {
@@ -71,7 +66,6 @@ const Appointments = () => {
         return acc;
       }, {});
 
-      // Merge appointments with their job tickets
       return appointmentsData.map(appointment => ({
         ...appointment,
         job_tickets: ticketsByAppointment[appointment.id] || []
@@ -114,10 +108,8 @@ const Appointments = () => {
   })) || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      
-      <main className="flex-1 ml-64 p-8">
+    <div className="min-h-screen bg-gray-50">
+      <main className="p-8">
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
