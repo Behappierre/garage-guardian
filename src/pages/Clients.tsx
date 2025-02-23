@@ -80,10 +80,23 @@ const Clients = () => {
     }
   };
 
-  const handleCloseClientDialog = () => {
+  const handleCloseClientDialog = async () => {
     setShowClientDialog(false);
     // Refresh clients data when dialog closes
-    queryClient.invalidateQueries({ queryKey: ["clients"] });
+    await queryClient.invalidateQueries({ queryKey: ["clients"] });
+    
+    // Update selected client with fresh data
+    if (selectedClient) {
+      const { data } = await supabase
+        .from("clients")
+        .select("id, first_name, last_name, email, phone, notes, created_at")
+        .eq("id", selectedClient.id)
+        .single();
+      
+      if (data) {
+        setSelectedClient(data);
+      }
+    }
   };
 
   const handleCloseVehicleDialog = () => {
@@ -101,6 +114,21 @@ const Clients = () => {
       queryClient.invalidateQueries({ queryKey: ["client-appointments", selectedClient.id] });
     }
   };
+
+  // Update selected client when clients data changes
+  const updateSelectedClient = () => {
+    if (selectedClient && clients) {
+      const updatedClient = clients.find(c => c.id === selectedClient.id);
+      if (updatedClient && JSON.stringify(updatedClient) !== JSON.stringify(selectedClient)) {
+        setSelectedClient(updatedClient);
+      }
+    }
+  };
+
+  // Call updateSelectedClient whenever clients data changes
+  useState(() => {
+    updateSelectedClient();
+  }, [clients]);
 
   return (
     <div className="min-h-screen bg-gray-50">
