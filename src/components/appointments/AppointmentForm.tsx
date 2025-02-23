@@ -8,6 +8,7 @@ import { ServiceTypeInput } from "./ServiceTypeInput";
 import { NotesInput } from "./NotesInput";
 import { VehicleSelector } from "./VehicleSelector";
 import { useAppointmentForm } from "./hooks/useAppointmentForm";
+import { useState } from "react";
 
 interface AppointmentFormProps {
   initialData?: AppointmentWithRelations | null;
@@ -32,6 +33,8 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
     handleCancel
   } = useAppointmentForm({ initialData, selectedDate, onClose });
 
+  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
+
   const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId) || 
     jobTickets?.find(ticket => ticket.id === selectedTickets[0])?.vehicle;
 
@@ -43,26 +46,44 @@ export const AppointmentForm = ({ initialData, selectedDate, onClose }: Appointm
         onClientChange={(clientId) => {
           setFormData(prev => ({ ...prev, client_id: clientId }));
           setSelectedVehicleId(null);
+          setIsEditingVehicle(false);
         }}
       />
 
-      {selectedVehicle && (
-        <div className="p-3 bg-gray-50 rounded-md">
-          <p className="text-sm font-medium text-gray-700">Selected Vehicle:</p>
-          <p className="text-sm text-gray-600">
-            {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
-            {selectedVehicle.license_plate && (
-              <span className="ml-1">({selectedVehicle.license_plate})</span>
-            )}
-          </p>
+      {selectedVehicle && !isEditingVehicle && (
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <label className="text-sm font-medium text-gray-700">Vehicle</label>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsEditingVehicle(true)}
+            >
+              Change Vehicle
+            </Button>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-md">
+            <p className="text-sm text-gray-600">
+              {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
+              {selectedVehicle.license_plate && (
+                <span className="ml-1">({selectedVehicle.license_plate})</span>
+              )}
+            </p>
+          </div>
         </div>
       )}
 
-      <VehicleSelector
-        vehicles={vehicles}
-        selectedVehicleId={selectedVehicleId}
-        onVehicleChange={setSelectedVehicleId}
-      />
+      {(!selectedVehicle || isEditingVehicle) && (
+        <VehicleSelector
+          vehicles={vehicles}
+          selectedVehicleId={selectedVehicleId}
+          onVehicleChange={(vehicleId) => {
+            setSelectedVehicleId(vehicleId);
+            setIsEditingVehicle(false);
+          }}
+        />
+      )}
 
       <TicketSelector
         clientId={formData.client_id}
