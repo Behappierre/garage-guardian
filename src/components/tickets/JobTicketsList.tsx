@@ -1,5 +1,8 @@
 
 import { format } from "date-fns";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
@@ -22,6 +25,8 @@ const formatStatus = (status: string | undefined) => {
 };
 
 export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTicketsListProps) => {
+  const [expandedTickets, setExpandedTickets] = useState<Record<string, boolean>>({});
+
   if (isLoading) {
     return <div className="text-center py-4">Loading job tickets...</div>;
   }
@@ -29,6 +34,20 @@ export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTickets
   if (!tickets?.length) {
     return <div className="text-center py-4">No job tickets found</div>;
   }
+
+  const toggleExpand = (ticketId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedTickets(prev => ({
+      ...prev,
+      [ticketId]: !prev[ticketId]
+    }));
+  };
+
+  const getDescriptionPreview = (description: string) => {
+    const lines = description.split('\n').filter(line => line.trim());
+    if (lines.length <= 5) return description;
+    return lines.slice(0, 5).join('\n');
+  };
 
   return (
     <div className="space-y-4">
@@ -39,7 +58,7 @@ export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTickets
           className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
         >
           <div className="flex justify-between items-start">
-            <div>
+            <div className="flex-1">
               <h3 className="font-medium text-lg">{ticket.ticket_number}</h3>
               {ticket.client ? (
                 <p className="text-sm text-gray-600 mt-1">
@@ -56,7 +75,26 @@ export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTickets
                   )}
                 </p>
               )}
-              <p className="text-sm mt-2">{ticket.description}</p>
+              <div className="mt-2 text-sm whitespace-pre-line">
+                {expandedTickets[ticket.id] 
+                  ? ticket.description
+                  : getDescriptionPreview(ticket.description || '')}
+                {ticket.description && ticket.description.split('\n').filter(line => line.trim()).length > 5 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1"
+                    onClick={(e) => toggleExpand(ticket.id, e)}
+                  >
+                    {expandedTickets[ticket.id] ? (
+                      <ChevronUp className="h-4 w-4 mr-1" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 mr-1" />
+                    )}
+                    {expandedTickets[ticket.id] ? "Less" : "More"}
+                  </Button>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-1">
                 Created: {format(new Date(ticket.created_at), 'MMM d, yyyy')}
               </p>
