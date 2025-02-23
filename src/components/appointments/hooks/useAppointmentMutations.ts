@@ -76,10 +76,11 @@ export const useAppointmentMutations = () => {
         toast.success("Appointment created successfully");
       }
 
-      // Only invalidate appointment-related queries
+      // Only invalidate the specific appointment queries
       await queryClient.invalidateQueries({ 
         queryKey: ["client-appointments", formData.client_id],
-        exact: true
+        exact: true,
+        refetchType: 'all'
       });
       
       onClose();
@@ -102,7 +103,7 @@ export const useAppointmentMutations = () => {
 
       if (error) throw error;
 
-      // Only invalidate the appointments query
+      // Only invalidate the appointments query for this specific appointment
       await queryClient.invalidateQueries({ 
         queryKey: ["client-appointments"],
         type: 'all'

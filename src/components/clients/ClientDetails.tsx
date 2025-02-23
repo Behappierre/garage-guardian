@@ -72,6 +72,9 @@ export const ClientDetails = ({
       return formattedAppointments;
     },
     staleTime: 0,
+    cacheTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   const now = new Date();
@@ -89,7 +92,9 @@ export const ClientDetails = ({
 
   const handleDialogClose = () => {
     setShowAppointmentDialog(false);
-    setSelectedAppointment(null);
+    setTimeout(() => {
+      setSelectedAppointment(null);
+    }, 100);
   };
 
   const renderAppointment = (appointment: AppointmentWithRelations) => (
