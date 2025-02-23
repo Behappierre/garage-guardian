@@ -14,19 +14,28 @@ serve(async (req: Request) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      }
-    );
+    console.log('Received request to create-user function');
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing environment variables');
+    }
 
-    // Get the request body
+    const supabaseClient = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    // Get and validate the request body
     const { email, password, firstName, lastName, role } = await req.json();
+    
+    if (!email || !password || !firstName || !lastName || !role) {
+      throw new Error('Missing required fields');
+    }
 
     console.log('Creating user with email:', email);
 
@@ -46,6 +55,10 @@ serve(async (req: Request) => {
       throw createUserError;
     }
 
+    if (!userData?.user) {
+      throw new Error('User creation failed - no user data returned');
+    }
+
     console.log('User created successfully:', userData.user.id);
 
     // Assign the role
@@ -61,9 +74,16 @@ serve(async (req: Request) => {
     console.log('Role assigned successfully');
 
     return new Response(
-      JSON.stringify({ message: 'User created successfully', userId: userData.user.id }),
+      JSON.stringify({ 
+        message: 'User created successfully', 
+        userId: userData.user.id,
+        status: 'success'
+      }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
         status: 200,
       }
     );
@@ -71,9 +91,15 @@ serve(async (req: Request) => {
   } catch (error) {
     console.error('Error in create-user function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        status: 'error'
+      }),
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
         status: 400,
       }
     );

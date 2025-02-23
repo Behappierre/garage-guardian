@@ -27,6 +27,8 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
+      console.log('Attempting to create user:', { email, firstName, lastName, role });
+      
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
           email,
@@ -37,8 +39,17 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         },
       });
 
-      if (error) throw error;
-      if (!data) throw new Error('No data returned from function');
+      console.log('Response from create-user function:', { data, error });
+
+      if (error) {
+        console.error('Error from create-user function:', error);
+        throw error;
+      }
+      
+      if (!data) {
+        console.error('No data returned from create-user function');
+        throw new Error('No response data from server');
+      }
 
       return data;
     },
@@ -54,9 +65,19 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       setRole("front_desk");
     },
     onError: (error: Error) => {
+      console.error('Error in createUserMutation:', error);
       toast.error(`Error creating user: ${error.message}`);
     },
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createUserMutation.mutate();
+    } catch (error) {
+      console.error('Error in form submission:', error);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,10 +85,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          createUserMutation.mutate();
-        }} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
