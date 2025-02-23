@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { PasswordResetDialog } from "@/components/admin/PasswordResetDialog";
+import { User } from '@supabase/supabase-js';
 
 interface UserData {
   id: string;
@@ -44,13 +45,16 @@ const Admin = () => {
 
       if (rolesError) throw rolesError;
 
-      const { data: users, error: usersError } = await supabase.auth.admin.listUsers();
+      const { data: usersResponse, error: usersError } = await supabase.auth.admin.listUsers();
       
       if (usersError) throw usersError;
 
-      return users.map((user: any) => ({
+      // Handle the response structure correctly
+      const usersList = usersResponse.users || [];
+
+      return usersList.map((user: User) => ({
         id: user.id,
-        email: user.email,
+        email: user.email || '',
         role: roles.find((r: any) => r.user_id === user.id)?.role || "none",
         first_name: profiles.find((p: any) => p.id === user.id)?.first_name || null,
         last_name: profiles.find((p: any) => p.id === user.id)?.last_name || null,

@@ -12,6 +12,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Database } from "@/integrations/supabase/types";
+
+type AppRole = Database['public']['Enums']['app_role'];
 
 interface UserRoleDialogProps {
   user: {
@@ -24,7 +27,7 @@ interface UserRoleDialogProps {
 }
 
 export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps) {
-  const [selectedRole, setSelectedRole] = useState(user.role);
+  const [selectedRole, setSelectedRole] = useState<AppRole>(user.role as AppRole);
   const queryClient = useQueryClient();
 
   const updateRoleMutation = useMutation({
@@ -40,7 +43,7 @@ export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps
       // Then insert new role
       const { error: insertError } = await supabase
         .from("user_roles")
-        .insert([{ user_id: user.id, role: selectedRole }]);
+        .insert({ user_id: user.id, role: selectedRole });
 
       if (insertError) throw insertError;
     },
@@ -61,7 +64,7 @@ export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps
           <DialogTitle>Change Role for {user.email}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <RadioGroup value={selectedRole} onValueChange={setSelectedRole}>
+          <RadioGroup value={selectedRole} onValueChange={(value: AppRole) => setSelectedRole(value)}>
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="administrator" id="administrator" />
               <Label htmlFor="administrator">Administrator</Label>
