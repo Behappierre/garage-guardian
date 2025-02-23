@@ -86,6 +86,12 @@ export const ClientDetails = ({
     setShowAppointmentDialog(true);
   };
 
+  const handleDialogClose = () => {
+    setShowAppointmentDialog(false);
+    // Clear the selected appointment after the dialog is closed
+    setTimeout(() => setSelectedAppointment(null), 100);
+  };
+
   const renderAppointment = (appointment: AppointmentWithRelations) => (
     <div 
       key={appointment.id} 
@@ -205,11 +211,11 @@ export const ClientDetails = ({
       </div>
 
       {/* Appointment Edit Dialog */}
-      <Dialog open={showAppointmentDialog} onOpenChange={setShowAppointmentDialog}>
+      <Dialog open={showAppointmentDialog} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[600px]">
           <AppointmentForm
             initialData={selectedAppointment}
-            onClose={() => setShowAppointmentDialog(false)}
+            onClose={handleDialogClose}
           />
         </DialogContent>
       </Dialog>
