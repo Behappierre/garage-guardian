@@ -206,7 +206,7 @@ export const ClientDetails = ({
 
       {/* Appointment Edit Dialog */}
       <Dialog open={showAppointmentDialog} onOpenChange={setShowAppointmentDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px]">
           <AppointmentForm
             initialData={selectedAppointment}
             onClose={() => setShowAppointmentDialog(false)}
