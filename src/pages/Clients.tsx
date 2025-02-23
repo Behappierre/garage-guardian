@@ -106,10 +106,8 @@ const Clients = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      
-      <main className="flex-1 ml-64 p-8">
+    <div className="min-h-screen bg-gray-50">
+      <main className="p-8">
         <div className="mb-8 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
