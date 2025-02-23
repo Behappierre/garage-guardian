@@ -86,17 +86,30 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     },
   });
 
-  // Get appointment tickets
+  // Get appointment tickets with vehicle information
   const { data: appointmentTickets } = useQuery({
     queryKey: ["appointment-tickets", initialData?.id],
     enabled: !!initialData?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointment_job_tickets")
-        .select("job_ticket_id")
+        .select(`
+          job_ticket_id,
+          job_tickets (
+            id,
+            vehicle:vehicles(*)
+          )
+        `)
         .eq("appointment_id", initialData?.id);
       
       if (error) throw error;
+
+      // Set the vehicle ID from the first ticket that has a vehicle
+      const ticketWithVehicle = data.find(t => t.job_tickets?.vehicle);
+      if (ticketWithVehicle?.job_tickets?.vehicle?.id) {
+        setSelectedVehicleId(ticketWithVehicle.job_tickets.vehicle.id);
+      }
+      
       return data.map(t => t.job_ticket_id);
     },
   });
