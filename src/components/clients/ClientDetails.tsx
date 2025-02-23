@@ -1,6 +1,10 @@
 
 import { Car, Calendar } from "lucide-react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import type { AppointmentWithRelations } from "@/types/appointment";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Client {
   id: string;
@@ -19,19 +23,9 @@ interface Vehicle {
   license_plate: string;
 }
 
-interface ServiceRecord {
-  id: string;
-  service_date: string;
-  service_type: string;
-  description: string;
-  cost: number;
-  status: string;
-}
-
 interface ClientDetailsProps {
   client: Client;
   vehicles: Vehicle[] | undefined;
-  serviceHistory: ServiceRecord[] | undefined;
   onEditClient: () => void;
   onAddVehicle: () => void;
   onAddService: () => void;
@@ -40,11 +34,78 @@ interface ClientDetailsProps {
 export const ClientDetails = ({
   client,
   vehicles,
-  serviceHistory,
   onEditClient,
   onAddVehicle,
   onAddService,
 }: ClientDetailsProps) => {
+  const { data: appointments } = useQuery({
+    queryKey: ["client-appointments", client.id],
+    queryFn: async () => {
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          client:clients(*),
+          job_tickets:appointment_job_tickets(
+            job_ticket:job_tickets(
+              *,
+              vehicle:vehicles(*)
+            )
+          )
+        `)
+        .eq("client_id", client.id)
+        .order("start_time", { ascending: true });
+
+      if (appointmentsError) throw appointmentsError;
+
+      const formattedAppointments = appointmentsData.map(appointment => ({
+        ...appointment,
+        job_tickets: appointment.job_tickets.map((t: any) => t.job_ticket)
+      })) as AppointmentWithRelations[];
+
+      return formattedAppointments;
+    }
+  });
+
+  const now = new Date();
+  const upcomingAppointments = appointments?.filter(
+    app => new Date(app.start_time) >= now
+  ) || [];
+  const previousAppointments = appointments?.filter(
+    app => new Date(app.start_time) < now
+  ) || [];
+
+  const renderAppointment = (appointment: AppointmentWithRelations) => (
+    <div key={appointment.id} className="border rounded-lg p-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <h4 className="font-medium">{appointment.service_type}</h4>
+          <div className="text-sm text-gray-500 space-y-1">
+            <p>Start: {format(new Date(appointment.start_time), "MMM d, yyyy h:mm a")}</p>
+            <p>End: {format(new Date(appointment.end_time), "MMM d, yyyy h:mm a")}</p>
+            {appointment.job_tickets?.[0]?.vehicle && (
+              <p className="text-sm text-gray-600">
+                Vehicle: {appointment.job_tickets[0].vehicle.year} {appointment.job_tickets[0].vehicle.make} {appointment.job_tickets[0].vehicle.model}
+                {appointment.job_tickets[0].vehicle.license_plate && (
+                  <span className="ml-1">({appointment.job_tickets[0].vehicle.license_plate})</span>
+                )}
+              </p>
+            )}
+            {appointment.notes && <p className="text-gray-600">{appointment.notes}</p>}
+          </div>
+        </div>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+          ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+            appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+            appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+            'bg-gray-100 text-gray-800'}`}
+        >
+          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="col-span-2 space-y-6">
       {/* Client Info */}
@@ -96,45 +157,35 @@ export const ClientDetails = ({
         </div>
       </div>
 
-      {/* Service History */}
+      {/* Upcoming Appointments */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Service History</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h3>
           <Button variant="outline" size="sm" onClick={onAddService}>
             <Calendar className="mr-2 h-4 w-4" />
-            New Service
+            New Appointment
           </Button>
         </div>
         <div className="space-y-4">
-          {serviceHistory?.map((service) => (
-            <div key={service.id} className="border rounded-lg p-4">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-medium">{service.service_type}</h4>
-                  <p className="text-sm text-gray-500">{service.description}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">${service.cost}</p>
-                  <p className="text-sm text-gray-500">
-                    {new Date(service.service_date).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2">
-                <span
-                  className={`inline-block px-2 py-1 text-xs rounded-full ${
-                    service.status === "completed"
-                      ? "bg-green-100 text-green-800"
-                      : service.status === "in_progress"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
-                  {service.status.replace("_", " ")}
-                </span>
-              </div>
-            </div>
-          ))}
+          {upcomingAppointments.length > 0 ? (
+            upcomingAppointments.map(renderAppointment)
+          ) : (
+            <p className="text-gray-500">No upcoming appointments</p>
+          )}
+        </div>
+      </div>
+
+      {/* Previous Appointments */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Previous Appointments</h3>
+        </div>
+        <div className="space-y-4">
+          {previousAppointments.length > 0 ? (
+            previousAppointments.map(renderAppointment)
+          ) : (
+            <p className="text-gray-500">No previous appointments</p>
+          )}
         </div>
       </div>
     </div>
