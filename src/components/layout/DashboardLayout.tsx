@@ -8,7 +8,7 @@ export function DashboardLayout() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
+      <Sidebar isCollapsed={isCollapsed} onCollapse={setIsCollapsed} />
       <main className={`flex-1 overflow-y-auto p-8 transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
         <Outlet />
       </main>

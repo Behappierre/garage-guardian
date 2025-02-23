@@ -16,11 +16,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 
-export const Sidebar = () => {
+interface SidebarProps {
+  isCollapsed: boolean;
+  onCollapse: (collapsed: boolean) => void;
+}
+
+export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
   const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { data: isAdmin } = useQuery({
     queryKey: ["userRole", user?.id],
@@ -44,14 +47,14 @@ export const Sidebar = () => {
   return (
     <div 
       className={cn(
-        "fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300",
+        "fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-10",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
       <div className="flex flex-col h-full">
         <div className={cn(
-          "flex items-center gap-2 px-4 py-4 border-b border-gray-200",
-          isCollapsed ? "justify-center" : "px-6"
+          "flex items-center gap-2 border-b border-gray-200",
+          isCollapsed ? "justify-center p-4" : "px-6 py-4"
         )}>
           <img 
             src="/lovable-uploads/ba509b59-4243-41c9-9fe3-392cd0b2b2a7.png" 
@@ -64,8 +67,8 @@ export const Sidebar = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-16 bg-white border shadow-sm"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-16 bg-white border shadow-sm z-20"
+          onClick={() => onCollapse(!isCollapsed)}
         >
           {isCollapsed ? (
             <ChevronRight className="h-4 w-4" />
@@ -83,13 +86,13 @@ export const Sidebar = () => {
                   cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
                     isActive && "bg-primary/5 text-primary hover:bg-primary/5",
-                    isCollapsed && "justify-center"
+                    isCollapsed && "justify-center px-2"
                   )
                 }
                 title="Dashboard"
               >
-                <LayoutDashboard className="w-5 h-5" />
-                {!isCollapsed && "Dashboard"}
+                <LayoutDashboard className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Dashboard</span>}
               </NavLink>
             </li>
             <li>
@@ -99,13 +102,13 @@ export const Sidebar = () => {
                   cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
                     isActive && "bg-primary/5 text-primary hover:bg-primary/5",
-                    isCollapsed && "justify-center"
+                    isCollapsed && "justify-center px-2"
                   )
                 }
                 title="Appointments"
               >
-                <Calendar className="w-5 h-5" />
-                {!isCollapsed && "Appointments"}
+                <Calendar className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Appointments</span>}
               </NavLink>
             </li>
             <li>
@@ -115,13 +118,13 @@ export const Sidebar = () => {
                   cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
                     isActive && "bg-primary/5 text-primary hover:bg-primary/5",
-                    isCollapsed && "justify-center"
+                    isCollapsed && "justify-center px-2"
                   )
                 }
                 title="Clients"
               >
-                <Users className="w-5 h-5" />
-                {!isCollapsed && "Clients"}
+                <Users className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Clients</span>}
               </NavLink>
             </li>
             <li>
@@ -131,13 +134,13 @@ export const Sidebar = () => {
                   cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
                     isActive && "bg-primary/5 text-primary hover:bg-primary/5",
-                    isCollapsed && "justify-center"
+                    isCollapsed && "justify-center px-2"
                   )
                 }
                 title="Job Tickets"
               >
-                <Wrench className="w-5 h-5" />
-                {!isCollapsed && "Job Tickets"}
+                <Wrench className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Job Tickets</span>}
               </NavLink>
             </li>
             {isAdmin && (
@@ -148,13 +151,13 @@ export const Sidebar = () => {
                     cn(
                       "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
                       isActive && "bg-primary/5 text-primary hover:bg-primary/5",
-                      isCollapsed && "justify-center"
+                      isCollapsed && "justify-center px-2"
                     )
                   }
                   title="Admin"
                 >
-                  <UserCog className="w-5 h-5" />
-                  {!isCollapsed && "Admin"}
+                  <UserCog className="shrink-0 w-5 h-5" />
+                  {!isCollapsed && <span>Admin</span>}
                 </NavLink>
               </li>
             )}
@@ -165,7 +168,7 @@ export const Sidebar = () => {
           "p-4 border-t border-gray-200",
           isCollapsed && "flex flex-col items-center"
         )}>
-          <ul className="space-y-1">
+          <ul className="space-y-1 w-full">
             <li>
               <NavLink
                 to="/dashboard/settings"
@@ -173,27 +176,27 @@ export const Sidebar = () => {
                   cn(
                     "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
                     isActive && "bg-primary/5 text-primary hover:bg-primary/5",
-                    isCollapsed && "justify-center"
+                    isCollapsed && "justify-center px-2"
                   )
                 }
                 title="Settings"
               >
-                <Settings className="w-5 h-5" />
-                {!isCollapsed && "Settings"}
+                <Settings className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Settings</span>}
               </NavLink>
             </li>
             <li>
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start gap-2",
+                  "w-full flex items-center gap-2 px-4 py-2",
                   isCollapsed && "justify-center px-2"
                 )}
                 onClick={handleSignOut}
                 title="Logout"
               >
-                <LogOut className="w-5 h-5" />
-                {!isCollapsed && "Logout"}
+                <LogOut className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Logout</span>}
               </Button>
             </li>
           </ul>
