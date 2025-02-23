@@ -115,6 +115,7 @@ const Clients = () => {
   const handleCloseServiceDialog = async () => {
     setShowServiceDialog(false);
     if (selectedClient) {
+      await refreshClientData(selectedClient.id);
       await queryClient.invalidateQueries({ 
         queryKey: ["client-appointments", selectedClient.id],
         exact: true

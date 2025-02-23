@@ -87,9 +87,13 @@ export const ClientDetails = ({
     setShowAppointmentDialog(true);
   };
 
-  const handleDialogClose = () => {
+  const handleDialogClose = async () => {
     setShowAppointmentDialog(false);
-    queryClient.invalidateQueries({ queryKey: ["client-appointments", client.id] });
+    // Only invalidate the appointments query
+    await queryClient.invalidateQueries({ 
+      queryKey: ["client-appointments", client.id],
+      exact: true
+    });
     // Clear the selected appointment after the dialog is closed
     setTimeout(() => setSelectedAppointment(null), 100);
   };
@@ -215,10 +219,12 @@ export const ClientDetails = ({
       {/* Appointment Edit Dialog */}
       <Dialog open={showAppointmentDialog} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-[600px]">
-          <AppointmentForm
-            initialData={selectedAppointment}
-            onClose={handleDialogClose}
-          />
+          {selectedAppointment && (
+            <AppointmentForm
+              initialData={selectedAppointment}
+              onClose={handleDialogClose}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
