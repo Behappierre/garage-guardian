@@ -32,8 +32,7 @@ interface Vehicle {
 const Clients = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
   const [showServiceDialog, setShowServiceDialog] = useState(false);
@@ -52,19 +51,21 @@ const Clients = () => {
     }
   });
 
+  const selectedClient = clients?.find(c => c.id === selectedClientId) || null;
+
   const { data: clientVehicles } = useQuery({
-    queryKey: ["vehicles", selectedClient?.id],
+    queryKey: ["vehicles", selectedClientId],
     queryFn: async () => {
-      if (!selectedClient) return [];
+      if (!selectedClientId) return [];
       const { data, error } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("client_id", selectedClient.id);
+        .eq("client_id", selectedClientId);
 
       if (error) throw error;
       return data as Vehicle[];
     },
-    enabled: !!selectedClient,
+    enabled: !!selectedClientId,
   });
 
   const handleAddClient = () => {
@@ -82,28 +83,19 @@ const Clients = () => {
   const handleCloseClientDialog = async () => {
     setShowClientDialog(false);
     await queryClient.invalidateQueries({ queryKey: ["clients"] });
+    setEditingClient(null);
   };
 
   const handleCloseVehicleDialog = async () => {
     setShowVehicleDialog(false);
-    if (selectedClient) {
-      await queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClient.id] });
+    if (selectedClientId) {
+      await queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClientId] });
     }
   };
 
   const handleCloseServiceDialog = () => {
     setShowServiceDialog(false);
   };
-
-  // Update selected client when clients data changes
-  useEffect(() => {
-    if (selectedClient && clients) {
-      const updatedClient = clients.find(c => c.id === selectedClient.id);
-      if (updatedClient && JSON.stringify(updatedClient) !== JSON.stringify(selectedClient)) {
-        setSelectedClient(updatedClient);
-      }
-    }
-  }, [clients, selectedClient]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -126,7 +118,7 @@ const Clients = () => {
             selectedClient={selectedClient}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
-            onSelectClient={setSelectedClient}
+            onSelectClient={(client) => setSelectedClientId(client.id)}
           />
 
           {selectedClient ? (
@@ -144,7 +136,7 @@ const Clients = () => {
           )}
         </div>
 
-        <Dialog open={showClientDialog} onOpenChange={handleCloseClientDialog}>
+        <Dialog open={showClientDialog} onOpenChange={setShowClientDialog}>
           <DialogContent className="sm:max-w-[425px]">
             <ClientForm
               initialData={editingClient || undefined}
@@ -153,7 +145,7 @@ const Clients = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showVehicleDialog} onOpenChange={handleCloseVehicleDialog}>
+        <Dialog open={showVehicleDialog} onOpenChange={setShowVehicleDialog}>
           <DialogContent className="sm:max-w-[425px]">
             {selectedClient && (
               <VehicleForm
@@ -164,7 +156,7 @@ const Clients = () => {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showServiceDialog} onOpenChange={handleCloseServiceDialog}>
+        <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
           <DialogContent className="sm:max-w-[600px]">
             {selectedClient && (
               <ServiceForm
