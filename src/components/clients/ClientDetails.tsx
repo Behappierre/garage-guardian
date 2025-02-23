@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import { useState } from "react";
 
 interface Client {
   id: string;
@@ -38,6 +41,9 @@ export const ClientDetails = ({
   onAddVehicle,
   onAddService,
 }: ClientDetailsProps) => {
+  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
+  const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
+
   const { data: appointments } = useQuery({
     queryKey: ["client-appointments", client.id],
     queryFn: async () => {
@@ -75,8 +81,17 @@ export const ClientDetails = ({
     app => new Date(app.start_time) < now
   ) || [];
 
+  const handleAppointmentClick = (appointment: AppointmentWithRelations) => {
+    setSelectedAppointment(appointment);
+    setShowAppointmentDialog(true);
+  };
+
   const renderAppointment = (appointment: AppointmentWithRelations) => (
-    <div key={appointment.id} className="border rounded-lg p-4">
+    <div 
+      key={appointment.id} 
+      className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+      onClick={() => handleAppointmentClick(appointment)}
+    >
       <div className="flex justify-between items-start">
         <div>
           <h4 className="font-medium">{appointment.service_type}</h4>
@@ -188,6 +203,16 @@ export const ClientDetails = ({
           )}
         </div>
       </div>
+
+      {/* Appointment Edit Dialog */}
+      <Dialog open={showAppointmentDialog} onOpenChange={setShowAppointmentDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <AppointmentForm
+            initialData={selectedAppointment}
+            onClose={() => setShowAppointmentDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
