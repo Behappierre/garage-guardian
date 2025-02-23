@@ -35,26 +35,31 @@ const Admin = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
+      // First get profiles data
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, first_name, last_name");
 
       if (profilesError) throw profilesError;
 
+      // Then get roles data
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role");
 
       if (rolesError) throw rolesError;
 
-      const { data: usersResponse, error: usersError } = await supabase.auth.admin.listUsers();
+      // Finally get users data using the Edge Function
+      const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
       
       if (usersError) throw usersError;
 
-      // Handle the response structure correctly
-      const usersList = usersResponse.users || [];
+      if (!usersResponse || !usersResponse.users) {
+        throw new Error('Failed to fetch users');
+      }
 
-      return usersList.map((user: User) => ({
+      // Map the data together
+      return usersResponse.users.map((user: User) => ({
         id: user.id,
         email: user.email || '',
         role: roles.find((r: any) => r.user_id === user.id)?.role || "none",
@@ -66,8 +71,11 @@ const Admin = () => {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId }
+      });
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
