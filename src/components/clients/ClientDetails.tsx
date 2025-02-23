@@ -3,11 +3,8 @@ import { Car, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import type { AppointmentWithRelations } from "@/types/appointment";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { AppointmentForm } from "@/components/appointments/AppointmentForm";
-import { useState, useCallback, useEffect } from "react";
 
 interface Client {
   id: string;
@@ -41,12 +38,8 @@ export const ClientDetails = ({
   onAddVehicle,
   onAddService,
 }: ClientDetailsProps) => {
-  const queryClient = useQueryClient();
-  const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
-  const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
-
-  // Main appointments query with automatic refresh
-  const { data: appointments, refetch } = useQuery({
+  // Main appointments query
+  const { data: appointments } = useQuery({
     queryKey: ["client-appointments", client.id],
     queryFn: async () => {
       const { data: appointmentsData, error: appointmentsError } = await supabase
@@ -75,13 +68,6 @@ export const ClientDetails = ({
     }
   });
 
-  // Effect to refetch data when dialog closes
-  useEffect(() => {
-    if (!showAppointmentDialog) {
-      refetch();
-    }
-  }, [showAppointmentDialog, refetch]);
-
   const now = new Date();
   const upcomingAppointments = appointments?.filter(
     app => new Date(app.start_time) >= now
@@ -90,26 +76,10 @@ export const ClientDetails = ({
     app => new Date(app.start_time) < now
   ) || [];
 
-  const handleAppointmentClick = useCallback((appointment: AppointmentWithRelations) => {
-    setSelectedAppointment(appointment);
-    setShowAppointmentDialog(true);
-  }, []);
-
-  const handleDialogClose = useCallback(async () => {
-    setShowAppointmentDialog(false);
-    await queryClient.invalidateQueries({ 
-      queryKey: ["client-appointments", client.id],
-      exact: true 
-    });
-    setSelectedAppointment(null);
-    await refetch(); // Force immediate refetch
-  }, [queryClient, client.id, refetch]);
-
-  const renderAppointment = useCallback((appointment: AppointmentWithRelations) => (
+  const renderAppointment = (appointment: AppointmentWithRelations) => (
     <div 
       key={appointment.id} 
-      className="border rounded-lg p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-      onClick={() => handleAppointmentClick(appointment)}
+      className="border rounded-lg p-4"
     >
       <div className="flex justify-between items-start">
         <div>
@@ -138,7 +108,7 @@ export const ClientDetails = ({
         </span>
       </div>
     </div>
-  ), [handleAppointmentClick]);
+  );
 
   return (
     <div className="col-span-2 space-y-6">
@@ -221,24 +191,6 @@ export const ClientDetails = ({
           )}
         </div>
       </div>
-
-      <Dialog 
-        open={showAppointmentDialog} 
-        onOpenChange={(open) => {
-          if (!open) {
-            handleDialogClose();
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-[600px]">
-          {selectedAppointment && (
-            <AppointmentForm
-              initialData={selectedAppointment}
-              onClose={handleDialogClose}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
