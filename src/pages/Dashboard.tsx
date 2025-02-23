@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { Sidebar } from "@/components/layout/Sidebar";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Wrench, 
@@ -18,7 +17,6 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<string | null>(null);
 
-  // Fetch user role
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!user) return;
@@ -47,7 +45,6 @@ const Dashboard = () => {
     fetchUserRole();
   }, [user, toast]);
 
-  // Fetch metrics data
   const { data: metricsData } = useQuery({
     queryKey: ['dashboardMetrics'],
     queryFn: async () => {
@@ -83,7 +80,6 @@ const Dashboard = () => {
     }
   });
 
-  // Fetch recent activity
   const { data: recentActivityData } = useQuery({
     queryKey: ['recentActivity'],
     queryFn: async () => {
@@ -92,21 +88,18 @@ const Dashboard = () => {
         { data: recentTickets },
         { data: recentClients }
       ] = await Promise.all([
-        // Recent appointments
         supabase
           .from('appointments')
           .select('id, service_type, created_at')
           .order('created_at', { ascending: false })
           .limit(2),
         
-        // Recent job tickets
         supabase
           .from('job_tickets')
           .select('id, description, created_at')
           .order('created_at', { ascending: false })
           .limit(2),
         
-        // Recent clients
         supabase
           .from('clients')
           .select('id, first_name, last_name, created_at')
@@ -175,10 +168,8 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar />
-      
-      <main className="flex-1 ml-64 p-8">
+    <div className="min-h-screen bg-gray-50">
+      <main className="p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard Overview</h1>
           <p className="text-gray-500">Welcome back! Here's what's happening today.</p>
