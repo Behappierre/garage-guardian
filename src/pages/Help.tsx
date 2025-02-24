@@ -6,12 +6,49 @@ import { useQuery } from "@tanstack/react-query";
 
 const Help = () => {
   const location = useLocation();
-  const currentSection = location.pathname.split('/')[2] || 'dashboard';
+  const currentSection = location.pathname.split('/')[2];
 
   const { data: helpContent, isLoading } = useQuery({
     queryKey: ["helpContent", currentSection],
     queryFn: async () => {
-      const defaultContent = `# ${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)} Help
+      // If we're at the root help page, show the main help content
+      if (!currentSection) {
+        return `# Help Center
+
+## Welcome to GarageGuardian Help
+
+Choose a section from the list below to learn more:
+
+### Appointments
+- Schedule and manage service appointments
+- View calendar and list views
+- Manage bay assignments
+[View Appointments Help](/dashboard/help/appointments)
+
+### Clients
+- Manage client information
+- Track client vehicles
+- View client history
+
+### Job Tickets
+- Create and manage service tickets
+- Track work progress
+- Manage parts and labor
+
+### Settings
+- Configure your workspace
+- Manage user preferences
+- Update system settings
+
+### Need More Help?
+Contact our support team for additional assistance.`;
+      }
+
+      try {
+        const response = await fetch(`/docs/${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}Help.md`);
+        if (!response.ok) {
+          console.log('Help content not found:', response.status);
+          return `# ${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)} Help
 
 This section provides help and guidance for the ${currentSection} feature. Detailed documentation for this section is coming soon.
 
@@ -20,17 +57,13 @@ This section provides help and guidance for the ${currentSection} feature. Detai
 - Click on items to view more details
 - Use the search function to find specific information
 - Contact support if you need additional assistance`;
-
-      try {
-        const response = await fetch(`/docs/${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}Help.md`);
-        if (!response.ok) {
-          console.log('Help content not found:', response.status);
-          return defaultContent;
         }
         return await response.text();
       } catch (error) {
         console.error('Error loading help content:', error);
-        return defaultContent;
+        return `# Error Loading Help Content
+        
+We apologize, but there was an error loading the help content. Please try again later or contact support if the problem persists.`;
       }
     },
   });
