@@ -1,97 +1,57 @@
 
 # Getting Started with GarageGuardian
 
-## Overview
-Welcome to GarageGuardian! This comprehensive guide will help you set up and start using your new garage management system effectively.
+## Welcome
+Welcome to GarageGuardian! This guide will help you get started with the essential features of your new garage management system.
 
-## Initial Setup
+## First Steps
 
-### System Configuration
+### 1. Set Up Your Profile
+- Update your business information
+- Configure your service bays
+- Set working hours
+- Add your logo
 
-• **Access Your Account**: 
-  • Log in with your credentials
-  • Complete your profile setup
-  • Review initial settings
+### 2. Add Your Team
+- Create user accounts
+- Assign roles
+- Set permissions
+- Train on basic features
 
-• **Workshop Setup**:
-  • Configure service bays
-  • Set business hours
-  • Add your company logo
-  • Define service types
+### 3. Start Managing Clients
+- Add client profiles
+- Enter vehicle information
+- Import existing client data
+- Set up communication preferences
 
-### Team Management
+### 4. Create Your First Appointment
+- Use the calendar view
+- Select a client
+- Choose a service type
+- Assign to a bay
 
-• **Staff Accounts**:
-  • Create user accounts for team members
-  • Assign appropriate roles
-  • Set access permissions
-  • Configure work schedules
-
-• **Training Resources**:
-  • Access tutorial videos
-  • Review user guides
-  • Schedule team training
-  • Practice with test data
-
-## Core Features
+## Key Features Overview
 
 ### Daily Operations
+- Appointment scheduling
+- Client management
+- Job ticket creation
+- Time tracking
 
-• **Calendar Management**:
-  • View daily schedule
-  • Book appointments
-  • Manage service bays
-  • Track technician availability
+### Business Management
+- Reports and analytics
+- Inventory tracking
+- Staff management
+- Financial overview
 
-• **Client Management**:
-  • Add new clients
-  • Record vehicle details
-  • Track service history
-  • Set reminders
-
-### Service Management
-
-• **Job Tickets**:
-  • Create service tickets
-  • Track job progress
-  • Record parts used
-  • Document labor hours
-
-• **Inventory Control**:
-  • Monitor stock levels
-  • Track parts usage
-  • Set reorder points
-  • Manage suppliers
-
-## Best Practices
-
-• **Regular Updates**:
-  • Keep client records current
-  • Update vehicle information
-  • Maintain accurate inventory
-  • Back up important data
-
-• **Communication**:
-  • Use automated reminders
-  • Send service updates
-  • Follow up with clients
-  • Document all interactions
+## Need Help?
+- Check our help articles
+- Contact support
+- Join our community
+- Watch tutorial videos
 
 ## Quick Tips
-
-• **Keyboard Shortcuts**: Learn common shortcuts for faster navigation
-• **Templates**: Create templates for common services
-• **Backup**: Perform regular data backups
-• **Support**: Know how to access help when needed
-
-## Getting Help
-
-• **Help Resources**:
-  • Browse help articles
-  • Watch tutorial videos
-  • Contact support team
-  • Join user community
-
----
-
-*This guide will help you get started with GarageGuardian efficiently. For more detailed information about specific features, please refer to their respective help sections.*
+1. Use keyboard shortcuts
+2. Set up templates
+3. Regular data backups
+4. Keep records updated
