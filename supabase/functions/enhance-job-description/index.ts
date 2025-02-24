@@ -45,7 +45,7 @@ Keep the response concise but thorough.`
     });
 
     const data = await response.json();
-    console.log('OpenAI Response:', data); // Log the response for debugging
+    console.log('OpenAI Response:', data);
     const enhancedDescription = data.choices[0].message.content;
 
     return new Response(JSON.stringify({ enhancedDescription }), {

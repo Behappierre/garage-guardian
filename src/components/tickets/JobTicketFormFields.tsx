@@ -4,6 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
+import { Wand2 } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import type { JobTicketFormData } from "@/types/job-ticket";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -28,6 +32,34 @@ export const JobTicketFormFields = ({
   setSelectedAppointmentId,
   technicians,
 }: JobTicketFormFieldsProps) => {
+  const handleEnhanceDescription = async () => {
+    if (!formData.description) {
+      toast.error("Please enter a description first");
+      return;
+    }
+
+    try {
+      const selectedVehicle = clientVehicles?.find(v => v.id === formData.vehicle_id);
+      const vehicleInfo = selectedVehicle 
+        ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
+        : undefined;
+
+      const { data, error } = await supabase.functions.invoke('enhance-job-description', {
+        body: { description: formData.description, vehicle: vehicleInfo }
+      });
+
+      if (error) throw error;
+
+      if (data.enhancedDescription) {
+        setFormData({ ...formData, description: data.enhancedDescription });
+        toast.success("Description enhanced successfully");
+      }
+    } catch (error: any) {
+      toast.error("Failed to enhance description");
+      console.error('Error enhancing description:', error);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -104,7 +136,19 @@ export const JobTicketFormFields = ({
       )}
 
       <div>
-        <Label htmlFor="description">Description</Label>
+        <div className="flex items-center justify-between mb-2">
+          <Label htmlFor="description">Description</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleEnhanceDescription}
+            className="gap-2"
+          >
+            <Wand2 className="h-4 w-4" />
+            Enhance
+          </Button>
+        </div>
         <Textarea
           id="description"
           value={formData.description}
