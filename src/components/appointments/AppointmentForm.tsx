@@ -24,6 +24,11 @@ interface AppointmentFormData {
   bay: BayType;
 }
 
+const formatDateTimeForInput = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDThh:mm
+};
+
 const ClientSelector = ({ value, onChange }: { value: string | null, onChange: (value: string) => void }) => {
   const { data: clients, isLoading, error } = useQuery({
     queryKey: ["clients"],
@@ -162,8 +167,10 @@ export const AppointmentForm = ({
   const [formData, setFormData] = useState<AppointmentFormData>({
     client_id: initialData?.client_id || null,
     vehicle_id: initialData?.vehicle_id || null,
-    start_time: initialData?.start_time || (selectedDate ? selectedDate.toISOString() : ''),
-    end_time: initialData?.end_time || '',
+    start_time: initialData?.start_time ? formatDateTimeForInput(initialData.start_time) : 
+                selectedDate ? formatDateTimeForInput(selectedDate.toISOString()) : '',
+    end_time: initialData?.end_time ? formatDateTimeForInput(initialData.end_time) : 
+             selectedDate ? formatDateTimeForInput(new Date(selectedDate.getTime() + 60 * 60 * 1000).toISOString()) : '',
     service_type: initialData?.service_type || '',
     notes: initialData?.notes || null,
     status: initialData?.status || 'scheduled',
