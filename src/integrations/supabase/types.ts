@@ -47,6 +47,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          bay: string | null
           client_id: string | null
           created_at: string
           end_time: string
@@ -60,6 +61,7 @@ export type Database = {
           vehicle_id: string | null
         }
         Insert: {
+          bay?: string | null
           client_id?: string | null
           created_at?: string
           end_time: string
@@ -73,6 +75,7 @@ export type Database = {
           vehicle_id?: string | null
         }
         Update: {
+          bay?: string | null
           client_id?: string | null
           created_at?: string
           end_time?: string
