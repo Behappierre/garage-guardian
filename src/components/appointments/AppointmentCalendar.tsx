@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -9,10 +10,14 @@ import type { AppointmentWithRelations } from "@/types/appointment";
 
 type BayType = 'all' | 'bay1' | 'bay2' | 'mot';
 
+interface AppointmentWithBay extends AppointmentWithRelations {
+  bay?: 'bay1' | 'bay2' | 'mot' | null;
+}
+
 interface AppointmentCalendarProps {
-  appointments: AppointmentWithRelations[];
+  appointments: AppointmentWithBay[];
   onDateSelect: (arg: { start: Date; end: Date }) => void;
-  onEventClick: (appointment: AppointmentWithRelations) => void;
+  onEventClick: (appointment: AppointmentWithBay) => void;
 }
 
 export const AppointmentCalendar = ({
@@ -22,7 +27,7 @@ export const AppointmentCalendar = ({
 }: AppointmentCalendarProps) => {
   const [selectedBay, setSelectedBay] = useState<BayType>('all');
 
-  const getEventTitle = (appointment: AppointmentWithRelations) => {
+  const getEventTitle = (appointment: AppointmentWithBay) => {
     const clientName = `${appointment.client.first_name} ${appointment.client.last_name}`;
     const vehicle = appointment.vehicle || appointment.job_tickets?.[0]?.vehicle;
     
@@ -33,7 +38,7 @@ export const AppointmentCalendar = ({
     return `${clientName} - ${appointment.service_type}`;
   };
 
-  const filterAppointmentsByBay = (appointments: AppointmentWithRelations[]) => {
+  const filterAppointmentsByBay = (appointments: AppointmentWithBay[]) => {
     if (selectedBay === 'all') return appointments;
     return appointments.filter(appointment => appointment.bay === selectedBay);
   };
@@ -49,7 +54,7 @@ export const AppointmentCalendar = ({
     })) || [];
 
   const handleEventClick = (clickInfo: EventClickArg) => {
-    onEventClick(clickInfo.event.extendedProps as AppointmentWithRelations);
+    onEventClick(clickInfo.event.extendedProps as AppointmentWithBay);
   };
 
   return (

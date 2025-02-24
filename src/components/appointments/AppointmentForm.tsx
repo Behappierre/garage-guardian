@@ -5,12 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { AppointmentWithRelations } from "@/types/appointment";
+import type { AppointmentWithRelations, AppointmentStatus, BayType } from "@/types/appointment";
 
 interface AppointmentFormProps {
   initialData: AppointmentWithRelations | null;
   selectedDate: Date | null;
   onClose: () => void;
+}
+
+interface AppointmentFormData {
+  client_id: string | null;
+  vehicle_id: string | null;
+  start_time: string;
+  end_time: string;
+  service_type: string;
+  notes: string | null;
+  status: AppointmentStatus;
+  bay: BayType;
 }
 
 const ClientSelector = ({ value, onChange }: { value: string | null, onChange: (value: string) => void }) => {
@@ -148,16 +159,7 @@ export const AppointmentForm = ({
   selectedDate,
   onClose,
 }: AppointmentFormProps) => {
-  const [formData, setFormData] = useState<{
-    client_id: string | null;
-    vehicle_id: string | null;
-    start_time: string;
-    end_time: string;
-    service_type: string;
-    notes: string | null;
-    status: string;
-    bay: 'bay1' | 'bay2' | 'mot' | null;
-  }>(() => ({
+  const [formData, setFormData] = useState<AppointmentFormData>({
     client_id: initialData?.client_id || null,
     vehicle_id: initialData?.vehicle_id || null,
     start_time: initialData?.start_time || (selectedDate ? selectedDate.toISOString() : ''),
@@ -166,13 +168,13 @@ export const AppointmentForm = ({
     notes: initialData?.notes || null,
     status: initialData?.status || 'scheduled',
     bay: initialData?.bay || null,
-  }));
+  });
 
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const createAppointmentMutation = useMutation(
-    async (data: Omit<typeof formData, 'id'>) => {
+  const createAppointmentMutation = useMutation({
+    mutationFn: async (data: AppointmentFormData) => {
       const { data: appointment, error } = await supabase
         .from('appointments')
         .insert([data])
@@ -185,19 +187,17 @@ export const AppointmentForm = ({
 
       return appointment;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        onClose();
-      },
-      onError: (error) => {
-        console.error("Error creating appointment:", error);
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Error creating appointment:", error);
+    },
+  });
 
-  const updateAppointmentMutation = useMutation(
-    async (data: typeof formData) => {
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async (data: AppointmentFormData & { id: string }) => {
       const { data: appointment, error } = await supabase
         .from('appointments')
         .update(data)
@@ -211,37 +211,24 @@ export const AppointmentForm = ({
 
       return appointment;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        onClose();
-      },
-      onError: (error) => {
-        console.error("Error updating appointment:", error);
-      },
-    }
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Error updating appointment:", error);
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const appointmentData = {
-      client_id: formData.client_id,
-      vehicle_id: formData.vehicle_id,
-      start_time: formData.start_time,
-      end_time: formData.end_time,
-      service_type: formData.service_type,
-      notes: formData.notes,
-      status: formData.status,
-      bay: formData.bay,
-    };
-
     try {
       if (initialData) {
         await updateAppointmentMutation.mutateAsync({ ...formData, id: initialData.id });
       } else {
-        await createAppointmentMutation.mutateAsync(appointmentData);
+        await createAppointmentMutation.mutateAsync(formData);
       }
     } catch (error) {
       console.error("Error during appointment submission:", error);
@@ -281,7 +268,7 @@ export const AppointmentForm = ({
         <Label>Bay Assignment</Label>
         <Select
           value={formData.bay || ""}
-          onValueChange={(value) => setFormData({ ...formData, bay: value as 'bay1' | 'bay2' | 'mot' | null })}
+          onValueChange={(value) => setFormData({ ...formData, bay: value as BayType })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select a bay" />
