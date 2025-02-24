@@ -33,11 +33,11 @@ export const JobTicketFormFields = ({
       <div>
         <Label htmlFor="client">Client</Label>
         <Select
-          value={formData.client_id || ""}
+          value={formData.client_id || "none"}
           onValueChange={(value) => {
             setFormData({
               ...formData,
-              client_id: value || null,
+              client_id: value === "none" ? null : value,
               vehicle_id: null,
             });
             setSelectedAppointmentId(null);
@@ -60,9 +60,9 @@ export const JobTicketFormFields = ({
         <div>
           <Label htmlFor="vehicle">Vehicle</Label>
           <Select
-            value={formData.vehicle_id || ""}
+            value={formData.vehicle_id || "none"}
             onValueChange={(value) =>
-              setFormData({ ...formData, vehicle_id: value || null })
+              setFormData({ ...formData, vehicle_id: value === "none" ? null : value })
             }
           >
             <SelectTrigger>
@@ -83,13 +83,14 @@ export const JobTicketFormFields = ({
         <div>
           <Label htmlFor="appointment">Link to Appointment (Optional)</Label>
           <Select
-            value={selectedAppointmentId || ""}
-            onValueChange={(value) => setSelectedAppointmentId(value || null)}
+            value={selectedAppointmentId || "none"}
+            onValueChange={(value) => setSelectedAppointmentId(value === "none" ? null : value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select an appointment" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">None</SelectItem>
               {clientAppointments.map((appointment) => (
                 <SelectItem key={appointment.id} value={appointment.id}>
                   {new Date(appointment.start_time).toLocaleDateString()}{" "}
@@ -117,16 +118,16 @@ export const JobTicketFormFields = ({
       <div>
         <Label htmlFor="technician">Assign Technician (Optional)</Label>
         <Select
-          value={formData.assigned_technician_id || ""}
+          value={formData.assigned_technician_id || "none"}
           onValueChange={(value) =>
-            setFormData({ ...formData, assigned_technician_id: value || null })
+            setFormData({ ...formData, assigned_technician_id: value === "none" ? null : value })
           }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select a technician" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">None</SelectItem>
+            <SelectItem value="none">None</SelectItem>
             {technicians?.map((technician) => (
               <SelectItem key={technician.id} value={technician.id}>
                 {technician.first_name} {technician.last_name}
