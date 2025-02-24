@@ -52,7 +52,7 @@ export const RecentActivity = () => {
           description: apt.service_type,
           time: apt.created_at,
           icon: Calendar,
-          onClick: () => navigate(`/appointments`)
+          onClick: () => navigate(`/dashboard/appointments/${apt.id}`)
         })) || []),
         ...(recentTickets?.map(ticket => ({
           id: ticket.id,
@@ -61,7 +61,7 @@ export const RecentActivity = () => {
           description: ticket.description,
           time: ticket.created_at,
           icon: Wrench,
-          onClick: () => navigate(`/job-tickets`)
+          onClick: () => navigate(`/dashboard/job-tickets/${ticket.id}`)
         })) || []),
         ...(completedTickets?.map(ticket => ({
           id: ticket.id,
@@ -70,7 +70,7 @@ export const RecentActivity = () => {
           description: ticket.description,
           time: ticket.updated_at,
           icon: Wrench,
-          onClick: () => navigate(`/job-tickets`)
+          onClick: () => navigate(`/dashboard/job-tickets/${ticket.id}`)
         })) || []),
         ...(recentClients?.map(client => ({
           id: client.id,
@@ -79,7 +79,7 @@ export const RecentActivity = () => {
           description: `${client.first_name} ${client.last_name}`,
           time: client.created_at,
           icon: Users,
-          onClick: () => navigate(`/clients`)
+          onClick: () => navigate(`/dashboard/clients/${client.id}`)
         })) || [])
       ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
        .slice(0, 4);
