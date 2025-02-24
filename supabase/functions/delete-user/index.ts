@@ -34,10 +34,25 @@ serve(async (req: Request) => {
       throw new Error('User ID is required');
     }
 
-    const { error } = await supabaseClient.auth.admin.deleteUser(userId);
+    console.log('Deleting user with ID:', userId);
 
-    if (error) {
-      throw error;
+    // First, update any job tickets to remove the technician reference
+    const { error: updateError } = await supabaseClient
+      .from('job_tickets')
+      .update({ assigned_technician_id: null })
+      .eq('assigned_technician_id', userId);
+
+    if (updateError) {
+      console.error('Error updating job tickets:', updateError);
+      throw updateError;
+    }
+
+    // Then delete the user from auth.users (this will cascade to profiles due to ON DELETE CASCADE)
+    const { error: deleteError } = await supabaseClient.auth.admin.deleteUser(userId);
+
+    if (deleteError) {
+      console.error('Error deleting user:', deleteError);
+      throw deleteError;
     }
 
     return new Response(
