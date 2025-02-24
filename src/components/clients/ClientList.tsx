@@ -1,8 +1,7 @@
 
 import { Mail, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search, Filter } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect } from "react";
 
 interface Client {
@@ -58,20 +57,14 @@ export const ClientList = ({
         <h2 className="font-semibold text-gray-900">Client List</h2>
       </div>
       <div className="p-4 border-b border-gray-200">
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search clients..."
-              value={searchTerm}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button variant="outline">
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search clients..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
       <div className="divide-y divide-gray-200 overflow-y-auto h-[calc(100vh-264px)]">
