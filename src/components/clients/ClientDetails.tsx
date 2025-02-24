@@ -12,6 +12,7 @@ interface Client {
   last_name: string;
   email: string;
   phone: string;
+  address: string;
   notes: string;
 }
 
@@ -82,6 +83,7 @@ export const ClientDetails = ({
         lastName={client.last_name}
         email={client.email}
         phone={client.phone}
+        address={client.address}
         notes={client.notes}
         onEditClient={onEditClient}
       />

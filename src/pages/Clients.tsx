@@ -16,6 +16,7 @@ interface Client {
   last_name: string;
   email: string;
   phone: string;
+  address: string;
   notes: string;
   created_at: string;
 }
@@ -42,7 +43,7 @@ const Clients = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, first_name, last_name, email, phone, notes, created_at")
+        .select("id, first_name, last_name, email, phone, address, notes, created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
