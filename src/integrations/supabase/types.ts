@@ -145,6 +145,48 @@ export type Database = {
         }
         Relationships: []
       }
+      clock_events: {
+        Row: {
+          created_at: string
+          event_type: Database["public"]["Enums"]["clock_event_type"]
+          id: string
+          job_ticket_id: string
+          notes: string | null
+          technician_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: Database["public"]["Enums"]["clock_event_type"]
+          id?: string
+          job_ticket_id: string
+          notes?: string | null
+          technician_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: Database["public"]["Enums"]["clock_event_type"]
+          id?: string
+          job_ticket_id?: string
+          notes?: string | null
+          technician_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clock_events_job_ticket_id_fkey"
+            columns: ["job_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "job_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clock_events_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_notifications: {
         Row: {
           created_at: string | null
@@ -406,6 +448,7 @@ export type Database = {
     Enums: {
       app_role: "administrator" | "technician" | "front_desk"
       appointment_status: "scheduled" | "confirmed" | "cancelled" | "completed"
+      clock_event_type: "clock_in" | "clock_out"
       ticket_priority: "low" | "normal" | "high" | "urgent"
       ticket_status:
         | "received"

@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Appointments from "./pages/Appointments";
 import Clients from "./pages/Clients";
 import JobTickets from "./pages/JobTickets";
+import MyWork from "./pages/MyWork";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
@@ -37,6 +38,7 @@ function App() {
               <Route path="appointments" element={<Appointments />} />
               <Route path="clients" element={<Clients />} />
               <Route path="job-tickets" element={<JobTickets />} />
+              <Route path="my-work" element={<MyWork />} />
               <Route path="admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />

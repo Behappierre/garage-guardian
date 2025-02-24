@@ -10,6 +10,7 @@ import {
   UserCog,
   ChevronLeft,
   ChevronRight,
+  Hammer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,20 +26,22 @@ interface SidebarProps {
 export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
   const { user } = useAuth();
 
-  const { data: isAdmin } = useQuery({
+  const { data: userRoles } = useQuery({
     queryKey: ["userRole", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user?.id)
-        .single();
+        .eq("user_id", user?.id);
 
       if (error) throw error;
-      return data?.role === "administrator";
+      return data?.map(r => r.role) || [];
     },
     enabled: !!user,
   });
+
+  const isAdmin = userRoles?.includes("administrator");
+  const isTechnician = userRoles?.includes("technician");
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -95,6 +98,24 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
                 {!isCollapsed && <span>Dashboard</span>}
               </NavLink>
             </li>
+            {isTechnician && (
+              <li>
+                <NavLink
+                  to="/dashboard/my-work"
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                      isActive && "bg-primary/5 text-primary hover:bg-primary/5",
+                      isCollapsed && "justify-center px-2"
+                    )
+                  }
+                  title="My Work"
+                >
+                  <Hammer className="shrink-0 w-5 h-5" />
+                  {!isCollapsed && <span>My Work</span>}
+                </NavLink>
+              </li>
+            )}
             <li>
               <NavLink
                 to="/dashboard/appointments"
