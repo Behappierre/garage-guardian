@@ -15,6 +15,7 @@ import MyWork from "./pages/MyWork";
 import Admin from "./pages/Admin";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import { ClientDetails } from "./components/clients/ClientDetails";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -39,8 +40,11 @@ function App() {
               >
                 <Route index element={<Dashboard />} />
                 <Route path="appointments" element={<Appointments />} />
+                <Route path="appointments/:id" element={<Appointments />} />
                 <Route path="clients" element={<Clients />} />
+                <Route path="clients/:id" element={<Clients />} />
                 <Route path="job-tickets" element={<JobTickets />} />
+                <Route path="job-tickets/:id" element={<JobTickets />} />
                 <Route path="my-work" element={<MyWork />} />
                 <Route path="admin" element={<Admin />} />
                 <Route path="settings" element={<Settings />} />
