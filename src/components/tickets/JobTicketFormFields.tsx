@@ -1,21 +1,21 @@
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Brain } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { JobTicketFormData, TicketPriority, TicketStatus } from "@/types/job-ticket";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import type { JobTicketFormData } from "@/types/job-ticket";
+import type { Database } from "@/integrations/supabase/types";
 
 interface JobTicketFormFieldsProps {
   formData: JobTicketFormData;
   setFormData: (data: JobTicketFormData) => void;
-  clients?: { id: string; first_name: string; last_name: string; }[];
-  clientVehicles?: { id: string; year: number; make: string; model: string; }[];
-  clientAppointments?: { id: string; start_time: string; service_type: string; }[];
+  clients?: { id: string; first_name: string; last_name: string; }[] | null;
+  clientVehicles?: Database["public"]["Tables"]["vehicles"]["Row"][] | null;
+  clientAppointments?: any[] | null;
   selectedAppointmentId: string | null;
   setSelectedAppointmentId: (id: string | null) => void;
+  technicians?: { id: string; first_name: string | null; last_name: string | null; }[] | null;
 }
 
 export const JobTicketFormFields = ({
@@ -26,162 +26,175 @@ export const JobTicketFormFields = ({
   clientAppointments,
   selectedAppointmentId,
   setSelectedAppointmentId,
+  technicians,
 }: JobTicketFormFieldsProps) => {
-  const [isEnhancing, setIsEnhancing] = useState(false);
-
-  const handleEnhanceDescription = async () => {
-    if (!formData.description.trim()) {
-      toast.error("Please enter a description first");
-      return;
-    }
-
-    setIsEnhancing(true);
-    try {
-      const selectedVehicle = clientVehicles?.find(v => v.id === formData.vehicle_id);
-      const vehicleString = selectedVehicle 
-        ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}`
-        : null;
-
-      const { data, error } = await supabase.functions.invoke('enhance-job-description', {
-        body: {
-          description: formData.description,
-          vehicle: vehicleString,
-        },
-      });
-
-      if (error) throw error;
-      
-      if (data.enhancedDescription) {
-        setFormData({ ...formData, description: data.enhancedDescription });
-        toast.success("Description enhanced with AI");
-      }
-    } catch (error) {
-      toast.error("Failed to enhance description");
-      console.error(error);
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   return (
-    <>
-      <div className="space-y-2">
+    <div className="space-y-4">
+      <div>
         <Label htmlFor="client">Client</Label>
-        <select
-          id="client"
-          className="w-full border border-input rounded-md h-10 px-3"
+        <Select
           value={formData.client_id || ""}
-          onChange={(e) => {
-            setFormData({ 
-              ...formData, 
-              client_id: e.target.value || null,
-              vehicle_id: null
+          onValueChange={(value) => {
+            setFormData({
+              ...formData,
+              client_id: value || null,
+              vehicle_id: null,
             });
             setSelectedAppointmentId(null);
           }}
-          required
         >
-          <option value="">Select a client</option>
-          {clients?.map((client) => (
-            <option key={client.id} value={client.id}>
-              {client.first_name} {client.last_name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a client" />
+          </SelectTrigger>
+          <SelectContent>
+            {clients?.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.first_name} {client.last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {formData.client_id && clientVehicles?.length > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="vehicle">Vehicle (Optional)</Label>
-          <select
-            id="vehicle"
-            className="w-full border border-input rounded-md h-10 px-3"
+      {formData.client_id && clientVehicles && clientVehicles.length > 0 && (
+        <div>
+          <Label htmlFor="vehicle">Vehicle</Label>
+          <Select
             value={formData.vehicle_id || ""}
-            onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value || null })}
+            onValueChange={(value) =>
+              setFormData({ ...formData, vehicle_id: value || null })
+            }
           >
-            <option value="">Select a vehicle</option>
-            {clientVehicles.map((vehicle) => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.year} {vehicle.make} {vehicle.model}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select a vehicle" />
+            </SelectTrigger>
+            <SelectContent>
+              {clientVehicles.map((vehicle) => (
+                <SelectItem key={vehicle.id} value={vehicle.id}>
+                  {vehicle.year} {vehicle.make} {vehicle.model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
-      {formData.client_id && clientAppointments?.length > 0 && (
-        <div className="space-y-2">
+      {formData.client_id && clientAppointments && clientAppointments.length > 0 && (
+        <div>
           <Label htmlFor="appointment">Link to Appointment (Optional)</Label>
-          <select
-            id="appointment"
-            className="w-full border border-input rounded-md h-10 px-3"
+          <Select
             value={selectedAppointmentId || ""}
-            onChange={(e) => setSelectedAppointmentId(e.target.value || null)}
+            onValueChange={(value) => setSelectedAppointmentId(value || null)}
           >
-            <option value="">Select an appointment</option>
-            {clientAppointments.map((appointment) => (
-              <option key={appointment.id} value={appointment.id}>
-                {new Date(appointment.start_time).toLocaleString()} - {appointment.service_type}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder="Select an appointment" />
+            </SelectTrigger>
+            <SelectContent>
+              {clientAppointments.map((appointment) => (
+                <SelectItem key={appointment.id} value={appointment.id}>
+                  {new Date(appointment.start_time).toLocaleDateString()}{" "}
+                  {new Date(appointment.start_time).toLocaleTimeString()} -{" "}
+                  {appointment.service_type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <Label htmlFor="description">Description</Label>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={handleEnhanceDescription}
-            disabled={isEnhancing}
-            className="h-8"
-          >
-            <Brain className="mr-2 h-4 w-4" />
-            {isEnhancing ? "Enhancing..." : "Enhance with AI"}
-          </Button>
-        </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          required
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            setFormData({ ...formData, description: e.target.value })
+          }
+          className="h-32"
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="priority">Priority</Label>
-          <select
-            id="priority"
-            className="w-full border border-input rounded-md h-10 px-3"
-            value={formData.priority}
-            onChange={(e) => setFormData({ ...formData, priority: e.target.value as TicketPriority })}
-          >
-            <option value="low">Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
-            <option value="urgent">Urgent</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="status">Status</Label>
-          <select
-            id="status"
-            className="w-full border border-input rounded-md h-10 px-3"
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as TicketStatus })}
-          >
-            <option value="received">Received</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="pending_parts">Pending Parts</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
+      <div>
+        <Label htmlFor="technician">Assign Technician (Optional)</Label>
+        <Select
+          value={formData.assigned_technician_id || ""}
+          onValueChange={(value) =>
+            setFormData({ ...formData, assigned_technician_id: value || null })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a technician" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">None</SelectItem>
+            {technicians?.map((technician) => (
+              <SelectItem key={technician.id} value={technician.id}>
+                {technician.first_name} {technician.last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-    </>
+
+      <div>
+        <Label>Status</Label>
+        <RadioGroup
+          value={formData.status}
+          onValueChange={(value: any) =>
+            setFormData({ ...formData, status: value })
+          }
+          className="flex gap-4 mt-2"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="received" id="received" />
+            <Label htmlFor="received">Received</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="in_progress" id="in_progress" />
+            <Label htmlFor="in_progress">In Progress</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="completed" id="completed" />
+            <Label htmlFor="completed">Completed</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="pending_parts" id="pending_parts" />
+            <Label htmlFor="pending_parts">Pending Parts</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="cancelled" id="cancelled" />
+            <Label htmlFor="cancelled">Cancelled</Label>
+          </div>
+        </RadioGroup>
+      </div>
+
+      <div>
+        <Label>Priority</Label>
+        <RadioGroup
+          value={formData.priority}
+          onValueChange={(value: any) =>
+            setFormData({ ...formData, priority: value })
+          }
+          className="flex gap-4 mt-2"
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="low" id="low" />
+            <Label htmlFor="low">Low</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="normal" id="normal" />
+            <Label htmlFor="normal">Normal</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="high" id="high" />
+            <Label htmlFor="high">High</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="urgent" id="urgent" />
+            <Label htmlFor="urgent">Urgent</Label>
+          </div>
+        </RadioGroup>
+      </div>
+    </div>
   );
 };

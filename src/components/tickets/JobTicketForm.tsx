@@ -14,6 +14,7 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
     clients,
     clientVehicles,
     clientAppointments,
+    technicians,
     handleSubmit,
   } = useJobTicketForm(props);
 
@@ -27,6 +28,7 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
         clientAppointments={clientAppointments}
         selectedAppointmentId={selectedAppointmentId}
         setSelectedAppointmentId={setSelectedAppointmentId}
+        technicians={technicians}
       />
 
       <div className="flex justify-end gap-2">

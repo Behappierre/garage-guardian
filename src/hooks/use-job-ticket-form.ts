@@ -32,6 +32,31 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     },
   });
 
+  const { data: technicians } = useQuery({
+    queryKey: ["technicians"],
+    queryFn: async () => {
+      const { data: userRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "technician");
+
+      if (rolesError) throw rolesError;
+
+      if (!userRoles?.length) return [];
+
+      const technicianIds = userRoles.map(role => role.user_id);
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", technicianIds)
+        .order("first_name");
+
+      if (profilesError) throw profilesError;
+      return profiles;
+    },
+  });
+
   const { data: clientVehicles } = useQuery({
     queryKey: ["vehicles", formData.client_id],
     enabled: !!formData.client_id,
@@ -140,6 +165,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     clients,
     clientVehicles,
     clientAppointments,
+    technicians,
     handleSubmit,
   };
 };
