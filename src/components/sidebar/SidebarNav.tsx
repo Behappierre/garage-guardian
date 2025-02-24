@@ -7,6 +7,7 @@ import {
   Wrench,
   UserCog,
   Hammer,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +121,22 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
             </NavLink>
           </li>
         )}
+        <li>
+          <NavLink
+            to="/dashboard/help"
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
+                isActive && "bg-primary/5 text-primary hover:bg-primary/5",
+                isCollapsed && "justify-center px-2"
+              )
+            }
+            title="Help"
+          >
+            <HelpCircle className="shrink-0 w-5 h-5" />
+            {!isCollapsed && <span>Help</span>}
+          </NavLink>
+        </li>
       </ul>
     </nav>
   );
