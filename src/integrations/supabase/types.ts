@@ -195,6 +195,7 @@ export type Database = {
       }
       email_notifications: {
         Row: {
+          appointment_id: string | null
           created_at: string | null
           id: string
           job_ticket_id: string | null
@@ -205,6 +206,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          appointment_id?: string | null
           created_at?: string | null
           id?: string
           job_ticket_id?: string | null
@@ -215,6 +217,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          appointment_id?: string | null
           created_at?: string | null
           id?: string
           job_ticket_id?: string | null
@@ -225,6 +228,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "email_notifications_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_notifications_job_ticket_id_fkey"
             columns: ["job_ticket_id"]
@@ -524,6 +534,10 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      process_appointment_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
