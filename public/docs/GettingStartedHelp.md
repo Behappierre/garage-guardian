@@ -1,8 +1,8 @@
 
-# Getting Started with GarageGuardian
+# Getting Started with GarageWizz
 
 ## Welcome
-Welcome to GarageGuardian! This guide will help you get started with the essential features of your new garage management system.
+Welcome to GarageWizz! This guide will help you get started with the essential features of your new garage management system.
 
 ## First Steps
 

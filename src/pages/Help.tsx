@@ -17,7 +17,7 @@ interface HelpTopic {
 const helpTopics: HelpTopic[] = [
   {
     title: "Getting Started",
-    description: "Learn the basics of using GarageGuardian",
+    description: "Learn the basics of using GarageWizz",
     id: "getting-started",
     Icon: HelpCircle
   },
@@ -77,7 +77,7 @@ const Help = () => {
             <div className="prose max-w-none mb-8">
               <h1 className="text-3xl font-bold mb-4">Help Center</h1>
               <p className="text-gray-600 mb-8">
-                Welcome to GarageGuardian Help Center. Choose a topic below to learn more about our features and capabilities.
+                Welcome to GarageWizz Help Center. Choose a topic below to learn more about our features and capabilities.
               </p>
             </div>
 
