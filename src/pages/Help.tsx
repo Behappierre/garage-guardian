@@ -1,6 +1,7 @@
 
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import { useQuery } from "@tanstack/react-query";
 
@@ -13,60 +14,59 @@ const Help = () => {
     queryFn: async () => {
       // If we're at the root help page, show the main help content
       if (!currentSection) {
-        return `# Help Center
+        return {
+          title: "Help Center",
+          content: `
+# Welcome to GarageGuardian Help Center
 
-## Welcome to GarageGuardian Help
-
-Choose a section from the list below to learn more:
-
-### Appointments
-- Schedule and manage service appointments
-- View calendar and list views
-- Manage bay assignments
-[View Appointments Help](/dashboard/help/appointments)
-
-### Clients
-- Manage client information
-- Track client vehicles
-- View client history
-
-### Job Tickets
-- Create and manage service tickets
-- Track work progress
-- Manage parts and labor
-
-### Settings
-- Configure your workspace
-- Manage user preferences
-- Update system settings
-
-### Need More Help?
-Contact our support team for additional assistance.`;
+Choose a topic below to learn more about GarageGuardian's features and capabilities.
+`
+        };
       }
 
       try {
         const response = await fetch(`/docs/${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}Help.md`);
-        if (!response.ok) {
-          console.log('Help content not found:', response.status);
-          return `# ${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)} Help
-
-This section provides help and guidance for the ${currentSection} feature. Detailed documentation for this section is coming soon.
-
-## Quick Tips
-- Use the navigation menu on the left to switch between different sections
-- Click on items to view more details
-- Use the search function to find specific information
-- Contact support if you need additional assistance`;
-        }
-        return await response.text();
+        const content = await response.text();
+        return {
+          title: `${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)} Help`,
+          content
+        };
       } catch (error) {
         console.error('Error loading help content:', error);
-        return `# Error Loading Help Content
-        
-We apologize, but there was an error loading the help content. Please try again later or contact support if the problem persists.`;
+        return {
+          title: "Error",
+          content: "We apologize, but there was an error loading the help content. Please try again later."
+        };
       }
     },
   });
+
+  const helpTopics = [
+    {
+      title: "Appointments",
+      description: "Learn how to manage service appointments, scheduling, and bay assignments",
+      path: "/dashboard/help/appointments",
+      icon: "📅"
+    },
+    {
+      title: "Clients",
+      description: "Understand client management, vehicle tracking, and history",
+      path: "/dashboard/help/clients",
+      icon: "👥"
+    },
+    {
+      title: "Job Tickets",
+      description: "Create and manage service tickets, track progress and parts",
+      path: "/dashboard/help/job-tickets",
+      icon: "🔧"
+    },
+    {
+      title: "Settings",
+      description: "Configure your workspace and manage preferences",
+      path: "/dashboard/help/settings",
+      icon: "⚙️"
+    }
+  ];
 
   if (isLoading) {
     return (
@@ -84,8 +84,38 @@ We apologize, but there was an error loading the help content. Please try again 
     <div className="container mx-auto py-6 max-w-4xl">
       <div className="bg-white rounded-lg shadow">
         <ScrollArea className="h-[calc(100vh-12rem)]">
-          <div className="p-6 prose prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-headings:font-semibold prose-headings:mb-4 prose-p:text-gray-600 prose-a:text-primary hover:prose-a:text-primary/80 prose-ul:list-disc">
-            <ReactMarkdown>{helpContent || ''}</ReactMarkdown>
+          <div className="p-6">
+            {!currentSection ? (
+              <>
+                <div className="prose max-w-none mb-8">
+                  <ReactMarkdown>{helpContent?.content || ''}</ReactMarkdown>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {helpTopics.map((topic) => (
+                    <Link key={topic.path} to={topic.path} className="no-underline">
+                      <Card className="p-4 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div className="flex items-start space-x-4">
+                          <span className="text-2xl">{topic.icon}</span>
+                          <div>
+                            <h3 className="font-semibold text-lg mb-1">{topic.title}</h3>
+                            <p className="text-gray-600 text-sm">{topic.description}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="prose max-w-none">
+                <div className="mb-4">
+                  <Link to="/dashboard/help" className="text-primary hover:text-primary/80 no-underline">
+                    ← Back to Help Center
+                  </Link>
+                </div>
+                <ReactMarkdown>{helpContent?.content || ''}</ReactMarkdown>
+              </div>
+            )}
           </div>
         </ScrollArea>
       </div>
