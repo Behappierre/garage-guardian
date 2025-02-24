@@ -19,7 +19,7 @@ const Dashboard = () => {
         "flex-1 transition-all duration-300",
         isCollapsed ? "ml-16" : "ml-64"
       )}>
-        <div className="container mx-auto p-6">
+        <div className="max-w-6xl mx-auto px-4 py-6">
           {isDashboardRoot ? (
             <>
               <WelcomeHeader />
