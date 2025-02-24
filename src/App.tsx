@@ -36,9 +36,15 @@ function App() {
                   </ProtectedRoute>
                 }
               >
-                <Route path="appointments" element={<Appointments />} />
-                <Route path="clients" element={<Clients />} />
-                <Route path="job-tickets" element={<JobTickets />} />
+                <Route path="appointments" element={<Appointments />}>
+                  <Route path=":id" element={<Appointments />} />
+                </Route>
+                <Route path="clients" element={<Clients />}>
+                  <Route path=":id" element={<Clients />} />
+                </Route>
+                <Route path="job-tickets" element={<JobTickets />}>
+                  <Route path=":id" element={<JobTickets />} />
+                </Route>
                 <Route path="admin" element={<Admin />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="my-work" element={<MyWork />} />
