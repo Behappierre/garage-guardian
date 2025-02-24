@@ -1,135 +1,311 @@
-
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AppointmentWithRelations } from "@/types/appointment";
-import { ClientSelector } from "./ClientSelector";
-import { TicketSelector } from "./TicketSelector";
-import { TimeSelector } from "./TimeSelector";
-import { ServiceTypeInput } from "./ServiceTypeInput";
-import { NotesInput } from "./NotesInput";
-import { VehicleSelector } from "./VehicleSelector";
-import { useAppointmentForm } from "./hooks/useAppointmentForm";
-import { useState } from "react";
 
 interface AppointmentFormProps {
-  initialData?: AppointmentWithRelations | null;
-  selectedDate?: Date | null;
+  initialData: AppointmentWithRelations | null;
+  selectedDate: Date | null;
   onClose: () => void;
 }
 
-export const AppointmentForm = ({ initialData, selectedDate, onClose }: AppointmentFormProps) => {
-  const {
-    formData,
-    setFormData,
-    isSubmitting,
-    isCancelling,
-    selectedTickets,
-    setSelectedTickets,
-    clients,
-    vehicles,
-    jobTickets,
-    selectedVehicleId,
-    setSelectedVehicleId,
-    handleSubmit,
-    handleCancel
-  } = useAppointmentForm({ initialData, selectedDate, onClose });
+const ClientSelector = ({ value, onChange }: { value: string | null, onChange: (value: string) => void }) => {
+  const { data: clients, isLoading, error } = useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, first_name, last_name")
+        .order("first_name");
 
-  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+  });
 
-  const selectedVehicle = vehicles?.find(v => v.id === selectedVehicleId) || 
-    initialData?.vehicle ||
-    jobTickets?.find(ticket => ticket.id === selectedTickets[0])?.vehicle;
+  if (isLoading) return <div>Loading clients...</div>;
+  if (error) return <div>Error loading clients: {error.message}</div>;
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="client">Client</Label>
+      <Select onValueChange={onChange} value={value || ""}>
+        <SelectTrigger id="client">
+          <SelectValue placeholder="Select a client" />
+        </SelectTrigger>
+        <SelectContent>
+          {clients?.map((client) => (
+            <SelectItem key={client.id} value={client.id}>
+              {client.first_name} {client.last_name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const VehicleSelector = ({ clientId, value, onChange }: { clientId: string, value: string | null, onChange: (value: string) => void }) => {
+  const { data: vehicles, isLoading, error } = useQuery({
+    queryKey: ["vehicles", clientId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("id, make, model, year, license_plate")
+        .eq("client_id", clientId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+      return data;
+    },
+    enabled: !!clientId,
+  });
+
+  if (isLoading) return <div>Loading vehicles...</div>;
+  if (error) return <div>Error loading vehicles: {error.message}</div>;
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="vehicle">Vehicle</Label>
+      <Select onValueChange={onChange} value={value || ""}>
+        <SelectTrigger id="vehicle">
+          <SelectValue placeholder="Select a vehicle" />
+        </SelectTrigger>
+        <SelectContent>
+          {vehicles?.map((vehicle) => (
+            <SelectItem key={vehicle.id} value={vehicle.id}>
+              {vehicle.year} {vehicle.make} {vehicle.model} ({vehicle.license_plate})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const TimeSelector = ({ startTime, endTime, onStartTimeChange, onEndTimeChange }: { startTime: string, endTime: string, onStartTimeChange: (value: string) => void, onEndTimeChange: (value: string) => void }) => {
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-2">
+        <Label htmlFor="start_time">Start Time</Label>
+        <Input
+          type="datetime-local"
+          id="start_time"
+          value={startTime}
+          onChange={(e) => onStartTimeChange(e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="end_time">End Time</Label>
+        <Input
+          type="datetime-local"
+          id="end_time"
+          value={endTime}
+          onChange={(e) => onEndTimeChange(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+};
+
+const ServiceTypeInput = ({ value, onChange }: { value: string, onChange: (value: string) => void }) => {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="service_type">Service Type</Label>
+      <Input
+        type="text"
+        id="service_type"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+};
+
+const NotesInput = ({ value, onChange }: { value: string, onChange: (value: string) => void }) => {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="notes">Notes</Label>
+      <Input
+        type="text"
+        id="notes"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+};
+
+export const AppointmentForm = ({
+  initialData,
+  selectedDate,
+  onClose,
+}: AppointmentFormProps) => {
+  const [formData, setFormData] = useState<{
+    client_id: string | null;
+    vehicle_id: string | null;
+    start_time: string;
+    end_time: string;
+    service_type: string;
+    notes: string | null;
+    status: string;
+    bay: 'bay1' | 'bay2' | 'mot' | null;
+  }>(() => ({
+    client_id: initialData?.client_id || null,
+    vehicle_id: initialData?.vehicle_id || null,
+    start_time: initialData?.start_time || (selectedDate ? selectedDate.toISOString() : ''),
+    end_time: initialData?.end_time || '',
+    service_type: initialData?.service_type || '',
+    notes: initialData?.notes || null,
+    status: initialData?.status || 'scheduled',
+    bay: initialData?.bay || null,
+  }));
+
+  const queryClient = useQueryClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const createAppointmentMutation = useMutation(
+    async (data: Omit<typeof formData, 'id'>) => {
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .insert([data])
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return appointment;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        onClose();
+      },
+      onError: (error) => {
+        console.error("Error creating appointment:", error);
+      },
+    }
+  );
+
+  const updateAppointmentMutation = useMutation(
+    async (data: typeof formData) => {
+      const { data: appointment, error } = await supabase
+        .from('appointments')
+        .update(data)
+        .eq('id', data.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return appointment;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        onClose();
+      },
+      onError: (error) => {
+        console.error("Error updating appointment:", error);
+      },
+    }
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const appointmentData = {
+      client_id: formData.client_id,
+      vehicle_id: formData.vehicle_id,
+      start_time: formData.start_time,
+      end_time: formData.end_time,
+      service_type: formData.service_type,
+      notes: formData.notes,
+      status: formData.status,
+      bay: formData.bay,
+    };
+
+    try {
+      if (initialData) {
+        await updateAppointmentMutation.mutateAsync({ ...formData, id: initialData.id });
+      } else {
+        await createAppointmentMutation.mutateAsync(appointmentData);
+      }
+    } catch (error) {
+      console.error("Error during appointment submission:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <ClientSelector
-        clients={clients}
-        selectedClientId={formData.client_id}
-        onClientChange={(clientId) => {
-          setFormData(prev => ({ ...prev, client_id: clientId }));
-          setSelectedVehicleId(null);
-          setIsEditingVehicle(false);
-        }}
+        value={formData.client_id}
+        onChange={(value) => setFormData({ ...formData, client_id: value })}
       />
 
-      {selectedVehicle && !isEditingVehicle && (
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-gray-700">Vehicle</label>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm"
-              onClick={() => setIsEditingVehicle(true)}
-            >
-              Change Vehicle
-            </Button>
-          </div>
-          <div className="p-3 bg-gray-50 rounded-md">
-            <p className="text-sm text-gray-600">
-              {selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}
-              {selectedVehicle.license_plate && (
-                <span className="ml-1">({selectedVehicle.license_plate})</span>
-              )}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {(!selectedVehicle || isEditingVehicle) && (
+      {formData.client_id && (
         <VehicleSelector
-          vehicles={vehicles}
-          selectedVehicleId={selectedVehicleId}
-          onVehicleChange={(vehicleId) => {
-            setSelectedVehicleId(vehicleId);
-            setIsEditingVehicle(false);
-          }}
+          clientId={formData.client_id}
+          value={formData.vehicle_id}
+          onChange={(value) => setFormData({ ...formData, vehicle_id: value })}
         />
       )}
-
-      <TicketSelector
-        clientId={formData.client_id}
-        tickets={jobTickets}
-        selectedTickets={selectedTickets}
-        appointmentId={initialData?.id}
-        onTicketSelectionChange={setSelectedTickets}
-      />
-
-      <ServiceTypeInput
-        value={formData.service_type}
-        onChange={(value) => setFormData(prev => ({ ...prev, service_type: value }))}
-      />
 
       <TimeSelector
         startTime={formData.start_time}
         endTime={formData.end_time}
-        onStartTimeChange={(time) => setFormData(prev => ({ ...prev, start_time: time }))}
-        onEndTimeChange={(time) => setFormData(prev => ({ ...prev, end_time: time }))}
+        onStartTimeChange={(value) => setFormData({ ...formData, start_time: value })}
+        onEndTimeChange={(value) => setFormData({ ...formData, end_time: value })}
       />
 
+      <ServiceTypeInput
+        value={formData.service_type}
+        onChange={(value) => setFormData({ ...formData, service_type: value })}
+      />
+
+      <div className="space-y-2">
+        <Label>Bay Assignment</Label>
+        <Select
+          value={formData.bay || ""}
+          onValueChange={(value) => setFormData({ ...formData, bay: value as 'bay1' | 'bay2' | 'mot' | null })}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a bay" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="bay1">Bay 1</SelectItem>
+            <SelectItem value="bay2">Bay 2</SelectItem>
+            <SelectItem value="mot">MOT</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <NotesInput
-        value={formData.notes}
-        onChange={(value) => setFormData(prev => ({ ...prev, notes: value }))}
+        value={formData.notes || ''}
+        onChange={(value) => setFormData({ ...formData, notes: value })}
       />
 
       <div className="flex justify-end gap-2">
-        {initialData && initialData.status !== 'cancelled' && (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleCancel}
-            disabled={isCancelling}
-          >
-            {isCancelling ? "Cancelling..." : "Cancel Appointment"}
-          </Button>
-        )}
         <Button type="button" variant="outline" onClick={onClose}>
-          Close
+          Cancel
         </Button>
-        {initialData?.status !== 'cancelled' && (
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : initialData ? "Update Appointment" : "Create Appointment"}
-          </Button>
-        )}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Saving...' : initialData ? 'Update Appointment' : 'Create Appointment'}
+        </Button>
       </div>
     </form>
   );
