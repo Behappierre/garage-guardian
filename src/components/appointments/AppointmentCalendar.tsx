@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventClickArg, EventDropArg, EventResizeDoneArg } from "@fullcalendar/core";
+import { EventClickArg, EventDropArg } from "@fullcalendar/core";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -64,6 +64,19 @@ export const AppointmentCalendar = ({
     return `${clientName} - ${appointment.service_type}`;
   };
 
+  const getBayColor = (bay: BayType | null | undefined) => {
+    switch (bay) {
+      case 'bay1':
+        return '#F97316'; // Bright Orange
+      case 'bay2':
+        return '#0EA5E9'; // Ocean Blue
+      case 'mot':
+        return '#8B5CF6'; // Vivid Purple
+      default:
+        return '#64748B'; // Default gray
+    }
+  };
+
   const filterAppointmentsByBay = (appointments: AppointmentWithBay[]) => {
     if (selectedBay === 'all') return appointments;
     return appointments.filter(appointment => appointment.bay === selectedBay);
@@ -80,8 +93,8 @@ export const AppointmentCalendar = ({
     });
   };
 
-  const handleEventResize = (eventResizeInfo: EventResizeDoneArg) => {
-    const { event } = eventResizeInfo;
+  const handleEventResize = (eventDropInfo: EventDropArg) => {
+    const { event } = eventDropInfo;
     const appointment = event.extendedProps as AppointmentWithBay;
     
     updateAppointmentMutation.mutate({
@@ -98,6 +111,9 @@ export const AppointmentCalendar = ({
       title: getEventTitle(appointment),
       start: appointment.start_time,
       end: appointment.end_time,
+      backgroundColor: getBayColor(appointment.bay),
+      borderColor: getBayColor(appointment.bay),
+      textColor: '#FFFFFF',
       extendedProps: appointment,
       editable: true,
       durationEditable: true,
@@ -109,7 +125,21 @@ export const AppointmentCalendar = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <div className="flex gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F97316' }} />
+            <span className="text-sm text-gray-600">Bay 1</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#0EA5E9' }} />
+            <span className="text-sm text-gray-600">Bay 2</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8B5CF6' }} />
+            <span className="text-sm text-gray-600">MOT</span>
+          </div>
+        </div>
         <Select value={selectedBay} onValueChange={(value: BayType) => setSelectedBay(value)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select bay" />
