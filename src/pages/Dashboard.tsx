@@ -17,6 +17,21 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  const { data: userProfile } = useQuery({
+    queryKey: ["userProfile", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user?.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   useEffect(() => {
     const fetchUserRole = async () => {
       if (!user) return;
@@ -172,7 +187,11 @@ const Dashboard = () => {
       <main className="p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">Dashboard Overview</h1>
-          <p className="text-gray-500">Welcome back! Here's what's happening today.</p>
+          <p className="text-gray-500">
+            {userProfile?.first_name 
+              ? `Welcome back, ${userProfile.first_name}! Here's what's happening today.`
+              : "Welcome back! Here's what's happening today."}
+          </p>
         </div>
 
         {/* Metrics Grid */}
