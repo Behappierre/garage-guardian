@@ -63,7 +63,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vehicles")
-        .select("id, year, make, model")
+        .select("*") // Now selecting all fields to match the expected type
         .eq("client_id", formData.client_id);
       
       if (error) throw error;
