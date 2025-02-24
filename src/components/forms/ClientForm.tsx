@@ -125,10 +125,12 @@ export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
 
       <div className="space-y-2">
         <Label htmlFor="address">Address</Label>
-        <Input
+        <Textarea
           id="address"
           value={formData.address}
           onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+          className="resize-none"
+          rows={2}
         />
       </div>
 
