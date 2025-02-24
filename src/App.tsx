@@ -48,7 +48,7 @@ function App() {
                 <Route path="admin" element={<Admin />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="my-work" element={<MyWork />} />
-                <Route path="help" element={<Help />} />
+                <Route path="help/*" element={<Help />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
