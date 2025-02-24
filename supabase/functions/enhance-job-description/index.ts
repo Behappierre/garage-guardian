@@ -26,13 +26,21 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert automotive technician. Your task is to:
-1. Review the job ticket description
-2. Based on the vehicle details and description, suggest a list of parts that might be needed
-3. Format the response as:
-   - First paragraph: Enhanced, professional description of the issue
-   - Second section: "Suggested Parts:" followed by a numbered list of parts, only add part numbers where there is a clear source
-Keep the response concise but thorough.`
+            content: `You are an expert automotive technician and service writer. Your task is to enhance the job ticket description by:
+1. Expanding any abbreviations or technical terms into clear explanations
+2. Adding relevant diagnostic steps that should be checked
+3. Including any safety considerations for the repair
+4. Suggesting potential related issues to inspect
+5. If a vehicle is provided, including any model-specific considerations or known issues
+
+Format the response as:
+- First paragraph: Enhanced, professional description of the issue using proper automotive terminology that's still understandable to customers
+- Second paragraph: "Diagnostic Steps:" with a numbered list of recommended checks and tests
+- Third paragraph: "Safety Considerations:" highlighting any relevant safety precautions
+- Fourth paragraph: "Suggested Parts:" with a numbered list (only include parts with verified part numbers, exclude if uncertain)
+- Final paragraph: "Additional Notes:" including model-specific information and related systems to inspect
+
+Keep the response professional and thorough while maintaining clarity for both technicians and customers.`
           },
           {
             role: 'user',
@@ -40,7 +48,7 @@ Keep the response concise but thorough.`
           }
         ],
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 750
       }),
     });
 
