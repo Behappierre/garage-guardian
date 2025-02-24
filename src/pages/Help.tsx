@@ -105,8 +105,28 @@ const Help = () => {
               </TabsContent>
 
               {selectedTopic && (
-                <TabsContent value={selectedTopic} className="prose max-w-none">
-                  {helpContent && <ReactMarkdown>{helpContent}</ReactMarkdown>}
+                <TabsContent value={selectedTopic}>
+                  <div className="markdown-content text-left">
+                    <div className="space-y-6">
+                      {helpContent && (
+                        <ReactMarkdown
+                          components={{
+                            h1: ({children}) => <h1 className="text-3xl font-bold mb-6">{children}</h1>,
+                            h2: ({children}) => <h2 className="text-2xl font-semibold mt-8 mb-4">{children}</h2>,
+                            h3: ({children}) => <h3 className="text-xl font-medium mt-6 mb-3">{children}</h3>,
+                            p: ({children}) => <p className="text-gray-700 mb-4">{children}</p>,
+                            ul: ({children}) => <ul className="space-y-2 mb-4 ml-4">{children}</ul>,
+                            li: ({children}) => <li className="flex items-start"><span className="mr-2">•</span> <span>{children}</span></li>,
+                            strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                            hr: () => <hr className="my-8 border-gray-200" />,
+                            em: ({children}) => <em className="text-gray-600 italic">{children}</em>,
+                          }}
+                        >
+                          {helpContent}
+                        </ReactMarkdown>
+                      )}
+                    </div>
+                  </div>
                 </TabsContent>
               )}
             </Tabs>
