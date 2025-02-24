@@ -34,11 +34,11 @@ This section provides help and guidance for the ${currentSection} feature. Detai
   });
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-6 max-w-4xl">
       <div className="bg-white rounded-lg shadow">
         <ScrollArea className="h-[calc(100vh-12rem)]">
           <div className="p-6">
-            <article className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 prose-a:text-primary hover:prose-a:text-primary/80">
+            <article className="prose max-w-none prose-headings:font-semibold prose-h1:text-2xl prose-h2:text-xl prose-headings:text-gray-900 prose-p:text-gray-600 prose-a:text-primary hover:prose-a:text-primary/80 prose-ul:list-disc prose-li:text-gray-600">
               {isLoading ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
