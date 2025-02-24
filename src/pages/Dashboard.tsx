@@ -1,15 +1,22 @@
 
-import { WelcomeHeader } from "@/components/dashboard/WelcomeHeader";
-import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import { Sidebar } from "@/components/Sidebar";
+import { cn } from "@/lib/utils";
 
 const Dashboard = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="p-8">
-        <WelcomeHeader />
-        <DashboardMetrics />
-        <RecentActivity />
+    <div className="flex min-h-screen">
+      <Sidebar isCollapsed={isCollapsed} onCollapse={setIsCollapsed} />
+      <main className={cn(
+        "flex-1 transition-all duration-300",
+        isCollapsed ? "ml-16" : "ml-64"
+      )}>
+        <div className="container mx-auto p-6">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
