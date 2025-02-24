@@ -6,6 +6,7 @@ interface ClientInfoProps {
   lastName: string;
   email: string;
   phone: string;
+  address: string;
   notes: string;
   onEditClient: () => void;
 }
@@ -15,6 +16,7 @@ export const ClientInfo = ({
   lastName,
   email,
   phone,
+  address,
   notes,
   onEditClient,
 }: ClientInfoProps) => {
@@ -31,6 +33,10 @@ export const ClientInfo = ({
         <div>
           <p className="text-sm text-gray-500">Phone</p>
           <p className="font-medium">{phone || "No phone"}</p>
+        </div>
+        <div className="col-span-2">
+          <p className="text-sm text-gray-500">Address</p>
+          <p className="font-medium">{address || "No address"}</p>
         </div>
         <div className="col-span-2">
           <p className="text-sm text-gray-500">Notes</p>

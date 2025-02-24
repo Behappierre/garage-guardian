@@ -16,6 +16,7 @@ interface ClientFormProps {
     last_name: string;
     email: string;
     phone: string;
+    address: string;
     notes: string;
   };
 }
@@ -28,6 +29,7 @@ export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
     last_name: initialData?.last_name || "",
     email: initialData?.email || "",
     phone: initialData?.phone || "",
+    address: initialData?.address || "",
     notes: initialData?.notes || "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,6 +120,15 @@ export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
           type="tel"
           value={formData.phone}
           onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="address">Address</Label>
+        <Input
+          id="address"
+          value={formData.address}
+          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
         />
       </div>
 
