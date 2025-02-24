@@ -367,6 +367,57 @@ export type Database = {
           },
         ]
       }
+      time_entries: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          end_time: string | null
+          id: string
+          job_ticket_id: string
+          notes: string | null
+          start_time: string
+          technician_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          end_time?: string | null
+          id?: string
+          job_ticket_id: string
+          notes?: string | null
+          start_time: string
+          technician_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          end_time?: string | null
+          id?: string
+          job_ticket_id?: string
+          notes?: string | null
+          start_time?: string
+          technician_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_job_ticket_id_fkey"
+            columns: ["job_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "job_tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
