@@ -54,7 +54,16 @@ const Help = () => {
     queryKey: ["helpContent", selectedTopic],
     queryFn: async () => {
       if (!selectedTopic) return null;
-      const response = await fetch(`/docs/${selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1)}Help.md`);
+      // Convert kebab-case to PascalCase for file naming
+      const formattedTopic = selectedTopic
+        .split("-")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join("");
+      const response = await fetch(`/docs/${formattedTopic}Help.md`);
+      if (!response.ok) {
+        console.error(`Failed to load help content for ${selectedTopic}`);
+        return null;
+      }
       return await response.text();
     },
     enabled: !!selectedTopic
