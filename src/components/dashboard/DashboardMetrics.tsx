@@ -1,5 +1,5 @@
 
-import { Wrench, Calendar, Clock, Users } from "lucide-react";
+import { Wrench, Calendar, CheckCircle, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -9,32 +9,53 @@ export const DashboardMetrics = () => {
     queryFn: async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
+      // Get active repairs (open job tickets)
       const { count: activeRepairs } = await supabase
         .from('job_tickets')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'in_progress');
+        .not('status', 'in', ['completed', 'cancelled']);
 
+      // Get today's appointments
       const { count: todayAppointments } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .gte('start_time', today.toISOString())
-        .lt('start_time', new Date(today.getTime() + 24*60*60*1000).toISOString());
+        .lt('start_time', tomorrow.toISOString());
 
-      const { count: pendingTickets } = await supabase
+      // Get job tickets completed today
+      const { count: completedToday } = await supabase
         .from('job_tickets')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'received');
+        .eq('status', 'completed')
+        .gte('updated_at', today.toISOString())
+        .lt('updated_at', tomorrow.toISOString());
 
-      const { count: totalClients } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true });
+      // Calculate booked hours ratio
+      const { data: appointments } = await supabase
+        .from('appointments')
+        .select('start_time, end_time')
+        .gte('start_time', today.toISOString())
+        .lt('start_time', tomorrow.toISOString());
+
+      // Calculate total booked minutes for today
+      const totalBookedMinutes = appointments?.reduce((total, appointment) => {
+        const start = new Date(appointment.start_time);
+        const end = new Date(appointment.end_time);
+        return total + (end.getTime() - start.getTime()) / (1000 * 60);
+      }, 0) || 0;
+
+      // Calculate ratio (assuming 3 bays and 8 working hours)
+      const totalPossibleMinutes = 3 * 8 * 60; // 3 bays * 8 hours * 60 minutes
+      const bookedRatio = totalBookedMinutes / totalPossibleMinutes;
 
       return {
         activeRepairs: activeRepairs || 0,
         todayAppointments: todayAppointments || 0,
-        pendingTickets: pendingTickets || 0,
-        totalClients: totalClients || 0
+        completedToday: completedToday || 0,
+        bookedRatio: Math.round(bookedRatio * 100)
       };
     }
   });
@@ -55,16 +76,16 @@ export const DashboardMetrics = () => {
       bgColor: "bg-green-50",
     },
     {
-      title: "Pending Orders",
-      value: metricsData?.pendingTickets.toString() || "0",
-      icon: Clock,
+      title: "Completed Today",
+      value: metricsData?.completedToday.toString() || "0",
+      icon: CheckCircle,
       color: "text-yellow-600",
       bgColor: "bg-yellow-50",
     },
     {
-      title: "Total Clients",
-      value: metricsData?.totalClients.toString() || "0",
-      icon: Users,
+      title: "Booked Hours Ratio",
+      value: `${metricsData?.bookedRatio || 0}%`,
+      icon: Clock,
       color: "text-purple-600",
       bgColor: "bg-purple-50",
     },
