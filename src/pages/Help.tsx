@@ -22,8 +22,9 @@ This section provides help and guidance for the ${currentSection} feature. Detai
 - Contact support if you need additional assistance`;
 
       try {
-        const response = await fetch(`/src/docs/${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}Help.md`);
+        const response = await fetch(`/docs/${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}Help.md`);
         if (!response.ok) {
+          console.log('Help content not found:', response.status);
           return defaultContent;
         }
         return await response.text();
