@@ -19,13 +19,13 @@ const Dashboard = () => {
         "flex-1 transition-all duration-300",
         isCollapsed ? "ml-16" : "ml-64"
       )}>
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="h-full w-full px-4 py-6">
           {isDashboardRoot ? (
-            <>
+            <div className="mx-auto w-full max-w-[1400px]">
               <WelcomeHeader />
               <DashboardMetrics />
               <RecentActivity />
-            </>
+            </div>
           ) : (
             <Outlet />
           )}

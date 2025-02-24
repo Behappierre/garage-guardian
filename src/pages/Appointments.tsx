@@ -35,8 +35,8 @@ const Appointments = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="p-8">
+    <div className="w-full max-w-[1400px] mx-auto">
+      <main>
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -95,7 +95,7 @@ const Appointments = () => {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
-                {selectedAppointment ? "Edit Appointment" : "Create New Appointment"}
+                {selectedAppointment ? "Edit Appointment" : "Create New Job Ticket"}
               </DialogTitle>
             </DialogHeader>
             <AppointmentForm
