@@ -10,7 +10,7 @@ export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
 export type AppointmentStatus = "scheduled" | "confirmed" | "cancelled" | "completed";
 export type BayType = "bay1" | "bay2" | "mot" | null;
 
-export interface AppointmentWithRelations extends DBAppointment {
+export interface AppointmentWithRelations extends Omit<DBAppointment, 'bay'> {
   client: DBClient;
   job_tickets?: DBJobTicket[];
   vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;

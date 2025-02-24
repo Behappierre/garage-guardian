@@ -4,8 +4,11 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventClickArg } from "@fullcalendar/core";
+import { EventClickArg, EventDropArg, EventResizeDoneArg } from "@fullcalendar/core";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import type { AppointmentWithRelations } from "@/types/appointment";
 
 type BayType = 'all' | 'bay1' | 'bay2' | 'mot';
@@ -26,6 +29,29 @@ export const AppointmentCalendar = ({
   onEventClick,
 }: AppointmentCalendarProps) => {
   const [selectedBay, setSelectedBay] = useState<BayType>('all');
+  const queryClient = useQueryClient();
+
+  const updateAppointmentMutation = useMutation({
+    mutationFn: async ({ id, start_time, end_time }: { id: string, start_time: string, end_time: string }) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ start_time, end_time })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment updated successfully');
+    },
+    onError: (error) => {
+      console.error('Error updating appointment:', error);
+      toast.error('Failed to update appointment');
+    },
+  });
 
   const getEventTitle = (appointment: AppointmentWithBay) => {
     const clientName = `${appointment.client.first_name} ${appointment.client.last_name}`;
@@ -43,6 +69,28 @@ export const AppointmentCalendar = ({
     return appointments.filter(appointment => appointment.bay === selectedBay);
   };
 
+  const handleEventDrop = (eventDropInfo: EventDropArg) => {
+    const { event } = eventDropInfo;
+    const appointment = event.extendedProps as AppointmentWithBay;
+    
+    updateAppointmentMutation.mutate({
+      id: appointment.id,
+      start_time: event.startStr,
+      end_time: event.endStr,
+    });
+  };
+
+  const handleEventResize = (eventResizeInfo: EventResizeDoneArg) => {
+    const { event } = eventResizeInfo;
+    const appointment = event.extendedProps as AppointmentWithBay;
+    
+    updateAppointmentMutation.mutate({
+      id: appointment.id,
+      start_time: event.startStr,
+      end_time: event.endStr,
+    });
+  };
+
   const calendarEvents = filterAppointmentsByBay(appointments)
     ?.filter(appointment => appointment.status !== 'cancelled')
     .map(appointment => ({
@@ -51,6 +99,8 @@ export const AppointmentCalendar = ({
       start: appointment.start_time,
       end: appointment.end_time,
       extendedProps: appointment,
+      editable: true,
+      durationEditable: true,
     })) || [];
 
   const handleEventClick = (clickInfo: EventClickArg) => {
@@ -91,6 +141,9 @@ export const AppointmentCalendar = ({
           slotMaxTime="18:00:00"
           allDaySlot={false}
           slotDuration="00:30:00"
+          editable={true}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
         />
       </div>
     </div>
