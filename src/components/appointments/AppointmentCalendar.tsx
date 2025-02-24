@@ -154,6 +154,58 @@ export const AppointmentCalendar = ({
       </div>
       
       <div className="bg-white p-4 rounded-lg border">
+        <style>
+          {`
+            .fc .fc-toolbar.fc-header-toolbar {
+              margin-bottom: 1em;
+            }
+            .fc .fc-button-primary {
+              background-color: #f3f4f6;
+              border-color: #e5e7eb;
+              color: #374151;
+              font-weight: 500;
+              text-transform: capitalize;
+              padding: 0.375rem 0.75rem;
+              font-size: 0.875rem;
+            }
+            .fc .fc-button-primary:not(:disabled):hover {
+              background-color: #e5e7eb;
+              border-color: #d1d5db;
+              color: #1f2937;
+            }
+            .fc .fc-button-primary:not(:disabled).fc-button-active,
+            .fc .fc-button-primary:not(:disabled):active {
+              background-color: #2dd4bf;
+              border-color: #2dd4bf;
+              color: #ffffff;
+            }
+            .fc .fc-button-primary:focus {
+              box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #2dd4bf;
+            }
+            .fc .fc-toolbar-title {
+              font-size: 1.25rem;
+              font-weight: 600;
+              color: #111827;
+            }
+            .fc .fc-button {
+              padding: 0.375rem 0.75rem;
+              border-radius: 0.375rem;
+              font-size: 0.875rem;
+              line-height: 1.25rem;
+              transition: all 150ms ease-in-out;
+            }
+            .fc .fc-toolbar {
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+            }
+            .fc .fc-toolbar-chunk {
+              display: flex;
+              align-items: center;
+              gap: 0.5rem;
+            }
+          `}
+        </style>
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
