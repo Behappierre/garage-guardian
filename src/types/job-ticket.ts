@@ -1,7 +1,10 @@
 
 import type { Database } from "@/integrations/supabase/types";
 
-export type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"];
+export type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
+  client?: Database["public"]["Tables"]["clients"]["Row"] | null;
+  vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
+};
 export type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 export type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
