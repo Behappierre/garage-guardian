@@ -4,7 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { EventClickArg, EventDropArg } from "@fullcalendar/core";
+import { EventClickArg, EventDropArg, EventResizeDoneArg } from "@fullcalendar/core";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -93,8 +93,8 @@ export const AppointmentCalendar = ({
     });
   };
 
-  const handleEventResize = (eventDropInfo: EventDropArg) => {
-    const { event } = eventDropInfo;
+  const handleEventResize = (eventResizeInfo: EventResizeDoneArg) => {
+    const { event } = eventResizeInfo;
     const appointment = event.extendedProps as AppointmentWithBay;
     
     updateAppointmentMutation.mutate({
