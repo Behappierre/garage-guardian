@@ -92,15 +92,15 @@ export const DashboardMetrics = () => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {metrics.map((metric) => (
-        <div key={metric.title} className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className={`${metric.bgColor} p-3 rounded-lg`}>
-              <metric.icon className={`h-6 w-6 ${metric.color}`} />
+        <div key={metric.title} className="bg-white rounded-lg shadow-sm p-4 flex flex-col">
+          <div className="flex items-center space-x-3">
+            <div className={`${metric.bgColor} p-2 rounded-lg`}>
+              <metric.icon className={`h-5 w-5 ${metric.color}`} />
             </div>
+            <h3 className="text-sm font-medium text-gray-900">{metric.title}</h3>
           </div>
-          <h3 className="text-lg font-medium text-gray-900">{metric.title}</h3>
           <p className="text-2xl font-semibold text-gray-900 mt-2">{metric.value}</p>
         </div>
       ))}
