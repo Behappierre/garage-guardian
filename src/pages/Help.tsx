@@ -6,28 +6,48 @@ import { useQuery } from "@tanstack/react-query";
 
 const Help = () => {
   const location = useLocation();
-  const currentSection = location.pathname.split('/')[2] || 'appointments';
+  const currentSection = location.pathname.split('/')[2] || 'dashboard';
 
-  const { data: helpContent } = useQuery({
+  const { data: helpContent, isLoading } = useQuery({
     queryKey: ["helpContent", currentSection],
     queryFn: async () => {
       try {
         const response = await fetch(`/src/docs/${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)}Help.md`);
+        if (!response.ok) {
+          throw new Error('Help content not found');
+        }
         const content = await response.text();
         return content;
       } catch (error) {
-        return "# Help Content Not Found\n\nThe help content for this section is not available yet.";
+        console.error('Error loading help content:', error);
+        return `# ${currentSection.charAt(0).toUpperCase() + currentSection.slice(1)} Help
+
+This section provides help and guidance for the ${currentSection} feature. Detailed documentation for this section is coming soon.
+
+## Quick Tips
+- Use the navigation menu on the left to switch between different sections
+- Click on items to view more details
+- Use the search function to find specific information
+- Contact support if you need additional assistance`;
       }
     },
   });
 
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
+    <div className="container mx-auto py-6">
       <div className="bg-white rounded-lg shadow">
-        <ScrollArea className="h-[calc(100vh-12rem)] p-6">
-          <article className="prose max-w-none">
-            <ReactMarkdown>{helpContent || ''}</ReactMarkdown>
-          </article>
+        <ScrollArea className="h-[calc(100vh-12rem)]">
+          <div className="p-6">
+            <article className="prose prose-sm max-w-none prose-headings:text-gray-900 prose-p:text-gray-600 prose-a:text-primary hover:prose-a:text-primary/80">
+              {isLoading ? (
+                <div className="flex items-center justify-center h-32">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : (
+                <ReactMarkdown>{helpContent || ''}</ReactMarkdown>
+              )}
+            </article>
+          </div>
         </ScrollArea>
       </div>
     </div>
