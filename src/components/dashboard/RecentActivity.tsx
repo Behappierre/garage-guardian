@@ -103,7 +103,7 @@ export const RecentActivity = () => {
   }, [refetch]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
+    <div className="bg-white rounded-lg shadow-sm p-6 text-left">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
         <ActivitySquare className="h-5 w-5 text-gray-400" />
@@ -112,15 +112,15 @@ export const RecentActivity = () => {
         {recentActivityData?.map((activity) => (
           <div
             key={`${activity.type}-${activity.id}`}
-            className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
+            className="flex items-start space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
             onClick={activity.onClick}
           >
-            <div className="bg-gray-100 p-2 rounded-lg">
+            <div className="bg-gray-100 p-2 rounded-lg shrink-0">
               <activity.icon className="h-5 w-5 text-gray-600" />
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-              <p className="text-sm text-gray-500 truncate">{activity.description}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 break-words">{activity.title}</p>
+              <p className="text-sm text-gray-500 break-words">{activity.description}</p>
               <p className="text-xs text-gray-400">
                 {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
               </p>
