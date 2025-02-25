@@ -19,11 +19,15 @@ export const useAppointments = () => {
 
       if (appointmentsError) throw appointmentsError;
 
-      // Transform the data to match the expected type
-      const appointments = appointmentsData.map(appointment => ({
-        ...appointment,
-        job_tickets: appointment.job_tickets || []
-      })) as AppointmentWithRelations[];
+      if (!appointmentsData) return [];
+
+      // Transform the data to match the expected type and filter out appointments with missing client data
+      const appointments = appointmentsData
+        .filter(appointment => appointment.client) // Only include appointments with valid client data
+        .map(appointment => ({
+          ...appointment,
+          job_tickets: appointment.job_tickets || []
+        })) as AppointmentWithRelations[];
 
       return appointments;
     },
