@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ChatAgent } from "@/components/chat/ChatAgent";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Appointments from "@/pages/Appointments";
@@ -52,6 +53,7 @@ function App() {
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <ChatAgent />
           </Router>
           <Toaster />
         </AuthProvider>
