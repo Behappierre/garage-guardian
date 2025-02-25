@@ -21,6 +21,8 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
     },
   });
 
+  console.log("Settings data:", settings); // Debug log
+
   return (
     <div className={cn(
       "flex items-center gap-2 border-b border-gray-200",
@@ -36,14 +38,16 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
         <div className="flex items-center gap-2">
           <img 
             src="/lovable-uploads/ba509b59-4243-41c9-9fe3-392cd0b2b2a7.png" 
-            alt="Garage Whizz Logo" 
+            alt="Garage Logo" 
             className="h-8 w-auto"
+            onError={(e) => console.error("Error loading first logo:", e)} // Debug log
           />
           {!isCollapsed && (
             <img 
               src="/lovable-uploads/5e9adef4-c7db-439d-ac8d-17c75809f019.png" 
               alt="GW Logo" 
               className="h-5 w-auto"
+              onError={(e) => console.error("Error loading second logo:", e)} // Debug log
             />
           )}
         </div>
