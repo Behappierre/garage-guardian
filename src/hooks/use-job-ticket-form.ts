@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,13 +23,19 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     enabled: !!initialData?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("appointments")
-        .select("id, start_time, service_type")
+        .from("appointment_job_tickets")
+        .select(`
+          appointment:appointments (
+            id,
+            start_time,
+            service_type
+          )
+        `)
         .eq("job_ticket_id", initialData?.id)
         .maybeSingle();
       
       if (error) throw error;
-      return data;
+      return data?.appointment;
     },
   });
 
@@ -117,27 +122,19 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
   });
 
   const { data: clientAppointments, isLoading: isLoadingAppointments } = useQuery({
-    queryKey: ["available-appointments", formData.client_id, initialData?.id],
+    queryKey: ["available-appointments", formData.client_id],
     enabled: !!formData.client_id,
     queryFn: async () => {
       try {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        // First, get appointments with no job ticket
-        const query = supabase
+        const { data, error } = await supabase
           .from("appointments")
           .select("id, start_time, service_type")
           .eq("client_id", formData.client_id)
-          .or("job_ticket_id.is.null")
-          .gte("start_time", thirtyDaysAgo.toISOString());
-
-        // If we're editing, also include the current appointment
-        if (initialData?.id) {
-          query.or(`job_ticket_id.eq.${initialData.id}`);
-        }
-
-        const { data, error } = await query.order("start_time");
+          .gte("start_time", thirtyDaysAgo.toISOString())
+          .order("start_time");
 
         if (error) {
           console.error("Error fetching appointments:", error);
@@ -186,12 +183,21 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
       }
 
       if (selectedAppointmentId) {
-        const { error: appointmentError } = await supabase
-          .from("appointments")
-          .update({ job_ticket_id: ticketId })
-          .eq("id", selectedAppointmentId);
+        if (initialData?.id) {
+          await supabase
+            .from("appointment_job_tickets")
+            .delete()
+            .eq("job_ticket_id", ticketId);
+        }
 
-        if (appointmentError) throw appointmentError;
+        const { error: relationError } = await supabase
+          .from("appointment_job_tickets")
+          .insert({
+            appointment_id: selectedAppointmentId,
+            job_ticket_id: ticketId
+          });
+
+        if (relationError) throw relationError;
       }
 
       if (formData.client_id && (formData.status === 'completed' || (initialData?.status !== formData.status))) {
