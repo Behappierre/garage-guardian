@@ -1,13 +1,28 @@
 
-import { Calendar, Wrench, Users, ActivitySquare } from "lucide-react";
+import { Calendar, Wrench, Users, ActivitySquare, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Button } from "../ui/button";
 
 export const RecentActivity = () => {
   const navigate = useNavigate();
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  const toggleItem = (id: string) => {
+    setExpandedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
   const { data: recentActivityData, refetch } = useQuery({
     queryKey: ['recentActivity'],
     queryFn: async () => {
@@ -109,24 +124,50 @@ export const RecentActivity = () => {
         <ActivitySquare className="h-5 w-5 text-gray-400" />
       </div>
       <div className="space-y-4">
-        {recentActivityData?.map((activity) => (
-          <div
-            key={`${activity.type}-${activity.id}`}
-            className="flex items-start space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
-            onClick={activity.onClick}
-          >
-            <div className="bg-gray-100 p-2 rounded-lg shrink-0">
-              <activity.icon className="h-5 w-5 text-gray-600" />
+        {recentActivityData?.map((activity) => {
+          const isExpanded = expandedItems.has(activity.id);
+          const ActivityIcon = activity.icon;
+          
+          return (
+            <div
+              key={`${activity.type}-${activity.id}`}
+              className="bg-white hover:bg-gray-50 rounded-lg border border-gray-100 p-4 transition-all"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="bg-gray-100 p-2 rounded-lg shrink-0">
+                  <ActivityIcon className="h-5 w-5 text-gray-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => toggleItem(activity.id)}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
+                  </p>
+                  <div
+                    className={`mt-2 text-sm text-gray-600 transition-all duration-200 ${
+                      isExpanded ? 'block' : 'hidden'
+                    }`}
+                  >
+                    {activity.description}
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 break-words">{activity.title}</p>
-              <p className="text-sm text-gray-500 break-words">{activity.description}</p>
-              <p className="text-xs text-gray-400">
-                {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
-              </p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
