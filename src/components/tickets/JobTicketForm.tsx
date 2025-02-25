@@ -4,6 +4,7 @@ import { JobTicketFormProps } from "@/types/job-ticket";
 import { useJobTicketForm } from "@/hooks/use-job-ticket-form";
 import { JobTicketFormFields } from "./JobTicketFormFields";
 import { TimeEntriesList } from "./TimeEntriesList";
+import { Wand2 } from "lucide-react";
 
 export const JobTicketForm = (props: JobTicketFormProps) => {
   const {
@@ -17,6 +18,7 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
     clientAppointments,
     technicians,
     handleSubmit,
+    onEnhanceDescription,
   } = useJobTicketForm(props);
 
   return (
@@ -40,6 +42,12 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
       )}
 
       <div className="flex justify-end gap-2">
+        {onEnhanceDescription && (
+          <Button type="button" variant="outline" size="sm" onClick={onEnhanceDescription}>
+            <Wand2 className="h-4 w-4" />
+            <span>Enhance</span>
+          </Button>
+        )}
         <Button type="button" variant="outline" onClick={props.onClose}>
           Cancel
         </Button>
