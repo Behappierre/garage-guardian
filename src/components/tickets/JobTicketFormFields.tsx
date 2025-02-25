@@ -1,8 +1,9 @@
-
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { JobTicketFormData } from "@/types/job-ticket";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Wand2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ interface JobTicketFormFieldsProps {
   selectedAppointmentId: string | null;
   setSelectedAppointmentId: (id: string | null) => void;
   technicians?: { id: string; first_name: string; last_name: string }[];
+  onEnhanceDescription?: () => void;
 }
 
 export const JobTicketFormFields = ({
@@ -31,6 +33,7 @@ export const JobTicketFormFields = ({
   selectedAppointmentId,
   setSelectedAppointmentId,
   technicians,
+  onEnhanceDescription,
 }: JobTicketFormFieldsProps) => {
   return (
     <div className="grid gap-4">
@@ -179,8 +182,22 @@ export const JobTicketFormFields = ({
         </Select>
       </div>
 
-      <div>
-        <Label>Description</Label>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label>Description</Label>
+          {onEnhanceDescription && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={onEnhanceDescription}
+            >
+              <Wand2 className="h-4 w-4" />
+              Enhance
+            </Button>
+          )}
+        </div>
         <Textarea
           value={formData.description}
           onChange={(e) =>
