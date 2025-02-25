@@ -124,8 +124,8 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("client_id", formData.client_id)
-        .or(`job_ticket_id.is.null,job_ticket_id.eq.${initialData?.id}`)
-        .gte("start_time", new Date().toISOString())
+        .is("job_ticket_id", null) // Only fetch appointments that aren't linked to any job ticket
+        .gte("start_time", new Date(new Date().setDate(new Date().getDate() - 30)).toISOString()) // Show appointments from last 30 days
         .order("start_time");
       
       if (error) throw error;
@@ -138,6 +138,8 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     setIsSubmitting(true);
 
     try {
+      let ticketId;
+      
       if (initialData?.id) {
         // Update existing ticket
         const { error } = await supabase
@@ -146,46 +148,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
           .eq("id", initialData.id);
 
         if (error) throw error;
-
-        // Clear any existing appointment linkage
-        const { error: clearError } = await supabase
-          .from("appointments")
-          .update({ job_ticket_id: null })
-          .eq("job_ticket_id", initialData.id);
-
-        if (clearError) throw clearError;
-
-        // Set new appointment linkage if selected
-        if (selectedAppointmentId) {
-          const { error: appointmentError } = await supabase
-            .from("appointments")
-            .update({ job_ticket_id: initialData.id })
-            .eq("id", selectedAppointmentId);
-
-          if (appointmentError) throw appointmentError;
-        }
-
-        if (formData.client_id && (formData.status === 'completed' || initialData.status !== formData.status)) {
-          const { data: clientData } = await supabase
-            .from('clients')
-            .select('first_name, last_name, email')
-            .eq('id', formData.client_id)
-            .single();
-
-          if (clientData?.email) {
-            const notificationType = formData.status === 'completed' ? 'completion' : 'status_update';
-            await sendEmailNotification(
-              initialData.id,
-              notificationType,
-              clientData.email,
-              `${clientData.first_name} ${clientData.last_name}`,
-              initialData.ticket_number,
-              formData.status
-            );
-          }
-        }
-
-        toast.success("Job ticket updated successfully");
+        ticketId = initialData.id;
       } else {
         // Create new ticket
         const { data: ticket, error: ticketError } = await supabase
@@ -198,22 +161,43 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
           .single();
 
         if (ticketError) throw ticketError;
+        ticketId = ticket.id;
+      }
 
-        // Link appointment to the new ticket if one was selected
-        if (selectedAppointmentId && ticket) {
-          const { error: appointmentError } = await supabase
-            .from("appointments")
-            .update({ job_ticket_id: ticket.id })
-            .eq("id", selectedAppointmentId);
+      // Handle appointment linkage
+      if (selectedAppointmentId) {
+        const { error: appointmentError } = await supabase
+          .from("appointments")
+          .update({ job_ticket_id: ticketId })
+          .eq("id", selectedAppointmentId);
 
-          if (appointmentError) throw appointmentError;
+        if (appointmentError) throw appointmentError;
+      }
+
+      // Handle email notifications
+      if (formData.client_id && (formData.status === 'completed' || (initialData?.status !== formData.status))) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('first_name, last_name, email')
+          .eq('id', formData.client_id)
+          .single();
+
+        if (clientData?.email) {
+          const notificationType = formData.status === 'completed' ? 'completion' : 'status_update';
+          await sendEmailNotification(
+            ticketId,
+            notificationType,
+            clientData.email,
+            `${clientData.first_name} ${clientData.last_name}`,
+            initialData?.ticket_number || 'New Ticket',
+            formData.status
+          );
         }
-
-        toast.success("Job ticket created successfully");
       }
 
       await queryClient.invalidateQueries({ queryKey: ["job_tickets"] });
       await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      toast.success(initialData ? "Job ticket updated successfully" : "Job ticket created successfully");
       onClose();
     } catch (error: any) {
       toast.error(error.message);
