@@ -116,32 +116,42 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
   });
 
   const { data: clientAppointments, isLoading: isLoadingAppointments } = useQuery({
-    queryKey: ["available-appointments", formData.client_id],
+    queryKey: ["available-appointments", formData.client_id, initialData?.id],
     enabled: !!formData.client_id,
     queryFn: async () => {
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const query = supabase
-        .from("appointments")
-        .select("id, start_time, service_type")
-        .eq("client_id", formData.client_id)
-        .is("job_ticket_id", null);
+      try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      if (initialData?.id) {
-        query.or(`job_ticket_id.eq.${initialData.id}`);
+        let filter = `client_id.eq.${formData.client_id}`;
+        if (initialData?.id) {
+          filter += `,and(job_ticket_id.is.null,or(job_ticket_id.eq.${initialData.id}))`;
+        } else {
+          filter += ",and(job_ticket_id.is.null)";
+        }
+        
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("id, start_time, service_type")
+          .or(filter)
+          .gte("start_time", thirtyDaysAgo.toISOString())
+          .order("start_time");
+
+        if (error) {
+          console.error("Error fetching appointments:", error);
+          throw error;
+        }
+
+        console.log("Available appointments:", data);
+        return data || [];
+      } catch (error) {
+        console.error("Error in clientAppointments query:", error);
+        throw error;
       }
-
-      const { data, error } = await query
-        .gte("start_time", thirtyDaysAgo.toISOString())
-        .order("start_time");
-      
-      if (error) throw error;
-      console.log("Available appointments:", data); // Debug log
-      return data || [];
     },
-    retry: false,
+    retry: 1,
     staleTime: 30000,
+    retryDelay: 1000,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
