@@ -32,7 +32,14 @@ const formatDescription = (description: string) => {
     if (index % 2 === 0) {
       return <span key={index}>{segment}</span>;
     } else {
-      return <strong key={index}>{segment}</strong>;
+      // Add line breaks before and after bold text
+      return (
+        <span key={index}>
+          <br />
+          <strong>{segment}</strong>
+          <br />
+        </span>
+      );
     }
   });
 };
