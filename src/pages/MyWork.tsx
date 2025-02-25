@@ -8,8 +8,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import type { JobTicket } from "@/types/job-ticket";
 
+const statusColumns = [
+  { key: 'received', label: 'To Do' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'pending_parts', label: 'Waiting for Parts' },
+  { key: 'completed', label: 'Complete' },
+  { key: 'cancelled', label: 'Cancelled' }
+] as const;
+
 const MyWork = () => {
-  const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const queryClient = useQueryClient();
 
   // Fetch assigned tickets
@@ -127,75 +134,72 @@ const MyWork = () => {
     return <div className="p-8">Loading...</div>;
   }
 
+  const getTicketsByStatus = (status: string) => {
+    return tickets?.filter(ticket => ticket.status === status) || [];
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <main className="p-8">
+      <div className="p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">My Work</h1>
           <p className="text-gray-500">Manage your assigned job tickets</p>
         </div>
 
-        <div className="space-y-4">
-          {tickets?.map((ticket) => {
-            const latestEvent = getLatestClockEvent(ticket.id);
-            const isClockedIn = latestEvent?.event_type === 'clock_in';
+        <div className="grid grid-cols-5 gap-4">
+          {statusColumns.map(column => (
+            <div key={column.key} className="bg-gray-100 rounded-lg p-4">
+              <h3 className="font-medium text-gray-700 mb-4">{column.label}</h3>
+              <div className="space-y-3">
+                {getTicketsByStatus(column.key).map((ticket) => {
+                  const latestEvent = getLatestClockEvent(ticket.id);
+                  const isClockedIn = latestEvent?.event_type === 'clock_in';
 
-            return (
-              <div
-                key={ticket.id}
-                className="bg-white p-6 rounded-lg shadow-sm border border-gray-200"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      {ticket.ticket_number}
-                    </h3>
-                    <p className="mt-1 text-gray-500">
-                      {ticket.client?.first_name} {ticket.client?.last_name}
-                    </p>
-                    {ticket.vehicle && (
-                      <p className="text-sm text-gray-500">
-                        {ticket.vehicle.year} {ticket.vehicle.make} {ticket.vehicle.model}
-                      </p>
-                    )}
-                    <p className="mt-2 text-sm text-gray-700 whitespace-pre-line">
-                      {ticket.description}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => handleClockAction(ticket)}
-                    variant={isClockedIn ? "destructive" : "default"}
-                    className="gap-2"
-                  >
-                    {isClockedIn ? (
-                      <>
-                        <StopCircle className="h-5 w-5" />
-                        Clock Out
-                      </>
-                    ) : (
-                      <>
-                        <PlayCircle className="h-5 w-5" />
-                        Clock In
-                      </>
-                    )}
-                  </Button>
-                </div>
-                {latestEvent && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Last action: {latestEvent.event_type === 'clock_in' ? 'Clocked in' : 'Clocked out'} at{' '}
-                    {format(new Date(latestEvent.created_at), 'MMM d, yyyy HH:mm')}
-                  </p>
-                )}
+                  return (
+                    <div
+                      key={ticket.id}
+                      className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-2"
+                    >
+                      <div className="flex justify-between items-start">
+                        <span className="text-sm font-medium text-gray-900">
+                          {ticket.ticket_number}
+                        </span>
+                        <Button
+                          onClick={() => handleClockAction(ticket)}
+                          variant={isClockedIn ? "destructive" : "default"}
+                          size="sm"
+                          className="h-7"
+                        >
+                          {isClockedIn ? (
+                            <StopCircle className="h-4 w-4" />
+                          ) : (
+                            <PlayCircle className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+
+                      {ticket.client && (
+                        <p className="text-sm text-gray-600">
+                          {ticket.client.first_name} {ticket.client.last_name}
+                        </p>
+                      )}
+                      
+                      {ticket.vehicle && (
+                        <div className="text-xs text-gray-500">
+                          <p>{ticket.vehicle.year} {ticket.vehicle.make} {ticket.vehicle.model}</p>
+                          {ticket.vehicle.license_plate && (
+                            <p className="mt-1">Reg: {ticket.vehicle.license_plate}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-          {(!tickets || tickets.length === 0) && (
-            <div className="text-center py-8 bg-white rounded-lg border border-gray-200">
-              <p className="text-gray-500">No job tickets assigned to you</p>
             </div>
-          )}
+          ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
