@@ -7,15 +7,70 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const formatDateTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatQueryResults = (data: any[], queryType: string) => {
+  if (!data || data.length === 0) {
+    return "No results found.";
+  }
+
+  switch (queryType) {
+    case 'appointments':
+      return data.map(appointment => `
+📅 Appointment Details:
+------------------------
+🕒 Time: ${formatDateTime(appointment.start_time)}
+📝 Service: ${appointment.service_type || 'Not specified'}
+📋 Status: ${appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+${appointment.notes ? `📌 Notes: ${appointment.notes}` : ''}
+`).join('\n');
+
+    case 'job_tickets':
+      return data.map(ticket => `
+🔧 Job Ticket: ${ticket.ticket_number}
+------------------------
+📝 Description: ${ticket.description.split('\n')[0]}... 
+🏷️ Status: ${ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
+⚡ Priority: ${ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+📅 Created: ${formatDateTime(ticket.created_at)}
+`).join('\n');
+
+    case 'vehicles':
+      return data.map(vehicle => `
+🚗 Vehicle Details:
+------------------------
+Make: ${vehicle.make}
+Model: ${vehicle.model}
+Year: ${vehicle.year}
+${vehicle.license_plate ? `License: ${vehicle.license_plate}` : ''}
+${vehicle.vin ? `VIN: ${vehicle.vin}` : ''}
+`).join('\n');
+
+    default:
+      return "```json\n" + JSON.stringify(data, null, 2) + "\n```";
+  }
+};
+
 const systemPrompt = `You are GarageWizz AI Assistant, an expert in auto repair shop management. You have access to the database and can help users retrieve information.
 
 To get data, you can use these READ-ONLY SQL queries (do not attempt modifications):
 
 1. List recent appointments:
    SELECT * FROM appointments ORDER BY start_time DESC LIMIT 5;
+   [QueryType: appointments]
 
 2. Find client information:
    SELECT * FROM clients WHERE first_name ILIKE '%{search}%' OR last_name ILIKE '%{search}%' LIMIT 5;
+   [QueryType: clients]
 
 3. Check vehicle history:
    SELECT v.*, c.first_name, c.last_name 
@@ -23,6 +78,7 @@ To get data, you can use these READ-ONLY SQL queries (do not attempt modificatio
    JOIN clients c ON v.client_id = c.id 
    WHERE v.make ILIKE '%{search}%' OR v.model ILIKE '%{search}%' 
    LIMIT 5;
+   [QueryType: vehicles]
 
 4. View job tickets:
    SELECT jt.*, c.first_name, c.last_name 
@@ -31,15 +87,9 @@ To get data, you can use these READ-ONLY SQL queries (do not attempt modificatio
    WHERE status = '{status}' 
    ORDER BY created_at DESC 
    LIMIT 5;
+   [QueryType: job_tickets]
 
-5. Check service history:
-   SELECT sh.*, v.make, v.model 
-   FROM service_history sh 
-   JOIN vehicles v ON sh.vehicle_id = v.id 
-   ORDER BY service_date DESC 
-   LIMIT 5;
-
-If a user asks for data, determine which query to use and execute it with appropriate parameters. Format the results in a clear, readable way.
+When executing a query, specify the QueryType in square brackets after the query to ensure proper formatting.
 
 User Question: `;
 
@@ -63,7 +113,8 @@ serve(async (req) => {
       throw new Error('No message provided');
     }
 
-    // First, get AI to understand the request
+    console.log('Processing request:', message);
+
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -77,22 +128,24 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     let response = aiData.candidates[0].content.parts[0].text;
 
-    // Check if the response contains an SQL query (enclosed in backticks)
-    const sqlMatch = response.match(/```sql\n([\s\S]*?)\n```/);
+    // Extract query and type
+    const sqlMatch = response.match(/```sql\n([\s\S]*?)\n```.*?\[QueryType:\s*(\w+)\]/);
     if (sqlMatch) {
-      const sqlQuery = sqlMatch[1].trim();
-      console.log('Executing SQL query:', sqlQuery);
+      const [_, sqlQuery, queryType] = sqlMatch;
+      console.log('Executing SQL query:', sqlQuery, 'Type:', queryType);
 
       try {
         const { data: queryResult, error: dbError } = await supabase
-          .from('job_tickets')
+          .from('appointments')
           .select('*')
-          .limit(1);
+          .order('start_time', { ascending: false })
+          .limit(5);
 
         if (dbError) throw dbError;
 
-        // Append the query results to the AI response
-        response += "\n\nQuery Results:\n" + JSON.stringify(queryResult, null, 2);
+        const formattedResults = formatQueryResults(queryResult, queryType);
+        response = response.replace(/```sql[\s\S]*?```.*?\[QueryType:\s*\w+\]/, 
+          "Here are the results:\n\n" + formattedResults);
       } catch (dbError) {
         console.error('Database query error:', dbError);
         response += "\n\nSorry, I encountered an error while querying the database.";
