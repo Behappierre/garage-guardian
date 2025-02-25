@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -124,8 +123,8 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("client_id", formData.client_id)
-        .is("job_ticket_id", null) // Only fetch appointments that aren't linked to any job ticket
-        .gte("start_time", new Date(new Date().setDate(new Date().getDate() - 30)).toISOString()) // Show appointments from last 30 days
+        .is("job_ticket_id", null)
+        .gte("start_time", new Date(new Date().setDate(new Date().getDate() - 30)).toISOString())
         .order("start_time");
       
       if (error) throw error;
@@ -141,7 +140,6 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
       let ticketId;
       
       if (initialData?.id) {
-        // Update existing ticket
         const { error } = await supabase
           .from("job_tickets")
           .update(formData)
@@ -150,7 +148,6 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         if (error) throw error;
         ticketId = initialData.id;
       } else {
-        // Create new ticket
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
           .insert({
@@ -164,7 +161,6 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         ticketId = ticket.id;
       }
 
-      // Handle appointment linkage
       if (selectedAppointmentId) {
         const { error: appointmentError } = await supabase
           .from("appointments")
@@ -174,7 +170,6 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         if (appointmentError) throw appointmentError;
       }
 
-      // Handle email notifications
       if (formData.client_id && (formData.status === 'completed' || (initialData?.status !== formData.status))) {
         const { data: clientData } = await supabase
           .from('clients')
