@@ -34,11 +34,16 @@ export const TimeEntriesList = ({ jobTicketId }: TimeEntriesListProps) => {
     return <div className="text-gray-500 italic">No time entries recorded</div>;
   }
 
-  const formatDuration = (minutes: number | null) => {
-    if (!minutes) return "In progress";
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
+  const formatDuration = (startTime: string, endTime: string | null) => {
+    if (!endTime) return "In progress";
+    
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    const diffMinutes = Math.round((end.getTime() - start.getTime()) / 1000 / 60);
+    
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+    return `${hours}h ${minutes}m`;
   };
 
   return (
@@ -66,7 +71,9 @@ export const TimeEntriesList = ({ jobTicketId }: TimeEntriesListProps) => {
                 ? format(new Date(entry.end_time), "MMM d, yyyy HH:mm")
                 : "In progress"}
             </TableCell>
-            <TableCell>{formatDuration(entry.duration_minutes)}</TableCell>
+            <TableCell>
+              {formatDuration(entry.start_time, entry.end_time)}
+            </TableCell>
             <TableCell>{entry.notes}</TableCell>
           </TableRow>
         ))}
