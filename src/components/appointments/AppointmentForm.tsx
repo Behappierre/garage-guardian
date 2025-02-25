@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ExternalLink } from "lucide-react";
 import type { AppointmentWithRelations, AppointmentStatus, BayType } from "@/types/appointment";
 
 interface AppointmentFormProps {
@@ -192,7 +192,21 @@ export const AppointmentForm = ({
     bay: initialData?.bay || null,
   });
 
-  // Update end_time when start_time or duration changes
+  const { data: linkedJobTicket } = useQuery({
+    queryKey: ["linked-job-ticket", initialData?.id],
+    enabled: !!initialData?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("job_tickets")
+        .select("id, ticket_number, description, status")
+        .eq("id", initialData?.job_ticket_id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+  });
+
   useEffect(() => {
     const startDate = new Date(formData.start_time);
     const durationInMs = parseInt(duration) * 60 * 1000;
@@ -283,6 +297,26 @@ export const AppointmentForm = ({
           value={formData.vehicle_id}
           onChange={(value) => setFormData({ ...formData, vehicle_id: value })}
         />
+      )}
+
+      {linkedJobTicket && (
+        <div className="space-y-2 p-4 border rounded-lg bg-gray-50">
+          <div className="flex justify-between items-center">
+            <Label>Linked Job Ticket</Label>
+          </div>
+          <div className="text-sm space-y-1">
+            <p className="font-medium">{linkedJobTicket.ticket_number}</p>
+            <p className="text-gray-600">{linkedJobTicket.description}</p>
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+              ${linkedJobTicket.status === 'completed' ? 'bg-green-100 text-green-800' :
+                linkedJobTicket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                linkedJobTicket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                'bg-gray-100 text-gray-800'}`}
+            >
+              {linkedJobTicket.status.charAt(0).toUpperCase() + linkedJobTicket.status.slice(1)}
+            </span>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-4">
