@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -123,19 +124,20 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        let filter = `client_id.eq.${formData.client_id}`;
-        if (initialData?.id) {
-          filter += `,and(job_ticket_id.is.null,or(job_ticket_id.eq.${initialData.id}))`;
-        } else {
-          filter += ",and(job_ticket_id.is.null)";
-        }
-        
-        const { data, error } = await supabase
+        // First, get appointments with no job ticket
+        const query = supabase
           .from("appointments")
           .select("id, start_time, service_type")
-          .or(filter)
-          .gte("start_time", thirtyDaysAgo.toISOString())
-          .order("start_time");
+          .eq("client_id", formData.client_id)
+          .or("job_ticket_id.is.null")
+          .gte("start_time", thirtyDaysAgo.toISOString());
+
+        // If we're editing, also include the current appointment
+        if (initialData?.id) {
+          query.or(`job_ticket_id.eq.${initialData.id}`);
+        }
+
+        const { data, error } = await query.order("start_time");
 
         if (error) {
           console.error("Error fetching appointments:", error);
