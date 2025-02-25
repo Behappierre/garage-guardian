@@ -6,6 +6,38 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
+import type { LucideIcon } from "lucide-react";
+
+type ActivityBase = {
+  id: string;
+  type: 'appointment' | 'ticket' | 'completed' | 'client';
+  title: string;
+  description: string;
+  time: string;
+  icon: LucideIcon;
+  onClick: () => void;
+};
+
+type AppointmentActivity = ActivityBase & {
+  type: 'appointment';
+  client?: {
+    first_name: string;
+    last_name: string;
+  } | null;
+  vehicle?: {
+    make: string;
+    model: string;
+    year: number;
+    license_plate: string | null;
+  } | null;
+  appointmentTime: string;
+};
+
+type OtherActivity = ActivityBase & {
+  type: 'ticket' | 'completed' | 'client';
+};
+
+type Activity = AppointmentActivity | OtherActivity;
 
 export const RecentActivity = () => {
   const navigate = useNavigate();
@@ -66,10 +98,10 @@ export const RecentActivity = () => {
           .limit(2)
       ]);
 
-      const activity = [
+      const activity: Activity[] = [
         ...(recentAppointments?.map(apt => ({
           id: apt.id,
-          type: 'appointment',
+          type: 'appointment' as const,
           title: 'New Appointment',
           description: apt.service_type,
           time: apt.created_at,
@@ -81,7 +113,7 @@ export const RecentActivity = () => {
         })) || []),
         ...(recentTickets?.map(ticket => ({
           id: ticket.id,
-          type: 'ticket',
+          type: 'ticket' as const,
           title: 'New Job Ticket',
           description: ticket.description,
           time: ticket.created_at,
@@ -90,7 +122,7 @@ export const RecentActivity = () => {
         })) || []),
         ...(completedTickets?.map(ticket => ({
           id: ticket.id,
-          type: 'completed',
+          type: 'completed' as const,
           title: 'Job Ticket Completed',
           description: ticket.description,
           time: ticket.updated_at,
@@ -99,7 +131,7 @@ export const RecentActivity = () => {
         })) || []),
         ...(recentClients?.map(client => ({
           id: client.id,
-          type: 'client',
+          type: 'client' as const,
           title: 'New Client',
           description: `${client.first_name} ${client.last_name}`,
           time: client.created_at,
