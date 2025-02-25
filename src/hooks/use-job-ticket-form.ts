@@ -63,7 +63,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vehicles")
-        .select("*") // Now selecting all fields to match the expected type
+        .select("*")
         .eq("client_id", formData.client_id);
       
       if (error) throw error;
@@ -94,12 +94,23 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
 
     try {
       if (initialData?.id) {
+        // Update existing ticket
         const { error } = await supabase
           .from("job_tickets")
           .update(formData)
           .eq("id", initialData.id);
 
         if (error) throw error;
+
+        // Update appointment linkage if needed
+        if (selectedAppointmentId) {
+          const { error: appointmentError } = await supabase
+            .from("appointments")
+            .update({ job_ticket_id: initialData.id })
+            .eq("id", selectedAppointmentId);
+
+          if (appointmentError) throw appointmentError;
+        }
 
         if (formData.client_id && (formData.status === 'completed' || initialData.status !== formData.status)) {
           const { data: clientData } = await supabase
@@ -123,6 +134,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
 
         toast.success("Job ticket updated successfully");
       } else {
+        // Create new ticket
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
           .insert({
@@ -134,6 +146,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
 
         if (ticketError) throw ticketError;
 
+        // Link appointment to the new ticket if one was selected
         if (selectedAppointmentId && ticket) {
           const { error: appointmentError } = await supabase
             .from("appointments")
