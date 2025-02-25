@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { JobTicketFormData } from "@/types/job-ticket";
@@ -182,32 +183,33 @@ export const JobTicketFormFields = ({
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label>Description</Label>
+      <div>
+        <Label>Description</Label>
+        <div className="flex gap-2">
+          <Textarea
+            value={formData.description}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                description: e.target.value,
+              })
+            }
+            rows={4}
+            className="flex-1"
+          />
           {onEnhanceDescription && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="h-auto"
               onClick={onEnhanceDescription}
             >
               <Wand2 className="h-4 w-4" />
-              Enhance
+              <span>Enhance</span>
             </Button>
           )}
         </div>
-        <Textarea
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              description: e.target.value,
-            })
-          }
-          rows={4}
-        />
       </div>
     </div>
   );
