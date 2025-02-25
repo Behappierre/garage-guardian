@@ -36,16 +36,16 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
         />
       ) : (
         <div className="grid grid-cols-2 gap-2 w-full">
-          <div className="flex items-center justify-start">
+          <div className="flex items-center justify-start w-8">
             <img 
               src="/lovable-uploads/e33cb773-8a89-43de-82f8-1026ab6337c3.png" 
               alt="Garage Logo" 
-              className="h-8 w-8 object-contain"
+              className="h-8 w-8 object-contain flex-shrink-0"
               onError={(e) => console.error("Error loading garage logo:", e)}
             />
           </div>
           {!isCollapsed && (
-            <div className="flex items-center justify-start">
+            <div className="flex items-center justify-start overflow-hidden">
               <img 
                 src="/lovable-uploads/3594fe63-3fa2-4b3c-9d23-b9706ebf4fa4.png" 
                 alt="GW Text Logo" 
