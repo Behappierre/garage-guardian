@@ -9,6 +9,7 @@ import { JobTicketFilters } from "@/components/tickets/JobTicketFilters";
 import { JobTicketsList } from "@/components/tickets/JobTicketsList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { useParams } from "react-router-dom";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
@@ -19,6 +20,7 @@ type SortField = "created_at" | "client_name";
 type SortOrder = "asc" | "desc";
 
 const JobTickets = () => {
+  const { id } = useParams(); // Get the ticket ID from URL if present
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [nameFilter, setNameFilter] = useState("");
@@ -26,6 +28,30 @@ const JobTickets = () => {
   const [registrationFilter, setRegistrationFilter] = useState("");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+
+  // Fetch specific ticket if ID is provided
+  useQuery({
+    queryKey: ['job_ticket', id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data } = await supabase
+        .from('job_tickets')
+        .select(`
+          *,
+          client:clients(*),
+          vehicle:vehicles(*)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (data) {
+        setSelectedTicket(data);
+        setShowTicketForm(true);
+      }
+      return data;
+    },
+    enabled: !!id,
+  });
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, sortField, sortOrder],
@@ -135,7 +161,17 @@ const JobTickets = () => {
           }}
         />
 
-        <Dialog open={showTicketForm} onOpenChange={setShowTicketForm}>
+        <Dialog 
+          open={showTicketForm} 
+          onOpenChange={(open) => {
+            setShowTicketForm(open);
+            if (!open) {
+              setSelectedTicket(null);
+              // Clear the URL parameter if dialog is closed
+              window.history.pushState({}, '', '/dashboard/job-tickets');
+            }
+          }}
+        >
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
@@ -147,6 +183,8 @@ const JobTickets = () => {
               onClose={() => {
                 setShowTicketForm(false);
                 setSelectedTicket(null);
+                // Clear the URL parameter when closing the form
+                window.history.pushState({}, '', '/dashboard/job-tickets');
               }}
             />
           </DialogContent>
