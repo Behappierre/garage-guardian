@@ -43,77 +43,78 @@ export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTickets
     }));
   };
 
-  const getDescriptionPreview = (description: string) => {
-    const lines = description.split('\n').filter(line => line.trim());
-    if (lines.length <= 5) return description;
-    return lines.slice(0, 5).join('\n');
-  };
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {tickets.map((ticket) => (
         <div
           key={ticket.id}
-          onClick={() => onTicketClick(ticket)}
-          className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer"
+          className="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
         >
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h3 className="font-medium text-lg">{ticket.ticket_number}</h3>
-              {ticket.client ? (
-                <p className="text-sm text-gray-600 mt-1">
-                  {ticket.client.first_name} {ticket.client.last_name}
-                </p>
-              ) : (
-                <p className="text-sm text-gray-600 mt-1 italic">No client assigned</p>
-              )}
-              {ticket.vehicle && (
-                <p className="text-sm text-gray-500">
-                  {ticket.vehicle.year} {ticket.vehicle.make} {ticket.vehicle.model}
-                  {ticket.vehicle.license_plate && (
-                    <span className="ml-2 text-gray-600">({ticket.vehicle.license_plate})</span>
+          <div 
+            onClick={() => onTicketClick(ticket)}
+            className="p-4 cursor-pointer"
+          >
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <div>
+                  <span className="font-medium">{ticket.ticket_number}</span>
+                  {ticket.client && (
+                    <span className="ml-3 text-gray-600">
+                      {ticket.client.first_name} {ticket.client.last_name}
+                    </span>
                   )}
-                </p>
-              )}
-              <div className="mt-2 text-sm whitespace-pre-line">
-                {expandedTickets[ticket.id] 
-                  ? ticket.description
-                  : getDescriptionPreview(ticket.description || '')}
-                {ticket.description && ticket.description.split('\n').filter(line => line.trim()).length > 5 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-1"
-                    onClick={(e) => toggleExpand(ticket.id, e)}
-                  >
-                    {expandedTickets[ticket.id] ? (
-                      <ChevronUp className="h-4 w-4 mr-1" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 mr-1" />
-                    )}
-                    {expandedTickets[ticket.id] ? "Less" : "More"}
-                  </Button>
-                )}
+                  {ticket.vehicle && ticket.vehicle.license_plate && (
+                    <span className="ml-3 text-gray-500">
+                      ({ticket.vehicle.license_plate})
+                    </span>
+                  )}
+                </div>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Created: {format(new Date(ticket.created_at), 'MMM d, yyyy')}
-              </p>
+
+              <div className="flex items-center space-x-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  ${ticket.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                    ticket.status === 'pending_parts' ? 'bg-yellow-100 text-yellow-800' :
+                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  {formatStatus(ticket.status)}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  Priority: {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => toggleExpand(ticket.id, e)}
+                  className="ml-2"
+                >
+                  {expandedTickets[ticket.id] ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
             </div>
-            <div className="text-right flex flex-col gap-2">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap
-                ${ticket.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                  ticket.status === 'pending_parts' ? 'bg-yellow-100 text-yellow-800' :
-                  ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {formatStatus(ticket.status)}
-              </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-gray-100 text-gray-800">
-                Priority: {ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)}
-              </span>
-            </div>
+
+            {expandedTickets[ticket.id] && (
+              <div className="mt-4 space-y-3 border-t pt-3">
+                {ticket.vehicle && (
+                  <p className="text-sm text-gray-600">
+                    Vehicle: {ticket.vehicle.year} {ticket.vehicle.make} {ticket.vehicle.model}
+                  </p>
+                )}
+                <div className="text-sm">
+                  <p className="whitespace-pre-line">{ticket.description}</p>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Created: {format(new Date(ticket.created_at), 'MMM d, yyyy')}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       ))}
