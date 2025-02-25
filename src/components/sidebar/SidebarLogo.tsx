@@ -25,7 +25,7 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
 
   return (
     <div className={cn(
-      "flex items-center gap-2 border-b border-gray-200",
+      "flex items-center border-b border-gray-200",
       isCollapsed ? "justify-center p-4" : "px-6 py-4"
     )}>
       {settings?.logo_url ? (
@@ -35,20 +35,24 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
           className="h-8 w-auto"
         />
       ) : (
-        <div className="flex items-center gap-3">
-          <img 
-            src="/lovable-uploads/e33cb773-8a89-43de-82f8-1026ab6337c3.png" 
-            alt="Garage Logo" 
-            className="h-8 w-auto"
-            onError={(e) => console.error("Error loading garage logo:", e)}
-          />
-          {!isCollapsed && (
+        <div className="flex items-center justify-start space-x-4 w-full">
+          <div className="flex-shrink-0">
             <img 
-              src="/lovable-uploads/3594fe63-3fa2-4b3c-9d23-b9706ebf4fa4.png" 
-              alt="GW Text Logo" 
+              src="/lovable-uploads/e33cb773-8a89-43de-82f8-1026ab6337c3.png" 
+              alt="Garage Logo" 
               className="h-8 w-auto"
-              onError={(e) => console.error("Error loading text logo:", e)}
+              onError={(e) => console.error("Error loading garage logo:", e)}
             />
+          </div>
+          {!isCollapsed && (
+            <div className="flex-shrink-0">
+              <img 
+                src="/lovable-uploads/3594fe63-3fa2-4b3c-9d23-b9706ebf4fa4.png" 
+                alt="GW Text Logo" 
+                className="h-8 w-auto"
+                onError={(e) => console.error("Error loading text logo:", e)}
+              />
+            </div>
           )}
         </div>
       )}
