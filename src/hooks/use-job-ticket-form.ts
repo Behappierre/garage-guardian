@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,31 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+
+  const onEnhanceDescription = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enhance-job-description`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ description: formData.description }),
+      });
+
+      if (!response.ok) throw new Error('Failed to enhance description');
+
+      const { enhancedDescription } = await response.json();
+      setFormData(prev => ({
+        ...prev,
+        description: enhancedDescription,
+      }));
+      toast.success('Description enhanced successfully');
+    } catch (error) {
+      toast.error('Failed to enhance description');
+      console.error('Error enhancing description:', error);
+    }
+  };
 
   const { data: clients } = useQuery({
     queryKey: ["clients"],
@@ -180,5 +204,6 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     clientAppointments,
     technicians,
     handleSubmit,
+    onEnhanceDescription,
   };
 };
