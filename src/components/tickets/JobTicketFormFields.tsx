@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { JobTicketFormData } from "@/types/job-ticket";
@@ -19,6 +20,7 @@ interface JobTicketFormFieldsProps {
   selectedAppointmentId: string | null;
   setSelectedAppointmentId: (id: string | null) => void;
   technicians?: { id: string; first_name: string; last_name: string }[];
+  isLoadingAppointments?: boolean;
 }
 
 export const JobTicketFormFields = ({
@@ -30,6 +32,7 @@ export const JobTicketFormFields = ({
   selectedAppointmentId,
   setSelectedAppointmentId,
   technicians,
+  isLoadingAppointments,
 }: JobTicketFormFieldsProps) => {
   return (
     <div className="grid gap-4">
@@ -91,9 +94,10 @@ export const JobTicketFormFields = ({
             <Select
               value={selectedAppointmentId || ""}
               onValueChange={setSelectedAppointmentId}
+              disabled={isLoadingAppointments}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select appointment" />
+                <SelectValue placeholder={isLoadingAppointments ? "Loading appointments..." : "Select appointment"} />
               </SelectTrigger>
               <SelectContent>
                 {clientAppointments?.map((appointment) => (

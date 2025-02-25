@@ -26,9 +26,9 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("job_ticket_id", initialData?.id)
-        .single();
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data;
     },
   });
@@ -115,24 +115,33 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     },
   });
 
-  const { data: clientAppointments } = useQuery({
+  const { data: clientAppointments, isLoading: isLoadingAppointments } = useQuery({
     queryKey: ["available-appointments", formData.client_id],
     enabled: !!formData.client_id,
     queryFn: async () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      const { data, error } = await supabase
+      const query = supabase
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("client_id", formData.client_id)
-        .or(`job_ticket_id.is.null,job_ticket_id.eq.${initialData?.id || 'null'}`)
+        .is("job_ticket_id", null);
+
+      if (initialData?.id) {
+        query.or(`job_ticket_id.eq.${initialData.id}`);
+      }
+
+      const { data, error } = await query
         .gte("start_time", thirtyDaysAgo.toISOString())
         .order("start_time");
       
       if (error) throw error;
-      return data;
+      console.log("Available appointments:", data); // Debug log
+      return data || [];
     },
+    retry: false,
+    staleTime: 30000,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -213,6 +222,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     clients,
     clientVehicles,
     clientAppointments,
+    isLoadingAppointments,
     technicians,
     handleSubmit,
     onEnhanceDescription,
