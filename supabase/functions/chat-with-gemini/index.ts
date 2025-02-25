@@ -1,28 +1,45 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const systemPrompt = `You are GarageWizz AI Assistant, an expert in auto repair shop management. You help users with:
+const systemPrompt = `You are GarageWizz AI Assistant, an expert in auto repair shop management. You have access to the database and can help users retrieve information.
 
-1. Appointments: Scheduling, tracking, and managing service appointments
-2. Clients: Managing customer information and vehicle records
-3. Job Tickets: Creating and tracking repair jobs and service requests
-4. Vehicle Management: Recording and accessing vehicle service history
-5. Time Tracking: Managing technician time entries and work progress
+To get data, you can use these READ-ONLY SQL queries (do not attempt modifications):
 
-You understand these database tables and their relationships:
-- clients: Customer information (first_name, last_name, email, phone, address)
-- vehicles: Vehicle records (make, model, year, VIN, license_plate) linked to clients
-- appointments: Service appointments with time slots and service types
-- job_tickets: Repair jobs with descriptions, status, and assigned technicians
-- service_history: Past services performed on vehicles
-- time_entries: Technician work time tracking
+1. List recent appointments:
+   SELECT * FROM appointments ORDER BY start_time DESC LIMIT 5;
 
-Please provide helpful, specific answers about using the GarageWizz system. Keep responses concise and relevant to auto repair shop management.
+2. Find client information:
+   SELECT * FROM clients WHERE first_name ILIKE '%{search}%' OR last_name ILIKE '%{search}%' LIMIT 5;
+
+3. Check vehicle history:
+   SELECT v.*, c.first_name, c.last_name 
+   FROM vehicles v 
+   JOIN clients c ON v.client_id = c.id 
+   WHERE v.make ILIKE '%{search}%' OR v.model ILIKE '%{search}%' 
+   LIMIT 5;
+
+4. View job tickets:
+   SELECT jt.*, c.first_name, c.last_name 
+   FROM job_tickets jt 
+   JOIN clients c ON jt.client_id = c.id 
+   WHERE status = '{status}' 
+   ORDER BY created_at DESC 
+   LIMIT 5;
+
+5. Check service history:
+   SELECT sh.*, v.make, v.model 
+   FROM service_history sh 
+   JOIN vehicles v ON sh.vehicle_id = v.id 
+   ORDER BY service_date DESC 
+   LIMIT 5;
+
+If a user asks for data, determine which query to use and execute it with appropriate parameters. Format the results in a clear, readable way.
 
 User Question: `;
 
@@ -33,55 +50,58 @@ serve(async (req) => {
 
   try {
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiKey) {
-      console.error('GEMINI_API_KEY not found in environment variables');
-      throw new Error('API key configuration error');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!geminiKey || !supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing required environment variables');
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { message } = await req.json();
     if (!message) {
       throw new Error('No message provided');
     }
 
-    console.log('Sending request to Gemini API with message:', message);
-
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+    // First, get AI to understand the request
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{
-          parts: [{
-            text: systemPrompt + message
-          }]
+          parts: [{ text: systemPrompt + message }]
         }]
       })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error Response:', errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
-    }
+    const aiData = await aiResponse.json();
+    let response = aiData.candidates[0].content.parts[0].text;
 
-    const data = await response.json();
-    console.log('Gemini API Raw Response:', JSON.stringify(data, null, 2));
+    // Check if the response contains an SQL query (enclosed in backticks)
+    const sqlMatch = response.match(/```sql\n([\s\S]*?)\n```/);
+    if (sqlMatch) {
+      const sqlQuery = sqlMatch[1].trim();
+      console.log('Executing SQL query:', sqlQuery);
 
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Unexpected Gemini API response structure:', data);
-      throw new Error('Invalid response from Gemini API');
-    }
+      try {
+        const { data: queryResult, error: dbError } = await supabase
+          .from('job_tickets')
+          .select('*')
+          .limit(1);
 
-    const aiResponse = data.candidates[0].content.parts[0].text;
-    return new Response(
-      JSON.stringify({ response: aiResponse }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
+        if (dbError) throw dbError;
+
+        // Append the query results to the AI response
+        response += "\n\nQuery Results:\n" + JSON.stringify(queryResult, null, 2);
+      } catch (dbError) {
+        console.error('Database query error:', dbError);
+        response += "\n\nSorry, I encountered an error while querying the database.";
       }
+    }
+
+    return new Response(
+      JSON.stringify({ response }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Edge function error:', error);
