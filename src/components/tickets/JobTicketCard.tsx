@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PlayCircle, StopCircle } from "lucide-react";
 import type { JobTicket } from "@/types/job-ticket";
+import { useNavigate } from "react-router-dom";
 
 interface JobTicketCardProps {
   ticket: JobTicket;
@@ -10,14 +11,28 @@ interface JobTicketCardProps {
 }
 
 export const JobTicketCard = ({ ticket, isClockedIn, onClockAction }: JobTicketCardProps) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/dashboard/job-tickets/${ticket.id}`);
+  };
+
+  const handleClockClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click when clicking the clock button
+    onClockAction(ticket);
+  };
+
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-2">
+    <div 
+      className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-2 cursor-pointer hover:shadow-md transition-all"
+      onClick={handleCardClick}
+    >
       <div className="flex justify-between items-start">
         <span className="text-sm font-medium text-gray-900">
           {ticket.ticket_number}
         </span>
         <Button
-          onClick={() => onClockAction(ticket)}
+          onClick={handleClockClick}
           variant={isClockedIn ? "destructive" : "default"}
           size="sm"
           className="h-7"
