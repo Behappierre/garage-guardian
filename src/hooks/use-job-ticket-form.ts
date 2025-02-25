@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,27 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+
+  const { data: linkedAppointment } = useQuery({
+    queryKey: ["linked-appointment", initialData?.id],
+    enabled: !!initialData?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("id, start_time, service_type")
+        .eq("job_ticket_id", initialData?.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+  });
+
+  React.useEffect(() => {
+    if (linkedAppointment?.id) {
+      setSelectedAppointmentId(linkedAppointment.id);
+    }
+  }, [linkedAppointment]);
 
   const onEnhanceDescription = async () => {
     try {
@@ -103,7 +123,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("client_id", formData.client_id)
-        .is("job_ticket_id", null)
+        .or(`job_ticket_id.is.null,job_ticket_id.eq.${initialData?.id}`)
         .gte("start_time", new Date().toISOString())
         .order("start_time");
       
@@ -126,7 +146,15 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
 
         if (error) throw error;
 
-        // Update appointment linkage if needed
+        // Clear any existing appointment linkage
+        const { error: clearError } = await supabase
+          .from("appointments")
+          .update({ job_ticket_id: null })
+          .eq("job_ticket_id", initialData.id);
+
+        if (clearError) throw clearError;
+
+        // Set new appointment linkage if selected
         if (selectedAppointmentId) {
           const { error: appointmentError } = await supabase
             .from("appointments")

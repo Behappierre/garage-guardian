@@ -12,38 +12,20 @@ export const useAppointments = () => {
         .select(`
           *,
           client:clients(*),
-          vehicle:vehicles(*)
+          vehicle:vehicles(*),
+          job_tickets:job_tickets(*)
         `)
         .order('start_time', { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
 
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from("appointment_job_tickets")
-        .select(`
-          appointment_id,
-          job_ticket:job_tickets(
-            *,
-            vehicle:vehicles(*)
-          )
-        `);
-
-      if (ticketsError) throw ticketsError;
-
-      const ticketsByAppointment = ticketsData.reduce((acc: Record<string, DBJobTicket[]>, curr) => {
-        if (curr.appointment_id && curr.job_ticket) {
-          if (!acc[curr.appointment_id]) {
-            acc[curr.appointment_id] = [];
-          }
-          acc[curr.appointment_id].push(curr.job_ticket);
-        }
-        return acc;
-      }, {});
-
-      return appointmentsData.map(appointment => ({
+      // Transform the data to match the expected type
+      const appointments = appointmentsData.map(appointment => ({
         ...appointment,
-        job_tickets: ticketsByAppointment[appointment.id] || []
+        job_tickets: appointment.job_tickets || []
       })) as AppointmentWithRelations[];
+
+      return appointments;
     },
   });
 };
