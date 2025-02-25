@@ -44,7 +44,7 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
           />
           {!isCollapsed && (
             <img 
-              src="/lovable-uploads/ba509b59-4243-41c9-9fe3-392cd0b2b2a7.png" 
+              src="/lovable-uploads/3594fe63-3fa2-4b3c-9d23-b9706ebf4fa4.png" 
               alt="GW Text Logo" 
               className="h-8 w-auto"
               onError={(e) => console.error("Error loading text logo:", e)}
