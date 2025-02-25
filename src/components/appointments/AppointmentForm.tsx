@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,10 +25,21 @@ interface AppointmentFormData {
   bay: BayType;
 }
 
-const formatDateTimeForInput = (dateString: string) => {
+const roundToNearestHour = (date: Date): Date => {
+  const rounded = new Date(date);
+  rounded.setMinutes(0);
+  rounded.setSeconds(0);
+  rounded.setMilliseconds(0);
+  rounded.setHours(rounded.getHours() + 1);
+  return rounded;
+};
+
+const formatDateTimeForInput = (dateString: string | Date) => {
   const date = new Date(dateString);
   return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDThh:mm
 };
+
+const durations = Array.from({ length: 16 }, (_, i) => (i + 1) * 30); // 30 min to 8 hours in 30 min intervals
 
 const ClientSelector = ({ value, onChange }: { value: string | null, onChange: (value: string) => void }) => {
   const { data: clients, isLoading, error } = useQuery({
@@ -164,18 +176,32 @@ export const AppointmentForm = ({
   selectedDate,
   onClose,
 }: AppointmentFormProps) => {
+  const defaultStartTime = roundToNearestHour(selectedDate || new Date());
+  const [duration, setDuration] = useState("60"); // Default 1 hour duration
+
   const [formData, setFormData] = useState<AppointmentFormData>({
     client_id: initialData?.client_id || null,
     vehicle_id: initialData?.vehicle_id || null,
     start_time: initialData?.start_time ? formatDateTimeForInput(initialData.start_time) : 
-                selectedDate ? formatDateTimeForInput(selectedDate.toISOString()) : '',
+                formatDateTimeForInput(defaultStartTime),
     end_time: initialData?.end_time ? formatDateTimeForInput(initialData.end_time) : 
-             selectedDate ? formatDateTimeForInput(new Date(selectedDate.getTime() + 60 * 60 * 1000).toISOString()) : '',
+             formatDateTimeForInput(new Date(defaultStartTime.getTime() + 60 * 60 * 1000)),
     service_type: initialData?.service_type || '',
     notes: initialData?.notes || null,
     status: initialData?.status || 'scheduled',
     bay: initialData?.bay || null,
   });
+
+  // Update end_time when start_time or duration changes
+  useEffect(() => {
+    const startDate = new Date(formData.start_time);
+    const durationInMs = parseInt(duration) * 60 * 1000;
+    const endDate = new Date(startDate.getTime() + durationInMs);
+    setFormData(prev => ({
+      ...prev,
+      end_time: formatDateTimeForInput(endDate)
+    }));
+  }, [formData.start_time, duration]);
 
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -259,12 +285,35 @@ export const AppointmentForm = ({
         />
       )}
 
-      <TimeSelector
-        startTime={formData.start_time}
-        endTime={formData.end_time}
-        onStartTimeChange={(value) => setFormData({ ...formData, start_time: value })}
-        onEndTimeChange={(value) => setFormData({ ...formData, end_time: value })}
-      />
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="start_time">Start Time</Label>
+          <Input
+            type="datetime-local"
+            id="start_time"
+            value={formData.start_time}
+            onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="duration">Duration</Label>
+          <Select
+            value={duration}
+            onValueChange={(value) => setDuration(value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select duration" />
+            </SelectTrigger>
+            <SelectContent>
+              {durations.map((mins) => (
+                <SelectItem key={mins} value={mins.toString()}>
+                  {mins >= 60 ? `${mins / 60} hour${mins > 60 ? 's' : ''}` : `${mins} minutes`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <ServiceTypeInput
         value={formData.service_type}
