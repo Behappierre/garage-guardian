@@ -24,6 +24,19 @@ const formatStatus = (status: string | undefined) => {
               .join(' ');
 };
 
+const formatDescription = (description: string) => {
+  // Split the text into segments based on **
+  const segments = description.split('**');
+  return segments.map((segment, index) => {
+    // Even indices are normal text, odd indices are bold
+    if (index % 2 === 0) {
+      return <span key={index}>{segment}</span>;
+    } else {
+      return <strong key={index}>{segment}</strong>;
+    }
+  });
+};
+
 export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTicketsListProps) => {
   const [expandedTickets, setExpandedTickets] = useState<Record<string, boolean>>({});
 
@@ -108,7 +121,7 @@ export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTickets
                   </p>
                 )}
                 <div className="text-sm">
-                  <p className="whitespace-pre-line">{ticket.description}</p>
+                  {formatDescription(ticket.description || '')}
                 </div>
                 <p className="text-xs text-gray-500">
                   Created: {format(new Date(ticket.created_at), 'MMM d, yyyy')}
