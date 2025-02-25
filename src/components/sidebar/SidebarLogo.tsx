@@ -35,24 +35,20 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
           className="h-8 w-auto"
         />
       ) : (
-        <div className="relative flex items-center justify-start space-x-4 w-full">
-          <div className="w-8">
-            <img 
-              src="/lovable-uploads/e33cb773-8a89-43de-82f8-1026ab6337c3.png" 
-              alt="Garage Logo" 
-              className="h-8 w-auto"
-              onError={(e) => console.error("Error loading garage logo:", e)}
-            />
-          </div>
+        <div className="flex items-center space-x-3">
+          <img 
+            src="/lovable-uploads/e33cb773-8a89-43de-82f8-1026ab6337c3.png" 
+            alt="Garage Logo" 
+            className="h-8 w-8 object-contain"
+            onError={(e) => console.error("Error loading garage logo:", e)}
+          />
           {!isCollapsed && (
-            <div className="flex-shrink-0 ml-2">
-              <img 
-                src="/lovable-uploads/3594fe63-3fa2-4b3c-9d23-b9706ebf4fa4.png" 
-                alt="GW Text Logo" 
-                className="h-8 w-auto"
-                onError={(e) => console.error("Error loading text logo:", e)}
-              />
-            </div>
+            <img 
+              src="/lovable-uploads/3594fe63-3fa2-4b3c-9d23-b9706ebf4fa4.png" 
+              alt="GW Text Logo" 
+              className="h-8 w-auto"
+              onError={(e) => console.error("Error loading text logo:", e)}
+            />
           )}
         </div>
       )}
