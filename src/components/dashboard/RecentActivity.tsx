@@ -2,7 +2,7 @@
 import { Calendar, Wrench, Users, ActivitySquare, ChevronDown, ChevronUp } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
@@ -34,7 +34,14 @@ export const RecentActivity = () => {
       ] = await Promise.all([
         supabase
           .from('appointments')
-          .select('id, service_type, created_at')
+          .select(`
+            id, 
+            service_type, 
+            created_at,
+            start_time,
+            client:clients(first_name, last_name),
+            vehicle:vehicles(make, model, year, license_plate)
+          `)
           .order('created_at', { ascending: false })
           .limit(2),
         
@@ -66,6 +73,9 @@ export const RecentActivity = () => {
           title: 'New Appointment',
           description: apt.service_type,
           time: apt.created_at,
+          appointmentTime: apt.start_time,
+          client: apt.client,
+          vehicle: apt.vehicle,
           icon: Calendar,
           onClick: () => navigate(`/dashboard/appointments/${apt.id}`)
         })) || []),
@@ -157,11 +167,31 @@ export const RecentActivity = () => {
                     {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
                   </p>
                   <div
-                    className={`mt-2 text-sm text-gray-600 transition-all duration-200 ${
+                    className={`mt-2 space-y-2 text-sm text-gray-600 transition-all duration-200 ${
                       isExpanded ? 'block' : 'hidden'
                     }`}
                   >
-                    {activity.description}
+                    {activity.type === 'appointment' ? (
+                      <>
+                        {activity.client && (
+                          <p>Client: {activity.client.first_name} {activity.client.last_name}</p>
+                        )}
+                        {activity.vehicle && (
+                          <>
+                            <p>Vehicle: {activity.vehicle.year} {activity.vehicle.make} {activity.vehicle.model}</p>
+                            {activity.vehicle.license_plate && (
+                              <p>Registration: {activity.vehicle.license_plate}</p>
+                            )}
+                          </>
+                        )}
+                        {activity.appointmentTime && (
+                          <p>Appointment: {format(new Date(activity.appointmentTime), 'PPP p')}</p>
+                        )}
+                        <p>Service: {activity.description}</p>
+                      </>
+                    ) : (
+                      <p>{activity.description}</p>
+                    )}
                   </div>
                 </div>
               </div>
