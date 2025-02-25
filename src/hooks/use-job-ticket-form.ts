@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,24 +21,23 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
 
   const onEnhanceDescription = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/enhance-job-description`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ description: formData.description }),
+      const { data, error } = await supabase.functions.invoke('enhance-job-description', {
+        body: { 
+          description: formData.description,
+          vehicle: clientVehicles?.find(v => v.id === formData.vehicle_id)
+        }
       });
 
-      if (!response.ok) throw new Error('Failed to enhance description');
+      if (error) throw error;
+      if (!data?.enhancedDescription) throw new Error('No enhanced description returned');
 
-      const { enhancedDescription } = await response.json();
       setFormData(prev => ({
         ...prev,
-        description: enhancedDescription,
+        description: data.enhancedDescription,
       }));
+      
       toast.success('Description enhanced successfully');
-    } catch (error) {
+    } catch (error: any) {
       toast.error('Failed to enhance description');
       console.error('Error enhancing description:', error);
     }
