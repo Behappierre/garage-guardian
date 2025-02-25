@@ -5,6 +5,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Textarea } from "@/components/ui/textarea";
 import { MessagesSquare, Send } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
@@ -26,11 +28,17 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
-      // Placeholder for API call - replace with actual AI integration
-      const response = "I'm here to help! This is a placeholder response.";
-      setMessages(prev => [...prev, { role: "assistant", content: response }]);
+      const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
+        body: { message: userMessage }
+      });
+
+      if (error) throw error;
+
+      const assistantMessage = data.response || "I apologize, but I couldn't generate a response at the moment.";
+      setMessages(prev => [...prev, { role: "assistant", content: assistantMessage }]);
     } catch (error) {
       console.error("Error sending message:", error);
+      toast.error("Failed to get response from AI assistant");
     } finally {
       setIsLoading(false);
     }
