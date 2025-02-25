@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,13 +301,12 @@ export const AppointmentForm = ({
       )}
 
       {linkedJobTicket && (
-        <div className="space-y-2 p-4 border rounded-lg bg-gray-50">
-          <div className="flex justify-between items-center">
-            <Label>Linked Job Ticket</Label>
-          </div>
-          <div className="text-sm space-y-1">
-            <p className="font-medium">{linkedJobTicket.ticket_number}</p>
-            <p className="text-gray-600">{linkedJobTicket.description}</p>
+        <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+          <div className="flex items-center gap-3">
+            <div>
+              <Label className="text-sm font-medium">Job Ticket</Label>
+              <p className="text-sm">{linkedJobTicket.ticket_number}</p>
+            </div>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
               ${linkedJobTicket.status === 'completed' ? 'bg-green-100 text-green-800' :
                 linkedJobTicket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
