@@ -32,13 +32,23 @@ export function ChatAgent() {
         body: { message: userMessage }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
 
-      const assistantMessage = data.response || "I apologize, but I couldn't generate a response at the moment.";
-      setMessages(prev => [...prev, { role: "assistant", content: assistantMessage }]);
+      if (!data?.response) {
+        throw new Error('No response received from AI assistant');
+      }
+
+      setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to get response from AI assistant");
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "I apologize, but I'm having trouble processing your request at the moment. Please try again later." 
+      }]);
     } finally {
       setIsLoading(false);
     }
