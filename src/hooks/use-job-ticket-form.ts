@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,18 +117,22 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
   });
 
   const { data: clientAppointments } = useQuery({
-    queryKey: ["appointments", formData.client_id],
+    queryKey: ["available-appointments", formData.client_id],
     enabled: !!formData.client_id,
     queryFn: async () => {
+      // Get all appointments for the client that either:
+      // 1. Have no job ticket linked
+      // 2. Are linked to the current ticket (for editing)
       const { data, error } = await supabase
         .from("appointments")
         .select("id, start_time, service_type")
         .eq("client_id", formData.client_id)
-        .is("job_ticket_id", null)
+        .or(`job_ticket_id.is.null,job_ticket_id.eq.${initialData?.id || 'null'}`)
         .gte("start_time", new Date(new Date().setDate(new Date().getDate() - 30)).toISOString())
         .order("start_time");
       
       if (error) throw error;
+      console.log("Available appointments:", data); // Add logging to debug
       return data;
     },
   });
