@@ -102,7 +102,7 @@ export function ChatAgent() {
           <MessagesSquare className="h-6 w-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent className={`${isWide ? 'w-[800px]' : 'w-[400px] sm:w-[540px]'}`}>
+      <SheetContent className={`${isWide ? 'w-[800px]' : 'w-[400px] sm:w-[540px]'} overflow-hidden`}>
         <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle>AI Assistant</SheetTitle>
           <div className="flex gap-2">
@@ -141,9 +141,9 @@ export function ChatAgent() {
                   }`}
                 >
                   <div
-                    className={`rounded-lg px-4 py-2 max-w-[90%] ${
+                    className={`rounded-lg px-4 py-2 max-w-full break-words ${
                       message.role === "assistant"
-                        ? "bg-muted prose prose-sm dark:prose-invert"
+                        ? "bg-muted prose prose-sm dark:prose-invert w-full"
                         : "bg-primary text-primary-foreground"
                     }`}
                   >

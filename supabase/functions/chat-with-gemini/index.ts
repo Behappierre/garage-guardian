@@ -40,6 +40,43 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Check for vehicle ownership query
+    const licensePlateMatch = message.match(/whose(?:\s+car(?:\s+is)?|\s+vehicle(?:\s+is)?)?\s+([a-zA-Z0-9]+)/i);
+    if (licensePlateMatch) {
+      const licensePlate = licensePlateMatch[1];
+      const { data: vehicleData, error: vehicleError } = await supabaseClient
+        .from('vehicles')
+        .select(`
+          license_plate,
+          client:clients (
+            first_name,
+            last_name,
+            email,
+            phone
+          )
+        `)
+        .eq('license_plate', licensePlate)
+        .single();
+
+      if (vehicleError) {
+        console.error('Error fetching vehicle data:', vehicleError);
+        return new Response(
+          JSON.stringify({
+            response: `I apologize, but I couldn't find any information about the vehicle with license plate ${licensePlate}.`
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (vehicleData?.client) {
+        const response = `The vehicle with license plate ${licensePlate} belongs to ${vehicleData.client.first_name} ${vehicleData.client.last_name}.\n\n`;
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     if (isAppointmentQuery(message)) {
       console.log('Processing as appointment query');
       const appointments = await fetchRelevantAppointments(message, supabaseClient);
