@@ -19,6 +19,8 @@ const formatDateTime = (dateString: string) => {
 };
 
 const formatQueryResults = (data: any[], queryType: string) => {
+  console.log('Formatting results for type:', queryType, 'Data:', data);
+  
   if (!data || data.length === 0) {
     return "No appointments scheduled at this time.";
   }
@@ -56,6 +58,7 @@ ${vehicle.vin ? `VIN: ${vehicle.vin}` : ''}
 `).join('\n');
 
     default:
+      console.log('Unknown query type:', queryType);
       return "```json\n" + JSON.stringify(data, null, 2) + "\n```";
   }
 };
@@ -115,7 +118,7 @@ serve(async (req) => {
 
     console.log('Processing request:', message);
 
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`, {
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -125,14 +128,27 @@ serve(async (req) => {
       })
     });
 
+    if (!aiResponse.ok) {
+      console.error('Gemini API error:', await aiResponse.text());
+      throw new Error(`Gemini API error: ${aiResponse.status}`);
+    }
+
     const aiData = await aiResponse.json();
+    console.log('AI response:', aiData);
+
+    if (!aiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error('Invalid AI response format');
+    }
+
     let response = aiData.candidates[0].content.parts[0].text;
+    console.log('Raw AI response text:', response);
 
     // Extract query and type
     const sqlMatch = response.match(/```sql\n([\s\S]*?)\n```.*?\[QueryType:\s*(\w+)\]/);
     if (sqlMatch) {
       const [_, sqlQuery, queryType] = sqlMatch;
-      console.log('Executing SQL query:', sqlQuery, 'Type:', queryType);
+      console.log('Executing SQL query:', sqlQuery);
+      console.log('Query type:', queryType);
 
       try {
         // Execute the actual query from the AI response
@@ -140,9 +156,13 @@ serve(async (req) => {
           query_text: sqlQuery
         });
 
+        console.log('Query result:', queryResult);
+        console.log('Query error:', dbError);
+
         if (dbError) throw dbError;
 
         const formattedResults = formatQueryResults(queryResult, queryType);
+        console.log('Formatted results:', formattedResults);
         
         // Replace the SQL query in the response with the formatted results
         response = "Let me check the upcoming appointments for you:\n\n" + formattedResults;
@@ -150,6 +170,8 @@ serve(async (req) => {
         console.error('Database query error:', dbError);
         response = "I apologize, but I encountered an error while retrieving the appointments. Please try again in a moment.";
       }
+    } else {
+      console.log('No SQL query found in response');
     }
 
     return new Response(
