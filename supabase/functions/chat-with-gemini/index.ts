@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -38,6 +37,7 @@ serve(async (req) => {
                 { text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
 
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
+If the user is asking about job tickets or their status, respond with exactly: QUERY_JOB_TICKETS
 Otherwise, provide a helpful response about auto repair, maintenance, or general information.` }
               ]
             }
@@ -63,17 +63,66 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
 
     console.log('Processed AI text:', aiText);
 
-    // Handle appointment queries
-    if (aiText.includes('QUERY_APPOINTMENTS')) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Missing Supabase configuration');
+    // Initialize Supabase client if we need it
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Handle job tickets query
+    if (aiText.includes('QUERY_JOB_TICKETS')) {
+      const { data: tickets, error } = await supabase
+        .from('job_tickets')
+        .select('status')
+        .eq('status', 'in_progress');
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
       }
 
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      
+      // Format job tickets count with Gemini
+      const formatResponse = await fetch(
+        'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': geminiKey
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: `Format this information into a friendly response: There are ${tickets.length} job tickets currently in progress.
+                    
+Use friendly language and be concise.` }
+                ]
+              }
+            ]
+          })
+        }
+      );
+
+      const formatData = await formatResponse.json();
+      const formattedResponse = formatData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!formattedResponse) {
+        throw new Error('Failed to format job tickets response');
+      }
+
+      return new Response(
+        JSON.stringify({ response: formattedResponse }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle appointment queries (keeping existing code)
+    if (aiText.includes('QUERY_APPOINTMENTS')) {
       const { data: appointments, error } = await supabase
         .from('appointments')
         .select('*, clients ( first_name, last_name ), vehicles ( make, model, year )')
@@ -86,7 +135,6 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
         throw error;
       }
 
-      // Format appointments with Gemini
       const formatResponse = await fetch(
         'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
         {
@@ -123,7 +171,7 @@ Be concise and clear.` }
       );
     }
 
-    // For non-appointment queries, return the AI response directly
+    // For non-database queries, return the AI response directly
     return new Response(
       JSON.stringify({ response: aiText }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
