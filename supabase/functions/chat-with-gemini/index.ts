@@ -60,14 +60,14 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing with Gemini API');
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    console.log('Processing with OpenAI API');
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY is not configured');
+    if (!OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not configured');
       return new Response(
         JSON.stringify({ 
-          error: 'GEMINI_API_KEY is not configured',
+          error: 'OPENAI_API_KEY is not configured',
           response: 'Configuration error - please contact support.'
         }),
         { 
@@ -77,57 +77,51 @@ serve(async (req) => {
       );
     }
 
-    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `You are an auto service shop assistant. Answer the following question: ${message}`
-          }]
-        }],
-        safetySettings: [
+        model: 'gpt-3.5-turbo',
+        messages: [
           {
-            category: "HARM_CATEGORY_DANGEROUS",
-            threshold: "BLOCK_NONE"
+            role: 'system',
+            content: 'You are a helpful auto service shop assistant. You provide clear, concise information about car maintenance, repairs, and services. Keep responses friendly and easy to understand.'
+          },
+          {
+            role: 'user',
+            content: message
           }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 1,
-          topP: 1,
-          maxOutputTokens: 2048,
-        }
+        temperature: 0.7,
+        max_tokens: 1000,
       })
     });
 
-    const responseText = await geminiResponse.text();
-    console.log('Raw Gemini API response:', responseText);
+    const data = await openaiResponse.json();
+    console.log('OpenAI API response:', data);
 
-    if (!geminiResponse.ok) {
-      console.error('Gemini API error response:', responseText);
+    if (!openaiResponse.ok) {
+      console.error('OpenAI API error response:', data);
       return new Response(
         JSON.stringify({ 
-          error: `Gemini API Error: ${responseText}`,
+          error: `OpenAI API Error: ${data.error?.message || 'Unknown error'}`,
           response: 'Failed to get response from AI assistant.'
         }),
         { 
-          status: geminiResponse.status,
+          status: openaiResponse.status,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
     }
 
-    const data = JSON.parse(responseText);
-    console.log('Parsed Gemini API response:', data);
-
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Invalid response structure from Gemini:', data);
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Invalid response structure from OpenAI:', data);
       return new Response(
         JSON.stringify({ 
-          error: 'Invalid response structure from Gemini API',
+          error: 'Invalid response structure from OpenAI API',
           response: 'Unexpected response format from AI assistant.'
         }),
         { 
@@ -137,7 +131,7 @@ serve(async (req) => {
       );
     }
 
-    const aiResponse = data.candidates[0].content.parts[0].text;
+    const aiResponse = data.choices[0].message.content;
     return new Response(
       JSON.stringify({ response: aiResponse }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -182,12 +176,10 @@ async function fetchRelevantAppointments(message: string, supabase: any) {
     startDate.setDate(startDate.getDate() + 7);
     endDate.setDate(endDate.getDate() + 13);
   } else if (lowercaseMessage.includes('this week')) {
-    // Adjust dates to cover the current week
     const today = startDate.getDay();
     endDate.setDate(endDate.getDate() + (6 - today));
   }
 
-  // Set time to start and end of day
   startDate.setHours(0, 0, 0, 0);
   endDate.setHours(23, 59, 59, 999);
 
