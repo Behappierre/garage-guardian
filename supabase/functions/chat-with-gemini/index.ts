@@ -65,7 +65,6 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     
     if (!GEMINI_API_KEY) {
-      console.error('Missing GEMINI_API_KEY');
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
@@ -77,27 +76,51 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: message
+            text: `You are an auto service shop assistant. Answer the following question professionally and concisely: ${message}`
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
       })
     });
 
     if (!geminiResponse.ok) {
-      console.error('Gemini API error:', await geminiResponse.text());
-      throw new Error(`Gemini API returned ${geminiResponse.status}`);
+      const errorText = await geminiResponse.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`Gemini API error: ${geminiResponse.status}`);
     }
 
     const data = await geminiResponse.json();
-    console.log('Gemini API response:', data);
+    console.log('Gemini API response:', JSON.stringify(data, null, 2));
 
+    // Check if we have a proper response with content
     if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Unexpected Gemini API response format:', data);
       throw new Error('Invalid response format from Gemini API');
     }
 
     const aiResponse = data.candidates[0].content.parts[0].text;
-
     return new Response(
       JSON.stringify({ response: aiResponse }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -107,11 +130,11 @@ serve(async (req) => {
     console.error('Error processing request:', error);
     return new Response(
       JSON.stringify({ 
-        response: "I apologize, but I'm having trouble processing your request at the moment. Please try again later.",
-        error: error.message 
+        error: error.message,
+        response: "I apologize, but I'm having trouble processing your request at the moment. Please try again later."
       }),
       { 
-        status: 200, // Return 200 even for errors to avoid FunctionsHttpError
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
