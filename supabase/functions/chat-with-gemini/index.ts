@@ -2,6 +2,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { addHours } from 'https://esm.sh/date-fns@2.30.0';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -11,6 +12,50 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Function to extract date and time from message
+function extractDateTime(message: string): Date | null {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  // Look for time in format like "2pm" or "2 PM"
+  const timeMatch = message.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
+  if (timeMatch) {
+    const hour = parseInt(timeMatch[1]);
+    const isPM = timeMatch[0].toLowerCase().includes('pm');
+    
+    tomorrow.setHours(isPM ? hour + 12 : hour, 0, 0, 0);
+    return tomorrow;
+  }
+  return null;
+}
+
+// Function to create appointment
+async function createAppointment(supabase: any, clientData: any, startTime: Date, serviceType: string) {
+  const endTime = addHours(startTime, 2); // Default 2-hour appointment
+
+  try {
+    const { data: appointment, error } = await supabase
+      .from('appointments')
+      .insert({
+        client_id: clientData.id,
+        vehicle_id: clientData.vehicles?.[0]?.id,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        service_type: serviceType,
+        status: 'scheduled',
+        notes: `Service requested: ${serviceType}`
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return appointment;
+  } catch (error) {
+    console.error('Error creating appointment:', error);
+    throw error;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -29,16 +74,19 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(5);
 
-    // First, let's fetch relevant client information
     let contextData = {};
+    let appointmentCreated = null;
     
     // Check for client name in the message and recent messages
     const allText = [message, ...recentMessages?.map(m => m.message) || []].join(' ').toLowerCase();
     const nameMatch = allText.match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
     const vehicleMatch = allText.match(/(?:alfa|romeo|stelvio|olh878)/);
     
-    // If we have a name match or vehicle details, search for the client
-    if (nameMatch || vehicleMatch) {
+    // Check if this is a confirmation message
+    const isConfirmation = message.toLowerCase().includes('yes') && 
+      recentMessages?.[0]?.response?.toLowerCase().includes('shall i proceed with the booking');
+    
+    if (nameMatch || vehicleMatch || isConfirmation) {
       let query = supabase
         .from('clients')
         .select(`
@@ -87,16 +135,26 @@ serve(async (req) => {
                 response: m.response
               }))
             };
+
+            // If this is a confirmation and we have an exact match, create the appointment
+            if (isConfirmation && matchingClients.length === 1) {
+              const startTime = extractDateTime(allText);
+              if (startTime) {
+                try {
+                  appointmentCreated = await createAppointment(
+                    supabase,
+                    matchingClients[0],
+                    startTime,
+                    'Major Service and Brake Check'
+                  );
+                  contextData.appointmentCreated = appointmentCreated;
+                } catch (error) {
+                  console.error('Failed to create appointment:', error);
+                  contextData.appointmentError = error.message;
+                }
+              }
+            }
           }
-        } else {
-          contextData = {
-            clients: clientData,
-            matchCount: clientData.length,
-            recentHistory: recentMessages?.map(m => ({
-              message: m.message,
-              response: m.response
-            }))
-          };
         }
       }
     }
@@ -115,27 +173,18 @@ Key requirements:
    - Maintain context from previous messages
    - For exact matches, proceed with booking details provided
    - Remember vehicle and service details mentioned earlier
-   - Use all information from previous messages
-
-Conversation flow:
-1. When client is identified, remember their details for the entire conversation
-2. When service details are provided, incorporate them into the booking process
-3. When date/time is confirmed, proceed with the booking
+   - If appointment was created, confirm with the booking reference
+   - If appointment creation failed, inform about the error
 
 Correct response examples:
+✅ "I've created the appointment for Mr. Andre's Alfa Romeo Stelvio (OLH878) for tomorrow at 2 PM. The booking is confirmed in the system."
 ✅ "I've found Mr. Andre's record. His Alfa Romeo Stelvio (OLH878) is in the system. Shall I proceed with booking for tomorrow at 2 PM?"
-✅ "Based on the previous messages, I'll book a major service and brake check for Mr. Andre's Alfa Romeo tomorrow at 2 PM. Would you like me to confirm this booking?"
-✅ "I understand Mr. Andre needs a major service and brake check. I'll add these details to the booking for tomorrow at 2 PM."
-
-Incorrect responses:
-❌ "Could you provide your vehicle details?"
-❌ "I need the client's information again"
-❌ "Please provide the service details again"
+✅ "I apologize, but there was an error creating the appointment. Please try again or create it manually."
 
 Remember: 
 - Maintain context from the entire conversation
-- Don't ask for information that was already provided
-- Always proceed with booking when you have all necessary information`;
+- Confirm when appointments are successfully created
+- Report any errors in appointment creation`;
 
     // Construct conversation history for the API call
     const conversationHistory = [
@@ -178,7 +227,8 @@ Remember:
         metadata: {
           model: 'gpt-4',
           context: contextData,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          appointmentCreated: appointmentCreated ? true : false
         }
       });
 
