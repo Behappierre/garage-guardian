@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
@@ -5,6 +6,13 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Store conversations in memory (could be moved to a database for persistence)
+let lastBooking: {
+  clientId?: string;
+  clientName?: string;
+  appointmentId?: string;
+} = {};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -78,6 +86,31 @@ serve(async (req) => {
         throw error
       }
 
+      // Store the booking context
+      lastBooking = {
+        clientId,
+        appointmentId: appointment.id,
+        clientName: appointment.client_name // This will be fetched in processBookingRequest
+      }
+
+      return appointment
+    }
+
+    async function updateAppointmentService(appointmentId: string, serviceType: string) {
+      console.log('Updating appointment service:', { appointmentId, serviceType })
+      
+      const { data: appointment, error } = await supabaseClient
+        .from('appointments')
+        .update({ service_type: serviceType })
+        .eq('id', appointmentId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating appointment:', error)
+        throw error
+      }
+
       return appointment
     }
 
@@ -102,74 +135,28 @@ serve(async (req) => {
       return date
     }
 
-    async function findRecentAppointment(clientId: string) {
-      const { data: appointment, error } = await supabaseClient
-        .from('appointments')
-        .select('*')
-        .eq('client_id', clientId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      if (error) {
-        console.error('Error finding recent appointment:', error)
-        return null
-      }
-
-      return appointment
-    }
-
-    async function updateAppointment(appointmentId: string, updates: any) {
-      const { data: appointment, error } = await supabaseClient
-        .from('appointments')
-        .update(updates)
-        .eq('id', appointmentId)
-        .select()
-        .single()
-
-      if (error) {
-        console.error('Error updating appointment:', error)
-        throw error
-      }
-
-      return appointment
-    }
-
     async function processMessage(message: string) {
-      console.log('Processing message:', message)
+      // Check if this is a service update request
+      const serviceUpdateMatch = message.match(/add\s+([a-zA-Z]+)\s+service(?:\s+in|\s+to|\s+for)?\s+(?:the|this|that)\s+booking/i)
       
-      const serviceUpdateMatch = message.match(/add\s+(.+?)\s+service\s+(?:to|in|for)\s+(?:the|this|that)\s+booking/i)
       if (serviceUpdateMatch) {
-        const serviceType = serviceUpdateMatch[1]
-        console.log('Service update requested:', serviceType)
-
-        const nameMatch = message.match(/(?:for|to)\s+([a-zA-Z ]+?)(?:\s|$)/i)
-        if (!nameMatch) {
-          return "I couldn't determine which booking you want to update. Please specify the client name."
-        }
-
-        const client = await findClient(nameMatch[1].trim())
-        if (!client) {
-          return "I couldn't find that client in our system."
-        }
-
-        const recentAppointment = await findRecentAppointment(client.id)
-        if (!recentAppointment) {
-          return "I couldn't find a recent booking for this client."
+        console.log('Processing service update:', serviceUpdateMatch[1], 'Last booking:', lastBooking)
+        
+        if (!lastBooking.appointmentId) {
+          return "I couldn't find the booking you're referring to. Could you try making the booking again?"
         }
 
         try {
-          const updated = await updateAppointment(recentAppointment.id, {
-            service_type: `${serviceType} Service`
-          })
-
-          return `I've updated the appointment for ${client.first_name} ${client.last_name} to be a ${serviceType} Service.`
+          const serviceType = `${serviceUpdateMatch[1]} Service`
+          await updateAppointmentService(lastBooking.appointmentId, serviceType)
+          return `I've updated the service type to "${serviceType}" for the booking.`
         } catch (error) {
-          console.error('Error updating service type:', error)
+          console.error('Error updating service:', error)
           return "I'm sorry, I couldn't update the service type. Please try again."
         }
       }
 
+      // If not a service update, process as a booking request
       return await processBookingRequest(message)
     }
 
@@ -201,7 +188,7 @@ serve(async (req) => {
           }
 
           try {
-            const appointment = await createAppointment(
+            await createAppointment(
               client.id,
               client.vehicles[0].id,
               appointmentTime
@@ -228,6 +215,7 @@ serve(async (req) => {
     }
 
     const response = await processMessage(message)
+    console.log('Sending response:', response)
 
     return new Response(
       JSON.stringify({ response }),
