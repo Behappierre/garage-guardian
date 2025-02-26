@@ -21,27 +21,61 @@ serve(async (req) => {
     const { message, user_id } = await req.json();
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+    // First, let's fetch relevant client information
+    let contextData = {};
+    const nameMatch = message.toLowerCase().match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
+    
+    if (nameMatch) {
+      const searchName = nameMatch[1].trim();
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select(`
+          *,
+          vehicles (
+            id,
+            make,
+            model,
+            year,
+            license_plate
+          ),
+          appointments (
+            id,
+            start_time,
+            service_type,
+            status
+          )
+        `)
+        .or(`first_name.ilike.%${searchName}%,last_name.ilike.%${searchName}%`)
+        .order('created_at', { ascending: false });
+
+      if (!clientError && clientData?.length > 0) {
+        contextData = {
+          clients: clientData,
+          matchCount: clientData.length
+        };
+      }
+    }
+
     // System message to guide AI responses
-    const systemMessage = `You are a knowledgeable automotive service assistant. When helping with bookings or client queries:
+    const systemMessage = `You are an AI assistant helping a garage manager with their automotive service management system. 
+    
+Important guidelines:
+1. Always speak TO THE GARAGE MANAGER about their clients, not to the clients directly
+2. Use "the client" or "Mr./Mrs. [Last Name]" when referring to clients
+3. When processing booking requests:
+   - If client is found in database, confirm their details
+   - If multiple matches found, ask the manager for clarification
+   - If no match found, inform the manager that the client needs to be registered
 
-1. If multiple clients have similar names, ask for specific details like:
-   - Full name
-   - Vehicle details (if available)
-   - Previous service history
-   
-2. For booking assistance:
-   - Always confirm which client is being referred to
-   - Ask for preferred service date/time if not provided
-   - Check for vehicle details if not specified
-   
-3. Format responses clearly using markdown for better readability
+Current context: ${JSON.stringify(contextData)}
 
-4. For vehicle-related queries:
-   - List all relevant vehicle details
-   - Include service history if available
-   - Suggest appropriate service types
+Example responses:
+✅ "I found Mr. Andre in the system. His Alfa Romeo Stelvio is due for service..."
+✅ "I found multiple clients with that name. Could you confirm which client by their vehicle details?"
+✅ "This client isn't in our system. Would you like to register them first?"
 
-Be proactive in gathering missing information to provide accurate assistance.`;
+❌ Don't say: "Could you provide your vehicle details?" (Don't speak to the client)
+❌ Don't say: "Thank you for contacting us" (Don't speak to the client)`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -76,6 +110,7 @@ Be proactive in gathering missing information to provide accurate assistance.`;
         response: aiResponse,
         metadata: {
           model: 'gpt-4',
+          context: contextData,
           timestamp: new Date().toISOString()
         }
       });
