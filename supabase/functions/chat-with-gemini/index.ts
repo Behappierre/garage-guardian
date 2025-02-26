@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
@@ -134,6 +133,114 @@ async function handleGeneralQuery(message: string) {
   }
 }
 
+async function attemptBookingCreation(supabase: any, message: string) {
+  try {
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) return null;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a booking assistant. Extract booking details from the user message into JSON format with these fields:
+              - client_name (string, full name)
+              - service_type (string)
+              - requested_date (YYYY-MM-DD format)
+              - requested_time (HH:mm format, 24h)
+              - duration_minutes (number)
+              - notes (string, optional)
+              
+              If any required field cannot be determined, set it to null.
+              Response must be valid JSON.`
+          },
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Failed to parse booking intent');
+      return null;
+    }
+
+    const data = await response.json();
+    if (!data.choices?.[0]?.message?.content) return null;
+
+    let bookingDetails;
+    try {
+      bookingDetails = JSON.parse(data.choices[0].message.content);
+    } catch (e) {
+      console.error('Failed to parse OpenAI response as JSON:', e);
+      return null;
+    }
+
+    if (!bookingDetails.client_name || !bookingDetails.service_type || 
+        !bookingDetails.requested_date || !bookingDetails.requested_time) {
+      return {
+        success: false,
+        message: "I couldn't get all the required information. Please provide client name, service type, date, and time."
+      };
+    }
+
+    const { data: clients } = await supabase
+      .from('clients')
+      .select('id, first_name, last_name')
+      .or(`first_name.ilike.%${bookingDetails.client_name}%,last_name.ilike.%${bookingDetails.client_name}%`)
+      .limit(1);
+
+    if (!clients?.length) {
+      return {
+        success: false,
+        message: `I couldn't find a client named "${bookingDetails.client_name}". Please check the name or create the client first.`
+      };
+    }
+
+    const startTime = new Date(`${bookingDetails.requested_date}T${bookingDetails.requested_time}`);
+    const endTime = new Date(startTime.getTime() + (bookingDetails.duration_minutes || 60) * 60000);
+
+    const { data: appointment, error } = await supabase
+      .from('appointments')
+      .insert({
+        client_id: clients[0].id,
+        service_type: bookingDetails.service_type,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        notes: bookingDetails.notes,
+        status: 'scheduled'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to create appointment:', error);
+      return {
+        success: false,
+        message: "Sorry, I couldn't create the appointment due to a technical error."
+      };
+    }
+
+    return {
+      success: true,
+      message: `Great! I've created an appointment for ${clients[0].first_name} ${clients[0].last_name} on ${format(startTime, "MMM d 'at' h:mm a")} for ${bookingDetails.service_type}.`
+    };
+  } catch (error) {
+    console.error('Error in booking creation:', error);
+    return {
+      success: false,
+      message: "Sorry, I encountered an error while trying to create the booking."
+    };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -148,7 +255,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check for bookings queries
     if (message.toLowerCase().includes('bookings') || message.toLowerCase().includes('appointments')) {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -171,7 +277,6 @@ serve(async (req) => {
       }
     }
 
-    // Check for statistics queries
     if (message.toLowerCase().includes('statistics') || 
         message.toLowerCase().includes('stats') || 
         message.toLowerCase().includes('count')) {
@@ -189,8 +294,19 @@ serve(async (req) => {
       }
     }
 
-    // For all other queries, use OpenAI
-    console.log('Attempting to handle with OpenAI');
+    if (message.toLowerCase().includes('create') || 
+        message.toLowerCase().includes('schedule') || 
+        message.toLowerCase().includes('book') || 
+        message.toLowerCase().includes('make appointment')) {
+      const result = await attemptBookingCreation(supabaseClient, message);
+      if (result) {
+        return new Response(
+          JSON.stringify({ response: result.message }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     const generatedResponse = await handleGeneralQuery(message);
     if (generatedResponse) {
       return new Response(
@@ -199,7 +315,6 @@ serve(async (req) => {
       );
     }
 
-    // Only reach here if both specific handlers and OpenAI failed
     return new Response(
       JSON.stringify({ response: "I'm sorry, I didn't understand your request. Please try again." }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
