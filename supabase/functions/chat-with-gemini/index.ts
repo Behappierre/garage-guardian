@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
@@ -7,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Chat memory for maintaining context
 const chatMemory: Record<string, {
   lastAppointmentId?: string;
   lastClientId?: string;
@@ -23,7 +21,6 @@ serve(async (req) => {
     const { message, user_id } = await req.json()
     console.log('Received message:', message, 'from user:', user_id)
 
-    // Initialize chat memory for this user if needed
     if (!chatMemory[user_id]) {
       chatMemory[user_id] = {};
     }
@@ -32,6 +29,36 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    function isBookingRelatedQuery(message: string): boolean {
+      const bookingKeywords = [
+        'book',
+        'appointment',
+        'booking',
+        'schedule',
+        'reserve',
+        'cancel',
+      ];
+      
+      const messageWords = message.toLowerCase().split(' ');
+      return bookingKeywords.some(keyword => messageWords.includes(keyword));
+    }
+
+    async function handleAutomotiveQuestion(question: string): Promise<string> {
+      const responses: Record<string, string> = {
+        'oil': 'For specific oil capacity information, please check your vehicle\'s manual or provide the make and model of your car.',
+        'tire': 'Tire pressure recommendations vary by vehicle. Please check your driver\'s door jamb or manual for the correct PSI.',
+        'battery': 'Most car batteries last between 3-5 years, but this can vary based on usage and climate.',
+      };
+
+      for (const [topic, response] of Object.entries(responses)) {
+        if (question.toLowerCase().includes(topic)) {
+          return response;
+        }
+      }
+
+      return "I can help you with general automotive questions or booking appointments. For this specific question, I recommend consulting your vehicle's manual or speaking with one of our technicians.";
+    }
 
     async function findClient(name: string) {
       console.log('Searching for client:', name)
@@ -79,7 +106,6 @@ serve(async (req) => {
         throw error
       }
 
-      // Update chat memory
       chatMemory[user_id].lastAppointmentId = appointment.id
       chatMemory[user_id].lastClientId = clientId
       chatMemory[user_id].lastClientName = appointment.client.first_name + ' ' + appointment.client.last_name
@@ -129,63 +155,65 @@ serve(async (req) => {
     }
 
     async function processMessage(message: string) {
-      const lowerMessage = message.toLowerCase()
-      console.log('Processing message:', message)
-      console.log('Current chat memory:', chatMemory[user_id])
+      const lowerMessage = message.toLowerCase();
+      console.log('Processing message:', message);
+      console.log('Current chat memory:', chatMemory[user_id]);
 
-      // Check for service update request
+      if (!isBookingRelatedQuery(message)) {
+        return await handleAutomotiveQuestion(message);
+      }
+
       if (lowerMessage.includes('add') && lowerMessage.includes('service') && 
           (lowerMessage.includes('booking') || lowerMessage.includes('appointment'))) {
         
         if (!chatMemory[user_id]?.lastAppointmentId) {
-          return "I couldn't find a recent booking to update. Could you try making the booking request again?"
+          return "I couldn't find a recent booking to update. Could you try making the booking request again?";
         }
 
-        const serviceMatch = message.match(/add\s+([A-Za-z]+)\s+service/i)
+        const serviceMatch = message.match(/add\s+([A-Za-z]+)\s+service/i);
         if (!serviceMatch) {
-          return "Please specify what type of service you'd like to add."
+          return "Please specify what type of service you'd like to add.";
         }
 
-        const serviceType = `${serviceMatch[1]} Service`
+        const serviceType = `${serviceMatch[1]} Service`;
         try {
-          const updated = await updateAppointmentService(chatMemory[user_id].lastAppointmentId, serviceType)
-          return `I've updated the service type to "${serviceType}" for ${chatMemory[user_id].lastClientName}'s appointment.`
+          const updated = await updateAppointmentService(chatMemory[user_id].lastAppointmentId, serviceType);
+          return `I've updated the service type to "${serviceType}" for ${chatMemory[user_id].lastClientName}'s appointment.`;
         } catch (error) {
-          console.error('Service update error:', error)
-          return "I had trouble updating the service type. Please try again."
+          console.error('Service update error:', error);
+          return "I had trouble updating the service type. Please try again.";
         }
       }
 
-      // Process booking request
-      const bookingMatch = message.match(/(?:book|appointment|booking)\s+(?:for|with)\s+([a-zA-Z ]+?)(?:\s+(?:at|on|tomorrow|for|,|\s)\s*(.*))?$/i)
+      const bookingMatch = message.match(/(?:book|appointment|booking)\s+(?:for|with)\s+([a-zA-Z ]+?)(?:\s+(?:at|on|tomorrow|for|,|\s)\s*(.*))?$/i);
       
       if (!bookingMatch) {
-        return "I couldn't understand the booking request. Please use format: 'Book an appointment for [name]' or 'Book for [name] tomorrow at 1pm'"
+        return "I couldn't understand the booking request. Please use format: 'Book an appointment for [name]' or 'Book for [name] tomorrow at 1pm'";
       }
 
-      const clientName = bookingMatch[1].trim()
-      const timeInfo = bookingMatch[2]
+      const clientName = bookingMatch[1].trim();
+      const timeInfo = bookingMatch[2];
 
-      const client = await findClient(clientName)
+      const client = await findClient(clientName);
       if (!client) {
-        return `I couldn't find a client named "${clientName}" in our system.`
+        return `I couldn't find a client named "${clientName}" in our system.`;
       }
 
       if (!timeInfo) {
-        return `I found ${client.first_name} ${client.last_name}. When would you like to schedule the appointment?`
+        return `I found ${client.first_name} ${client.last_name}. When would you like to schedule the appointment?`;
       }
 
-      const appointmentTime = parseDateAndTime(timeInfo)
+      const appointmentTime = parseDateAndTime(timeInfo);
       if (!appointmentTime) {
-        return "I couldn't understand the time format. Please specify a time like '1pm' or '2:30pm'."
+        return "I couldn't understand the time format. Please specify a time like '1pm' or '2:30pm'.";
       }
 
       if (!client.vehicles?.[0]) {
-        return `${client.first_name} ${client.last_name} doesn't have any vehicles registered. Please add a vehicle first.`
+        return `${client.first_name} ${client.last_name} doesn't have any vehicles registered. Please add a vehicle first.`;
       }
 
       try {
-        await createAppointment(client.id, client.vehicles[0].id, appointmentTime)
+        await createAppointment(client.id, client.vehicles[0].id, appointmentTime);
         return `Perfect! I've booked an appointment for ${client.first_name} ${client.last_name} ${
           appointmentTime.toLocaleString('en-US', {
             weekday: 'long',
@@ -195,15 +223,15 @@ serve(async (req) => {
             minute: '2-digit',
             hour12: true
           })
-        }. The booking is confirmed in the system.`
+        }. The booking is confirmed in the system.`;
       } catch (error) {
-        console.error('Booking error:', error)
-        return "I encountered an error while creating the appointment. Please try again."
+        console.error('Booking error:', error);
+        return "I encountered an error while creating the appointment. Please try again.";
       }
     }
 
-    const response = await processMessage(message)
-    console.log('Sending response:', response)
+    const response = await processMessage(message);
+    console.log('Sending response:', response);
 
     return new Response(
       JSON.stringify({ response }),
@@ -213,9 +241,9 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         }
       }
-    )
+    );
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
@@ -225,6 +253,6 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         }
       }
-    )
+    );
   }
-})
+});
