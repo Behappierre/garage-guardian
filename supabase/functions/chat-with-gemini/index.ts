@@ -49,70 +49,55 @@ async function getBookingsForDate(supabase: any, date: Date) {
 }
 
 async function handleGeneralQuery(message: string) {
-  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
-    console.error('GEMINI_API_KEY not found');
+    console.error('OPENAI_API_KEY not found');
     return null;
   }
 
   try {
-    console.log('Calling Gemini API with message:', message);
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`, {
+    console.log('Calling OpenAI API with message:', message);
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: message
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
+        model: 'gpt-4o-mini',
+        messages: [
           {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            role: 'system',
+            content: `You are an automotive service advisor AI assistant. You help with questions about 
+            vehicles, maintenance, repairs, and general automotive knowledge. Keep responses concise 
+            and format them using markdown for better readability. If you're not sure about something, 
+            acknowledge that and provide any relevant information you are confident about.`
           },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
-      })
+          { role: 'user', content: message }
+        ],
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
     });
 
     if (!response.ok) {
-      console.error(`Gemini API error: ${response.status} ${response.statusText}`);
+      console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
       const errorText = await response.text();
       console.error('Error response:', errorText);
       return null;
     }
 
     const data = await response.json();
-    console.log('Gemini API response:', data);
+    console.log('OpenAI API response:', data);
     
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Unexpected Gemini API response structure:', data);
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Unexpected OpenAI API response structure:', data);
       return null;
     }
 
-    return data.candidates[0].content.parts[0].text;
+    return data.choices[0].message.content;
   } catch (error) {
-    console.error('Error calling Gemini API:', error);
+    console.error('Error calling OpenAI API:', error);
     return null;
   }
 }
@@ -167,8 +152,8 @@ serve(async (req) => {
       }
     }
 
-    // For all other queries, use Gemini
-    console.log('Attempting to handle with Gemini');
+    // For all other queries, use OpenAI
+    console.log('Attempting to handle with OpenAI');
     const generatedResponse = await handleGeneralQuery(message);
     if (generatedResponse) {
       return new Response(
@@ -177,7 +162,7 @@ serve(async (req) => {
       );
     }
 
-    // Only reach here if both specific handlers and Gemini failed
+    // Only reach here if both specific handlers and OpenAI failed
     return new Response(
       JSON.stringify({ response: "I'm sorry, I didn't understand your request. Please try again." }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
