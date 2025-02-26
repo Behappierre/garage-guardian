@@ -33,25 +33,41 @@ serve(async (req) => {
       const firstName = nameParts[0];
       const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
-      console.log(`Looking up vehicles for ${firstName} ${lastName}`);
+      console.log(`Looking up vehicles for "${firstName}" "${lastName}"`);
 
-      const { data: vehicles, error } = await supabase
-        .from('vehicles')
-        .select(`
-          *,
-          clients!inner (
-            first_name,
-            last_name
-          )
-        `)
-        .ilike('clients.first_name', firstName)
-        .ilike('clients.last_name', lastName);
+      // First, let's check if the client exists
+      const { data: client, error: clientError } = await supabase
+        .from('clients')
+        .select('id, first_name, last_name')
+        .ilike('first_name', firstName)
+        .ilike('last_name', lastName)
+        .single();
 
-      if (error) {
-        console.error('Vehicle lookup error:', error);
+      console.log('Client lookup result:', client || 'Not found');
+      if (clientError) console.error('Client lookup error:', clientError);
+
+      if (!client) {
         return new Response(
           JSON.stringify({ 
-            response: `I couldn't find any vehicles for ${clientName}.` 
+            response: `I couldn't find a client named ${clientName} in our system.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Now look up vehicles for this specific client
+      const { data: vehicles, error: vehicleError } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('client_id', client.id);
+
+      console.log('Vehicles found:', vehicles || 'None');
+      if (vehicleError) console.error('Vehicle lookup error:', vehicleError);
+
+      if (vehicleError) {
+        return new Response(
+          JSON.stringify({ 
+            response: `Error looking up vehicles for ${clientName}.` 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -64,7 +80,7 @@ serve(async (req) => {
         
         return new Response(
           JSON.stringify({ 
-            response: `${clientName}'s vehicles:\n${vehicleList}` 
+            response: `${client.first_name} ${client.last_name}'s vehicles:\n${vehicleList}` 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -72,71 +88,8 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
-          response: `${clientName} has no vehicles registered in our system.` 
+          response: `${client.first_name} ${client.last_name} has no vehicles registered in our system.` 
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check for client info queries
-    const clientInfoMatch = message.toLowerCase().match(/about ([a-zA-Z ]+)/);
-    if (clientInfoMatch) {
-      const clientName = clientInfoMatch[1].trim();
-      const nameParts = clientName.split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
-
-      console.log(`Looking up info for ${firstName} ${lastName}`);
-
-      const { data: client, error } = await supabase
-        .from('clients')
-        .select(`
-          *,
-          vehicles (
-            id,
-            make,
-            model,
-            year,
-            license_plate
-          ),
-          appointments (
-            id,
-            start_time,
-            service_type,
-            status,
-            bay
-          ),
-          job_tickets (
-            id,
-            ticket_number,
-            status,
-            description
-          )
-        `)
-        .ilike('first_name', firstName)
-        .ilike('last_name', lastName)
-        .single();
-
-      if (error || !client) {
-        return new Response(
-          JSON.stringify({ response: `I couldn't find any information for ${clientName}.` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const vehicles = client.vehicles.map(v => 
-        `${v.year} ${v.make} ${v.model}${v.license_plate ? ` (${v.license_plate})` : ''}`
-      ).join(', ');
-
-      const response = `
-Client Information for ${client.first_name} ${client.last_name}:
-Contact: ${client.phone || 'No phone'} | ${client.email || 'No email'}
-Address: ${client.address || 'No address on file'}
-Vehicles: ${vehicles || 'No vehicles registered'}
-      `.trim();
-
-      return new Response(
-        JSON.stringify({ response }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
