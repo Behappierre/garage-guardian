@@ -33,7 +33,7 @@ Provide clear, concise responses and when discussing SQL, provide practical exam
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',  // Changed to correct model name
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
