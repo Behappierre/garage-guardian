@@ -77,32 +77,31 @@ serve(async (req) => {
       );
     }
 
-    const geminiEndpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
-    const geminiResponse = await fetch(`${geminiEndpoint}?key=${GEMINI_API_KEY}`, {
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+      },
+      params: {
+        key: GEMINI_API_KEY
       },
       body: JSON.stringify({
         contents: [{
           parts: [{
             text: `You are an auto service shop assistant. Answer the following question: ${message}`
           }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 1,
-          topP: 1
-        }
+        }]
       })
     });
 
+    const responseText = await geminiResponse.text();
+    console.log('Raw Gemini API response:', responseText);
+
     if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text();
-      console.error('Gemini API error response:', errorText);
+      console.error('Gemini API error response:', responseText);
       return new Response(
         JSON.stringify({ 
-          error: `Gemini API Error: ${errorText}`,
+          error: `Gemini API Error: ${responseText}`,
           response: 'Failed to get response from AI assistant.'
         }),
         { 
@@ -112,8 +111,8 @@ serve(async (req) => {
       );
     }
 
-    const data = await geminiResponse.json();
-    console.log('Gemini API raw response:', data);
+    const data = JSON.parse(responseText);
+    console.log('Parsed Gemini API response:', data);
 
     if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
       console.error('Invalid response structure from Gemini:', data);
