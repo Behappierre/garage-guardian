@@ -90,6 +90,123 @@ async function getStats(supabase: any) {
   };
 }
 
+async function countAppointments(supabase: any, params: {
+  bay?: string;
+  clientId?: string;
+  future?: boolean;
+  past?: boolean;
+}) {
+  let query = supabase.from('appointments').select('*', { count: 'exact' });
+  
+  if (params.bay) {
+    query = query.eq('bay', params.bay);
+  }
+  
+  if (params.clientId) {
+    query = query.eq('client_id', params.clientId);
+  }
+  
+  const now = new Date().toISOString();
+  if (params.future) {
+    query = query.gte('start_time', now);
+  } else if (params.past) {
+    query = query.lt('start_time', now);
+  }
+
+  const { count, error } = await query;
+  
+  if (error) {
+    console.error('Error counting appointments:', error);
+    return null;
+  }
+  
+  return count;
+}
+
+async function countJobTickets(supabase: any, params: {
+  clientId?: string;
+  vehicleId?: string;
+  licensePlate?: string;
+  bay?: string;
+  status?: string;
+  technicianId?: string;
+}) {
+  let query = supabase
+    .from('job_tickets')
+    .select('*, vehicles!inner(*)', { count: 'exact' });
+  
+  if (params.clientId) {
+    query = query.eq('client_id', params.clientId);
+  }
+  
+  if (params.vehicleId) {
+    query = query.eq('vehicle_id', params.vehicleId);
+  }
+  
+  if (params.licensePlate) {
+    query = query.eq('vehicles.license_plate', params.licensePlate);
+  }
+  
+  if (params.status) {
+    query = query.eq('status', params.status);
+  }
+  
+  if (params.technicianId) {
+    query = query.eq('assigned_technician_id', params.technicianId);
+  }
+
+  const { count, error } = await query;
+  
+  if (error) {
+    console.error('Error counting job tickets:', error);
+    return null;
+  }
+  
+  return count;
+}
+
+async function getAppointmentTickets(supabase: any, appointmentId: string) {
+  const { data, error } = await supabase
+    .from('appointment_job_tickets')
+    .select(`
+      appointment:appointments!inner(*),
+      job_ticket:job_tickets!inner(
+        *,
+        client:clients(*),
+        vehicle:vehicles(*)
+      )
+    `)
+    .eq('appointment_id', appointmentId);
+
+  if (error) {
+    console.error('Error fetching appointment tickets:', error);
+    return null;
+  }
+
+  return data;
+}
+
+async function getTicketAppointments(supabase: any, ticketId: string) {
+  const { data, error } = await supabase
+    .from('appointment_job_tickets')
+    .select(`
+      job_ticket:job_tickets!inner(*),
+      appointment:appointments!inner(
+        *,
+        client:clients(*),
+        vehicle:vehicles(*)
+      )
+    `)
+    .eq('job_ticket_id', ticketId);
+
+  if (error) {
+    console.error('Error fetching ticket appointments:', error);
+    return null;
+  }
+
+  return data;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -234,6 +351,124 @@ serve(async (req) => {
         JSON.stringify({ response }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Appointment count queries
+    const appointmentCountMatch = message.match(/(?:count|how many) appointments?(?: for)?(?: bay)?(?: client)?(?: past)?(?: future)? ?([0-9]+)?/i);
+    if (appointmentCountMatch) {
+      const bay = appointmentCountMatch[1];
+      const isFuture = message.toLowerCase().includes('future');
+      const isPast = message.toLowerCase().includes('past');
+      
+      const count = await countAppointments(supabaseClient, {
+        bay,
+        future: isFuture,
+        past: isPast
+      });
+
+      let timeFrame = '';
+      if (isFuture) timeFrame = 'future ';
+      if (isPast) timeFrame = 'past ';
+      
+      let response = `**Appointment Count:**\n\n`;
+      if (bay) {
+        response += `There ${count === 1 ? 'is' : 'are'} ${count} ${timeFrame}appointment${count === 1 ? '' : 's'} for Bay ${bay}`;
+      } else {
+        response += `Total ${timeFrame}appointments: ${count}`;
+      }
+      
+      return new Response(
+        JSON.stringify({ response }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Job ticket count queries
+    const ticketCountMatch = message.match(/(?:count|how many) (?:job )?tickets?(?: for)? ?(?:status|client|car|registration|bay|tech)? ?([a-zA-Z0-9]+)?/i);
+    if (ticketCountMatch) {
+      const param = ticketCountMatch[1];
+      let queryParams: any = {};
+      
+      if (message.includes('status')) {
+        queryParams.status = param;
+      } else if (message.includes('registration')) {
+        queryParams.licensePlate = param;
+      } else if (message.includes('bay')) {
+        queryParams.bay = param;
+      } else if (message.includes('tech')) {
+        queryParams.technicianId = param;
+      }
+      
+      const count = await countJobTickets(supabaseClient, queryParams);
+      
+      let response = `**Job Ticket Count:**\n\n`;
+      if (param) {
+        response += `There ${count === 1 ? 'is' : 'are'} ${count} ticket${count === 1 ? '' : 's'} `;
+        if (queryParams.status) response += `with status "${param}"`;
+        else if (queryParams.licensePlate) response += `for vehicle ${param}`;
+        else if (queryParams.bay) response += `in Bay ${param}`;
+        else if (queryParams.technicianId) response += `assigned to technician ${param}`;
+      } else {
+        response += `Total tickets: ${count}`;
+      }
+      
+      return new Response(
+        JSON.stringify({ response }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Appointment-Ticket relationship queries
+    const appointmentTicketsMatch = message.match(/(?:show|list|get) tickets? for appointment ([A-Za-z0-9-]+)/i);
+    if (appointmentTicketsMatch) {
+      const appointmentId = appointmentTicketsMatch[1];
+      const tickets = await getAppointmentTickets(supabaseClient, appointmentId);
+      
+      if (tickets) {
+        let response = `**Job Tickets for Appointment ${appointmentId}:**\n\n`;
+        tickets.forEach((record: any) => {
+          const ticket = record.job_ticket;
+          response += `- ${ticket.ticket_number}\n`;
+          response += `  Status: ${ticket.status}\n`;
+          if (ticket.client) {
+            response += `  Client: ${ticket.client.first_name} ${ticket.client.last_name}\n`;
+          }
+          if (ticket.vehicle) {
+            response += `  Vehicle: ${ticket.vehicle.year} ${ticket.vehicle.make} ${ticket.vehicle.model}\n`;
+          }
+          response += '\n';
+        });
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    const ticketAppointmentsMatch = message.match(/(?:show|list|get) appointments? for ticket ([A-Za-z0-9-]+)/i);
+    if (ticketAppointmentsMatch) {
+      const ticketId = ticketAppointmentsMatch[1];
+      const appointments = await getTicketAppointments(supabaseClient, ticketId);
+      
+      if (appointments) {
+        let response = `**Appointments for Job Ticket ${ticketId}:**\n\n`;
+        appointments.forEach((record: any) => {
+          const apt = record.appointment;
+          response += `- ${format(new Date(apt.start_time), "MMM dd, yyyy HH:mm")}\n`;
+          response += `  Service: ${apt.service_type}\n`;
+          if (apt.bay) response += `  Bay: ${apt.bay}\n`;
+          if (apt.client) {
+            response += `  Client: ${apt.client.first_name} ${apt.client.last_name}\n`;
+          }
+          response += '\n';
+        });
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     if (isAppointmentQuery(message)) {
