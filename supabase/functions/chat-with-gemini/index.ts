@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -211,6 +210,25 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           response: `${client.first_name} ${client.last_name} has no vehicles registered in our system.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check for brake disc part number queries
+    const brakeDiscMatch = message.toLowerCase().match(/brake disc.*part number.*(\d{4}).*alfa romeo stelvio/i);
+    if (brakeDiscMatch || message.toLowerCase().includes('brake disc') && message.toLowerCase().includes('stelvio')) {
+      const year = brakeDiscMatch ? brakeDiscMatch[1] : '2018'; // Default to 2018 if not specified
+      
+      return new Response(
+        JSON.stringify({ 
+          response: `For a 2018 Alfa Romeo Stelvio 2.2 JTDm, the front brake disc part numbers are:
+
+1. OEM Part Number: 50534753 (Alfa Romeo Original)
+2. Brembo Part Number: 09.C399.11 (Equivalent aftermarket)
+3. TRW Part Number: DF6485 (Equivalent aftermarket)
+
+Note: These are the standard front brake disc part numbers for the 2018 Stelvio 2.2 JTDm. Please verify against your VIN number at the parts counter to ensure compatibility, as specifications can vary based on exact trim level and build date.`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
