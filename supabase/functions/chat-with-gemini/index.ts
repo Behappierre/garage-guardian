@@ -408,14 +408,23 @@ Registered Vehicles: ${client.vehicles?.length || 0}`;
     async function handleVehicleLookup(message: string): Promise<string> {
       const lowerMessage = message.toLowerCase();
       
-      // Looking up a vehicle by registration
-      const regMatch = lowerMessage.match(/(?:car|vehicle|registration|reg|plate)\s+([A-Z0-9 ]+)/i) ||
-                        lowerMessage.match(/whose\s+car\s+is\s+([A-Z0-9 ]+)/i);
+      // Extract potential registration from the message
+      // First look for specific patterns
+      let regMatch = lowerMessage.match(/(?:car|vehicle|registration|reg|plate)\s+([A-Z0-9 ]+)/i) ||
+                     lowerMessage.match(/whose\s+car\s+is\s+([A-Z0-9 ]+)/i);
+      
+      // If no match with keywords, try to find any alphanumeric sequence that looks like a registration
+      if (!regMatch) {
+        // Look for patterns like "client with ABC123" or just "ABC123"
+        regMatch = lowerMessage.match(/client\s+with\s+([a-zA-Z0-9]{1,7})/i) || 
+                   lowerMessage.match(/\b([a-zA-Z0-9]{4,7})\b/i);
+      }
       
       if (regMatch) {
         const registration = regMatch[1].trim().toUpperCase();
+        console.log(`Looking up vehicle with registration: ${registration}`);
         
-        // Query the database for the vehicle
+        // Query the database for the vehicle with partial matching
         const { data: vehicle, error } = await supabaseClient
           .from('vehicles')
           .select(`
@@ -439,6 +448,9 @@ Registered Vehicles: ${client.vehicles?.length || 0}`;
           .single();
         
         if (error || !vehicle) {
+          console.log(`No vehicle found with registration containing: ${registration}`);
+          console.log(`Error: ${error?.message || 'No vehicle found'}`);
+          
           // Try searching by make and model if registration fails
           const makeModelMatch = lowerMessage.match(/(?:find|about|info)\s+([a-zA-Z0-9 ]+)\s+([a-zA-Z0-9 ]+)/i);
           if (makeModelMatch) {
@@ -484,15 +496,29 @@ Registered Vehicles: ${client.vehicles?.length || 0}`;
             return response;
           }
           
-          return `I couldn't find a vehicle with registration "${registration}" in our system.`;
+          return `I couldn't find a vehicle with registration similar to "${registration}" in our system.`;
         }
         
         // Store in memory for context
         chatMemory[user_id].lastVehicleId = vehicle.id;
-        chatMemory[user_id].lastRegistration = registration;
+        chatMemory[user_id].lastRegistration = vehicle.registration;
         if (vehicle.clients) {
           chatMemory[user_id].lastClientId = vehicle.clients.id;
           chatMemory[user_id].lastClientName = `${vehicle.clients.first_name} ${vehicle.clients.last_name}`;
+        }
+        
+        // If the message specifically asks about the client, provide just client info
+        if (lowerMessage.includes('client with') || lowerMessage.includes('owner of') || 
+            lowerMessage.includes('who owns') || lowerMessage.includes('tell me the client')) {
+          
+          if (!vehicle.clients) {
+            return `The vehicle with registration ${vehicle.registration} (${vehicle.make} ${vehicle.model}) doesn't have an associated client in our system.`;
+          }
+          
+          return `The vehicle with registration ${vehicle.registration} (${vehicle.make} ${vehicle.model}) belongs to:
+Client: ${vehicle.clients.first_name} ${vehicle.clients.last_name}
+Phone: ${vehicle.clients.phone || 'Not provided'}
+Email: ${vehicle.clients.email || 'Not provided'}`;
         }
         
         // Get service history for this vehicle
@@ -520,7 +546,7 @@ Contact: ${vehicle.clients?.phone || vehicle.clients?.email || 'Not provided'}
 
 ${serviceHistory && serviceHistory.length > 0 ? 'Recent service history:' : 'No recent service history available.'}
 ${serviceHistory && serviceHistory.length > 0 ? serviceHistory.map((job, i) => 
-  `${i+1}. ${new Date(job.completed_at).toLocaleDateString() || 'Scheduled'} - ${job.service_type} - ${job.status}`
+  `${i+1}. ${job.completed_at ? new Date(job.completed_at).toLocaleDateString() : 'Scheduled'} - ${job.service_type} - ${job.status}`
 ).join('\n') : ''}`;
         
         return response;
@@ -1310,30 +1336,35 @@ async function findClient(searchTerm: string) {
       
       // Determine query type
       const queryType = determineQueryType(message);
-      console.log('Query type:', queryType);
+      console.log('Query type detected:', queryType);
       
       // Store conversation context
       chatMemory[user_id].lastConversationContext = queryType;
       
-      // Route to appropriate handler based on query type
-      switch (queryType) {
-        case 'booking':
-          return await handleBookingQuery(message);
-        case 'client_management':
-          return await handleClientManagement(message);
-        case 'client_lookup':
-          return await handleClientLookup(message);
-        case 'vehicle_lookup':
-          return await handleVehicleLookup(message);
-        case 'job_sheet':
-          return await handleJobSheetQuery(message);
-        case 'car_specific':
-          return await handleCarSpecificQuestion(message);
-        case 'safety_protocol':
-          return await handleSafetyProtocol(message);
-        case 'general_automotive':
-        default:
-          return await handleGeneralAutomotiveQuestion(message);
+      try {
+        // Route to appropriate handler based on query type
+        switch (queryType) {
+          case 'booking':
+            return await handleBookingQuery(message);
+          case 'client_management':
+            return await handleClientManagement(message);
+          case 'client_lookup':
+            return await handleClientLookup(message);
+          case 'vehicle_lookup':
+            return await handleVehicleLookup(message);
+          case 'job_sheet':
+            return await handleJobSheetQuery(message);
+          case 'car_specific':
+            return await handleCarSpecificQuestion(message);
+          case 'safety_protocol':
+            return await handleSafetyProtocol(message);
+          case 'general_automotive':
+          default:
+            return await handleGeneralAutomotiveQuestion(message);
+        }
+      } catch (error) {
+        console.error('Error processing message:', error);
+        return `I encountered an error while processing your request: ${error.message}. Please try again or rephrase your question.`;
       }
     }
 
