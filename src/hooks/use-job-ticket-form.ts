@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -163,7 +164,14 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
       if (initialData?.id) {
         const { error } = await supabase
           .from("job_tickets")
-          .update(formData)
+          .update({
+            description: formData.description,
+            status: formData.status,
+            priority: formData.priority,
+            assigned_technician_id: formData.assigned_technician_id,
+            client_id: formData.client_id,
+            vehicle_id: formData.vehicle_id
+          })
           .eq("id", initialData.id);
 
         if (error) throw error;
@@ -172,7 +180,12 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
         const { data: ticket, error: ticketError } = await supabase
           .from("job_tickets")
           .insert({
-            ...formData,
+            description: formData.description,
+            status: formData.status,
+            priority: formData.priority,
+            assigned_technician_id: formData.assigned_technician_id,
+            client_id: formData.client_id,
+            vehicle_id: formData.vehicle_id,
             ticket_number: 'TEMP'
           })
           .select()
