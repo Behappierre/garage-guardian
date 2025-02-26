@@ -5,7 +5,7 @@ export type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
   vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
 };
-export type TicketStatus = Database["public"]["Enums"]["ticket_status"];
+export type TicketStatus = "received" | "in_progress" | "on_hold" | "completed" | "cancelled";
 export type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
 
 export type JobTicketFormData = {
