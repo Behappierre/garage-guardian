@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -16,12 +15,6 @@ serve(async (req) => {
     const { message } = await req.json();
     console.log('Received message:', message);
 
-    const geminiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiKey) {
-      console.error('Missing Gemini API key');
-      throw new Error('Configuration error');
-    }
-
     // Initialize Supabase client early as we'll need it for multiple queries
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -31,6 +24,155 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Check for bay-related queries
+    const bayMatch = message.toLowerCase().match(/bay|service bay|work bay/);
+    if (bayMatch) {
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          clients (first_name, last_name),
+          vehicles (make, model, year)
+        `)
+        .gte('start_time', new Date().toISOString())
+        .order('start_time');
+
+      if (error) throw error;
+
+      const baySchedule = {
+        bay1: appointments.filter(a => a.bay === 'bay1'),
+        bay2: appointments.filter(a => a.bay === 'bay2'),
+        mot: appointments.filter(a => a.bay === 'mot'),
+      };
+
+      const response = Object.entries(baySchedule).map(([bay, apps]) => {
+        if (apps.length === 0) return `${bay.toUpperCase()}: Currently available`;
+        const currentApp = apps[0];
+        return `${bay.toUpperCase()}: ${currentApp.clients.first_name} ${currentApp.clients.last_name}'s ${currentApp.vehicles.year} ${currentApp.vehicles.make} ${currentApp.vehicles.model} - ${currentApp.service_type}`;
+      }).join('\n');
+
+      return new Response(
+        JSON.stringify({ response: `Current bay status:\n${response}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check for status count queries
+    const statusMatch = message.toLowerCase().match(/tickets? (by|per) status|how many tickets/);
+    if (statusMatch) {
+      const { data, error } = await supabase
+        .from('job_tickets')
+        .select('status');
+
+      if (error) throw error;
+
+      const counts = data.reduce((acc, ticket) => {
+        acc[ticket.status] = (acc[ticket.status] || 0) + 1;
+        return acc;
+      }, {});
+
+      const response = Object.entries(counts)
+        .map(([status, count]) => `${status}: ${count} tickets`)
+        .join('\n');
+
+      return new Response(
+        JSON.stringify({ response: `Ticket count by status:\n${response}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check for client info queries
+    const clientMatch = message.toLowerCase().match(/tell me about ([a-zA-Z ]+)/);
+    if (clientMatch) {
+      const clientName = clientMatch[1].trim();
+      const nameParts = clientName.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+      const { data: client, error } = await supabase
+        .from('clients')
+        .select(`
+          *,
+          vehicles (
+            id,
+            make,
+            model,
+            year,
+            license_plate
+          ),
+          appointments (
+            id,
+            start_time,
+            service_type,
+            status,
+            bay
+          ),
+          job_tickets (
+            id,
+            ticket_number,
+            status,
+            description
+          )
+        `)
+        .eq('first_name', firstName)
+        .eq('last_name', lastName)
+        .single();
+
+      if (error || !client) {
+        return new Response(
+          JSON.stringify({ response: `I couldn't find any information for ${clientName}.` }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const vehicles = client.vehicles.map(v => 
+        `${v.year} ${v.make} ${v.model}${v.license_plate ? ` (${v.license_plate})` : ''}`
+      ).join(', ');
+
+      const activeAppointments = client.appointments
+        .filter(a => new Date(a.start_time) >= new Date())
+        .map(a => `${new Date(a.start_time).toLocaleString()} - ${a.service_type} (Bay: ${a.bay || 'Not assigned'})`);
+
+      const activeTickets = client.job_tickets
+        .filter(t => t.status !== 'completed' && t.status !== 'cancelled')
+        .map(t => `${t.ticket_number} (${t.status})`);
+
+      const response = `
+Client Information for ${client.first_name} ${client.last_name}:
+Contact: ${client.phone || 'No phone'} | ${client.email || 'No email'}
+Address: ${client.address || 'No address on file'}
+
+Vehicles: ${vehicles || 'No vehicles registered'}
+
+Upcoming Appointments: ${activeAppointments.length ? '\n- ' + activeAppointments.join('\n- ') : 'None'}
+
+Active Tickets: ${activeTickets.length ? '\n- ' + activeTickets.join('\n- ') : 'None'}
+      `.trim();
+
+      return new Response(
+        JSON.stringify({ response }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check for count queries
+    const countMatch = message.toLowerCase().match(/how many (clients|tickets|appointments)/);
+    if (countMatch) {
+      const type = countMatch[1];
+      const table = type === 'tickets' ? 'job_tickets' : type;
+      
+      const { count, error } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true });
+
+      if (error) throw error;
+
+      return new Response(
+        JSON.stringify({ response: `There are ${count} ${type} in the system.` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check for specific client vehicle query
     const clientVehicleMatch = message.toLowerCase().match(/what is ([a-zA-Z ]+)'s vehicle/);
@@ -136,7 +278,7 @@ serve(async (req) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': geminiKey
+          'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')
         },
         body: JSON.stringify({
           contents: [
@@ -147,6 +289,7 @@ serve(async (req) => {
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
 If the user is asking about job tickets or their status, respond with exactly: QUERY_JOB_TICKETS
 If the user is asking about clients in general, respond with exactly: QUERY_CLIENTS
+If the user is asking about service bays, respond with exactly: QUERY_BAYS
 Otherwise, provide a helpful response about auto repair, maintenance, or general information.` }
               ]
             }
@@ -171,16 +314,6 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
     }
 
     console.log('Processed AI text:', aiText);
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Handle job tickets query
     if (aiText.includes('QUERY_JOB_TICKETS')) {
