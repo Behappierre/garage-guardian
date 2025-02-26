@@ -24,43 +24,27 @@ serve(async (req) => {
 
     // First attempt to understand user intent with Gemini
     const aiResponse = await fetch(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${geminiKey}`,
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
+          contents: [{
+            parts: [{
+              text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
 
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
 Otherwise, provide a helpful response about auto repair, maintenance, or general information.`
-                }
-              ]
-            }
-          ],
+            }]
+          }],
           generationConfig: {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
             maxOutputTokens: 1024,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-          ]
+          }
         })
       }
     );
@@ -107,27 +91,21 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
 
       // Use Gemini to format the appointment data
       const formatResponse = await fetch(
-        'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`,
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${geminiKey}`,
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  {
-                    text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
-                    
+            contents: [{
+              parts: [{
+                text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
+                
 Use emojis and clear formatting. If there are no appointments, just say so in a friendly way.
 Be concise and clear.`
-                  }
-                ]
-              }
-            ],
+              }]
+            }],
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 1024,
