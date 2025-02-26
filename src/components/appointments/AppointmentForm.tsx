@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExternalLink } from "lucide-react";
 import type { AppointmentWithRelations, AppointmentStatus, BayType } from "@/types/appointment";
+import { toast } from "sonner";
 
 interface AppointmentFormProps {
   initialData: AppointmentWithRelations | null;
@@ -237,10 +237,12 @@ export const AppointmentForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment created successfully');
       onClose();
     },
     onError: (error) => {
       console.error("Error creating appointment:", error);
+      toast.error('Failed to create appointment');
     },
   });
 
@@ -261,10 +263,38 @@ export const AppointmentForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment updated successfully');
       onClose();
     },
     onError: (error) => {
       console.error("Error updating appointment:", error);
+      toast.error('Failed to update appointment');
+    },
+  });
+
+  const cancelAppointmentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({ status: 'cancelled' })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      toast.success('Appointment cancelled successfully');
+      onClose();
+    },
+    onError: (error) => {
+      console.error("Error cancelling appointment:", error);
+      toast.error('Failed to cancel appointment');
     },
   });
 
@@ -282,6 +312,14 @@ export const AppointmentForm = ({
       console.error("Error during appointment submission:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!initialData?.id) return;
+    
+    if (confirm('Are you sure you want to cancel this appointment?')) {
+      await cancelAppointmentMutation.mutateAsync(initialData.id);
     }
   };
 
@@ -378,8 +416,18 @@ export const AppointmentForm = ({
 
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onClose}>
-          Cancel
+          Close
         </Button>
+        {initialData && (
+          <Button 
+            type="button" 
+            variant="destructive" 
+            onClick={handleCancel}
+            disabled={isSubmitting || initialData.status === 'cancelled'}
+          >
+            Cancel Booking
+          </Button>
+        )}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Saving...' : initialData ? 'Update Appointment' : 'Create Appointment'}
         </Button>
