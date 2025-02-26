@@ -85,38 +85,10 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
         throw error;
       }
 
-      // Format job tickets count with Gemini
-      const formatResponse = await fetch(
-        'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': geminiKey
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `Format this information into a friendly response: There are ${tickets.length} job tickets currently in progress.
-                    
-Use friendly language and be concise.` }
-                ]
-              }
-            ]
-          })
-        }
-      );
-
-      const formatData = await formatResponse.json();
-      const formattedResponse = formatData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-      if (!formattedResponse) {
-        throw new Error('Failed to format job tickets response');
-      }
-
       return new Response(
-        JSON.stringify({ response: formattedResponse }),
+        JSON.stringify({ 
+          response: `Okay, I've checked. We currently have ${tickets.length} ticket${tickets.length === 1 ? '' : 's'} in progress.`
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -185,8 +157,7 @@ Be concise and clear.` }
       }),
       { 
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
