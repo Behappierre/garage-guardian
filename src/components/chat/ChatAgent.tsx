@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { MessagesSquare, Send } from "lucide-react";
+import { MessagesSquare, Send, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,13 +17,14 @@ export function ChatAgent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom whenever messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
-    }
+    scrollToBottom();
   }, [messages, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,6 +63,11 @@ export function ChatAgent() {
     }
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+    toast.success("Chat cleared");
+  };
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -73,11 +79,20 @@ export function ChatAgent() {
         </Button>
       </SheetTrigger>
       <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
+        <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle>AI Assistant</SheetTitle>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={handleClearChat}
+            className="h-8 w-8"
+            title="Clear chat"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
         </SheetHeader>
         <div className="flex flex-col h-[calc(100vh-8rem)]">
-          <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
+          <ScrollArea className="flex-1 pr-4">
             <div className="space-y-4 mt-4">
               {messages.map((message, i) => (
                 <div
@@ -104,6 +119,7 @@ export function ChatAgent() {
                   </div>
                 </div>
               )}
+              <div ref={messagesEndRef} />
             </div>
           </ScrollArea>
           <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
