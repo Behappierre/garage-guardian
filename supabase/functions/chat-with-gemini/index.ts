@@ -15,7 +15,6 @@ serve(async (req) => {
     const { message } = await req.json();
     console.log('Received message:', message);
 
-    // Initialize Supabase client early as we'll need it for multiple queries
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -24,7 +23,60 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    
+
+    // Check for "list vehicles" queries
+    const listVehiclesMatch = message.toLowerCase().match(/list ([a-zA-Z ]+)'s vehicles/);
+    if (listVehiclesMatch) {
+      const clientName = listVehiclesMatch[1].trim();
+      const nameParts = clientName.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+      console.log(`Looking up vehicles for ${firstName} ${lastName}`);
+
+      const { data: vehicles, error } = await supabase
+        .from('vehicles')
+        .select(`
+          *,
+          clients!inner (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('clients.first_name', firstName)
+        .eq('clients.last_name', lastName);
+
+      if (error) {
+        console.error('Vehicle lookup error:', error);
+        return new Response(
+          JSON.stringify({ 
+            response: `I couldn't find any vehicles for ${clientName}.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (vehicles && vehicles.length > 0) {
+        const vehicleList = vehicles.map(v => 
+          `- ${v.year} ${v.make} ${v.model}${v.license_plate ? ` (Plate: ${v.license_plate})` : ''}`
+        ).join('\n');
+        
+        return new Response(
+          JSON.stringify({ 
+            response: `${clientName}'s vehicles:\n${vehicleList}` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          response: `${clientName} has no vehicles registered in our system.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check for bay-related queries
     const bayMatch = message.toLowerCase().match(/bay|service bay|work bay/);
     if (bayMatch) {
@@ -271,14 +323,18 @@ Active Tickets: ${activeTickets.length ? '\n- ' + activeTickets.join('\n- ') : '
       );
     }
 
-    // Generate content using Gemini API for other queries
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiKey) {
+      throw new Error('Missing Gemini API key');
+    }
+
     const aiResponse = await fetch(
       'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': Deno.env.get('GEMINI_API_KEY')
+          'x-goog-api-key': geminiKey
         },
         body: JSON.stringify({
           contents: [
@@ -289,7 +345,6 @@ Active Tickets: ${activeTickets.length ? '\n- ' + activeTickets.join('\n- ') : '
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
 If the user is asking about job tickets or their status, respond with exactly: QUERY_JOB_TICKETS
 If the user is asking about clients in general, respond with exactly: QUERY_CLIENTS
-If the user is asking about service bays, respond with exactly: QUERY_BAYS
 Otherwise, provide a helpful response about auto repair, maintenance, or general information.` }
               ]
             }
@@ -299,69 +354,18 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
     );
 
     if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('Gemini API error:', errorText);
-      throw new Error(`Gemini API error: ${aiResponse.status}`);
+      throw new Error('Failed to get AI response');
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI response data:', aiData);
-
-    const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!aiText) {
-      console.error('Invalid AI response format:', aiData);
-      throw new Error('Invalid response from AI');
+    if (!aiData.candidates || !aiData.candidates[0] || !aiData.candidates[0].content) {
+      throw new Error('Invalid AI response format');
     }
 
+    const aiText = aiData.candidates[0].content.parts[0].text;
     console.log('Processed AI text:', aiText);
 
-    // Handle job tickets query
-    if (aiText.includes('QUERY_JOB_TICKETS')) {
-      const { data: ticketStats, error: ticketsError } = await supabase
-        .from('job_tickets')
-        .select(`
-          id,
-          status,
-          priority,
-          clients (
-            first_name,
-            last_name
-          ),
-          vehicles (
-            make,
-            model,
-            year
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (ticketsError) {
-        console.error('Database error:', ticketsError);
-        throw ticketsError;
-      }
-
-      const inProgressCount = ticketStats.filter(t => t.status === 'in_progress').length;
-      const recentTickets = ticketStats.map(ticket => ({
-        client: ticket.clients ? `${ticket.clients.first_name} ${ticket.clients.last_name}` : 'Unknown',
-        vehicle: ticket.vehicles ? `${ticket.vehicles.year} ${ticket.vehicles.make} ${ticket.vehicles.model}` : 'Unknown',
-        status: ticket.status,
-        priority: ticket.priority
-      }));
-
-      return new Response(
-        JSON.stringify({ 
-          response: `I've checked the system. Currently, there are ${inProgressCount} ticket${inProgressCount === 1 ? '' : 's'} in progress. Here are the 5 most recent tickets:\n\n${
-            recentTickets.map((t, i) => 
-              `${i + 1}. ${t.client}'s ${t.vehicle} - Status: ${t.status}, Priority: ${t.priority}`
-            ).join('\n')}`
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Handle appointment queries
-    if (aiText.includes('QUERY_APPOINTMENTS')) {
+    if (aiText === 'QUERY_APPOINTMENTS') {
       const { data: appointments, error } = await supabase
         .from('appointments')
         .select(`
@@ -405,10 +409,49 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
-    }
+    } else if (aiText === 'QUERY_JOB_TICKETS') {
+      const { data: ticketStats, error: ticketsError } = await supabase
+        .from('job_tickets')
+        .select(`
+          id,
+          status,
+          priority,
+          clients (
+            first_name,
+            last_name
+          ),
+          vehicles (
+            make,
+            model,
+            year
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    // Handle client queries
-    if (aiText.includes('QUERY_CLIENTS')) {
+      if (ticketsError) {
+        console.error('Database error:', ticketsError);
+        throw ticketsError;
+      }
+
+      const inProgressCount = ticketStats.filter(t => t.status === 'in_progress').length;
+      const recentTickets = ticketStats.map(ticket => ({
+        client: ticket.clients ? `${ticket.clients.first_name} ${ticket.clients.last_name}` : 'Unknown',
+        vehicle: ticket.vehicles ? `${ticket.vehicles.year} ${ticket.vehicles.make} ${ticket.vehicles.model}` : 'Unknown',
+        status: ticket.status,
+        priority: ticket.priority
+      }));
+
+      return new Response(
+        JSON.stringify({ 
+          response: `I've checked the system. Currently, there are ${inProgressCount} ticket${inProgressCount === 1 ? '' : 's'} in progress. Here are the 5 most recent tickets:\n\n${
+            recentTickets.map((t, i) => 
+              `${i + 1}. ${t.client}'s ${t.vehicle} - Status: ${t.status}, Priority: ${t.priority}`
+            ).join('\n')}`
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else if (aiText === 'QUERY_CLIENTS') {
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select(`
@@ -458,13 +501,12 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    } else {
+      return new Response(
+        JSON.stringify({ response: aiText }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
-
-    // For non-database queries, return the AI response directly
-    return new Response(
-      JSON.stringify({ response: aiText }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error) {
     console.error('Edge function error:', error);
