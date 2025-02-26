@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { MessagesSquare, Send, Trash2, ArrowsMaximize, ArrowsMinimize } from "lucide-react";
+import { MessagesSquare, Send, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -114,9 +114,9 @@ export function ChatAgent() {
               title={isWide ? "Narrow view" : "Wide view"}
             >
               {isWide ? (
-                <ArrowsMinimize className="h-4 w-4" />
+                <Minimize2 className="h-4 w-4" />
               ) : (
-                <ArrowsMaximize className="h-4 w-4" />
+                <Maximize2 className="h-4 w-4" />
               )}
             </Button>
             <Button 
