@@ -22,7 +22,60 @@ serve(async (req) => {
       throw new Error('Configuration error');
     }
 
-    // Generate content using Gemini API
+    // Check if it's a vehicle query first
+    const licensePlateMatch = message.toLowerCase().match(/whose car is ([a-z0-9]+)/);
+    if (licensePlateMatch) {
+      const licensePlate = licensePlateMatch[1];
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        throw new Error('Missing Supabase configuration');
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const { data: vehicle, error: vehicleError } = await supabase
+        .from('vehicles')
+        .select(`
+          *,
+          clients (
+            first_name,
+            last_name,
+            phone
+          )
+        `)
+        .eq('license_plate', licensePlate)
+        .single();
+
+      if (vehicleError) {
+        console.error('Vehicle lookup error:', vehicleError);
+        return new Response(
+          JSON.stringify({ 
+            response: `I couldn't find a vehicle with license plate ${licensePlate} in our system.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (vehicle) {
+        return new Response(
+          JSON.stringify({ 
+            response: `The ${vehicle.year} ${vehicle.make} ${vehicle.model} (plate: ${vehicle.license_plate}) belongs to ${vehicle.clients.first_name} ${vehicle.clients.last_name}. ${vehicle.clients.phone ? `Their phone number is ${vehicle.clients.phone}.` : ''}` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          response: `I couldn't find a vehicle with license plate ${licensePlate} in our system.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Generate content using Gemini API for other queries
     const aiResponse = await fetch(
       'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
       {
@@ -39,7 +92,7 @@ serve(async (req) => {
 
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
 If the user is asking about job tickets or their status, respond with exactly: QUERY_JOB_TICKETS
-If the user is asking about a specific client or clients in general, respond with exactly: QUERY_CLIENTS
+If the user is asking about clients in general, respond with exactly: QUERY_CLIENTS
 Otherwise, provide a helpful response about auto repair, maintenance, or general information.` }
               ]
             }
