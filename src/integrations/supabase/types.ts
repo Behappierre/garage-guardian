@@ -528,6 +528,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      execute_read_only_query: {
+        Args: {
+          query_text: string
+        }
+        Returns: Json
+      }
       has_role: {
         Args: {
           user_id: string
