@@ -3,10 +3,11 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { MessagesSquare, Send, Trash2 } from "lucide-react";
+import { MessagesSquare, Send, Trash2, ArrowsMaximize, ArrowsMinimize } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   role: "user" | "assistant";
@@ -17,6 +18,7 @@ export function ChatAgent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isWide, setIsWide] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -26,6 +28,21 @@ export function ChatAgent() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  const formatMessage = (content: string) => {
+    // Add bold formatting to specific elements
+    return content
+      .replace(/^([A-Za-z ]+):/gm, '**$1:**')  // Section headers
+      .replace(/^- /gm, '• ')  // Bullet points
+      .replace(/\n\n/g, '\n\n---\n\n')  // Section breaks
+      .replace(/Bay \d+/g, '**$&**')  // Bay numbers
+      .replace(/Status:/g, '**Status:**')
+      .replace(/Vehicle:/g, '**Vehicle:**')
+      .replace(/Customer:/g, '**Customer:**')
+      .replace(/Service Details:/g, '**Service Details:**')
+      .replace(/Job Ticket:/g, '**Job Ticket:**')
+      .replace(/Notes:/g, '**Notes:**');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +67,10 @@ export function ChatAgent() {
         throw new Error('No response received from AI assistant');
       }
 
-      setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: formatMessage(data.response)
+      }]);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to get response from AI assistant");
@@ -68,6 +88,10 @@ export function ChatAgent() {
     toast.success("Chat cleared");
   };
 
+  const toggleWidth = () => {
+    setIsWide(prev => !prev);
+  };
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -78,18 +102,33 @@ export function ChatAgent() {
           <MessagesSquare className="h-6 w-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className={`${isWide ? 'w-[800px]' : 'w-[400px] sm:w-[540px]'}`}>
         <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle>AI Assistant</SheetTitle>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={handleClearChat}
-            className="h-8 w-8"
-            title="Clear chat"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={toggleWidth}
+              className="h-8 w-8"
+              title={isWide ? "Narrow view" : "Wide view"}
+            >
+              {isWide ? (
+                <ArrowsMinimize className="h-4 w-4" />
+              ) : (
+                <ArrowsMaximize className="h-4 w-4" />
+              )}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleClearChat}
+              className="h-8 w-8"
+              title="Clear chat"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </SheetHeader>
         <div className="flex flex-col h-[calc(100vh-8rem)]">
           <ScrollArea className="flex-1 pr-4">
@@ -102,13 +141,17 @@ export function ChatAgent() {
                   }`}
                 >
                   <div
-                    className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                    className={`rounded-lg px-4 py-2 max-w-[90%] ${
                       message.role === "assistant"
-                        ? "bg-muted"
+                        ? "bg-muted prose prose-sm dark:prose-invert"
                         : "bg-primary text-primary-foreground"
                     }`}
                   >
-                    {message.content}
+                    {message.role === "assistant" ? (
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    ) : (
+                      message.content
+                    )}
                   </div>
                 </div>
               ))}
