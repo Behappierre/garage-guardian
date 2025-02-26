@@ -145,7 +145,7 @@ async function attemptBookingCreation(supabase: any, message: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -161,9 +161,7 @@ async function attemptBookingCreation(supabase: any, message: string) {
               Response must be valid JSON.`
           },
           { role: 'user', content: message }
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
+        ]
       }),
     });
 
@@ -183,34 +181,73 @@ async function attemptBookingCreation(supabase: any, message: string) {
       return null;
     }
 
-    if (!bookingDetails.client_name || !bookingDetails.service_type || 
-        !bookingDetails.requested_date || !bookingDetails.requested_time) {
+    const { data: clients, error: clientError } = await supabase
+      .from('clients')
+      .select(`
+        id,
+        first_name,
+        last_name,
+        vehicles (
+          id,
+          make,
+          model,
+          year,
+          license_plate
+        )
+      `)
+      .or(`first_name.ilike.%${bookingDetails.client_name}%,last_name.ilike.%${bookingDetails.client_name}%`);
+
+    if (clientError) {
+      console.error('Error searching for client:', clientError);
       return {
         success: false,
-        message: "I couldn't get all the required information. Please provide client name, service type, date, and time."
+        message: "Sorry, I encountered an error while searching for the client."
       };
     }
-
-    const { data: clients } = await supabase
-      .from('clients')
-      .select('id, first_name, last_name')
-      .or(`first_name.ilike.%${bookingDetails.client_name}%,last_name.ilike.%${bookingDetails.client_name}%`)
-      .limit(1);
 
     if (!clients?.length) {
       return {
         success: false,
-        message: `I couldn't find a client named "${bookingDetails.client_name}". Please check the name or create the client first.`
+        message: `I couldn't find a client named "${bookingDetails.client_name}". Please check the name or create the client first.\n\nAvailable actions:\n1. Create a new client\n2. Try again with a different name`
       };
     }
 
+    if (clients.length > 1) {
+      const clientList = clients.map(client => {
+        const vehicles = client.vehicles?.map(v => 
+          `    • ${v.year} ${v.make} ${v.model}${v.license_plate ? ` (${v.license_plate})` : ''}`
+        ).join('\n') || '    • No vehicles registered';
+        
+        return `- ${client.first_name} ${client.last_name}:\n${vehicles}`;
+      }).join('\n\n');
+
+      return {
+        success: false,
+        message: `I found multiple clients with similar names. Please specify which one:\n\n${clientList}`
+      };
+    }
+
+    const client = clients[0];
     const startTime = new Date(`${bookingDetails.requested_date}T${bookingDetails.requested_time}`);
     const endTime = new Date(startTime.getTime() + (bookingDetails.duration_minutes || 60) * 60000);
 
-    const { data: appointment, error } = await supabase
+    const { data: conflictingAppointments } = await supabase
+      .from('appointments')
+      .select('*')
+      .lt('end_time', endTime.toISOString())
+      .gt('start_time', startTime.toISOString());
+
+    if (conflictingAppointments?.length) {
+      return {
+        success: false,
+        message: "Sorry, there's already an appointment scheduled for this time slot. Please choose a different time."
+      };
+    }
+
+    const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
       .insert({
-        client_id: clients[0].id,
+        client_id: client.id,
         service_type: bookingDetails.service_type,
         start_time: startTime.toISOString(),
         end_time: endTime.toISOString(),
@@ -220,17 +257,23 @@ async function attemptBookingCreation(supabase: any, message: string) {
       .select()
       .single();
 
-    if (error) {
-      console.error('Failed to create appointment:', error);
+    if (appointmentError) {
+      console.error('Failed to create appointment:', appointmentError);
       return {
         success: false,
         message: "Sorry, I couldn't create the appointment due to a technical error."
       };
     }
 
+    const vehicleInfo = client.vehicles?.length 
+      ? `\n\nRegistered vehicles:\n${client.vehicles.map(v => 
+          `• ${v.year} ${v.make} ${v.model}${v.license_plate ? ` (${v.license_plate})` : ''}`
+        ).join('\n')}`
+      : '';
+
     return {
       success: true,
-      message: `Great! I've created an appointment for ${clients[0].first_name} ${clients[0].last_name} on ${format(startTime, "MMM d 'at' h:mm a")} for ${bookingDetails.service_type}.`
+      message: `Great! I've created an appointment for ${client.first_name} ${client.last_name} on ${format(startTime, "MMM d 'at' h:mm a")} for ${bookingDetails.service_type}.${vehicleInfo}`
     };
   } catch (error) {
     console.error('Error in booking creation:', error);
