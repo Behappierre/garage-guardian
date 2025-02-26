@@ -165,6 +165,39 @@ async function countJobTickets(supabase: any, params: {
   return count;
 }
 
+async function getSpecificTicketCount(supabase: any, status: string) {
+  const { count, error } = await supabase
+    .from('job_tickets')
+    .select('*', { count: 'exact' })
+    .eq('status', status);
+
+  if (error) {
+    console.error('Error counting tickets by status:', error);
+    return null;
+  }
+
+  return count;
+}
+
+async function getCurrentStatistics(supabase: any) {
+  try {
+    const [clients, tickets, appointments] = await Promise.all([
+      supabase.from('clients').select('*', { count: 'exact' }),
+      supabase.from('job_tickets').select('*', { count: 'exact' }),
+      supabase.from('appointments').select('*', { count: 'exact' })
+    ]);
+
+    return {
+      totalClients: clients.count,
+      totalTickets: tickets.count,
+      totalAppointments: appointments.count
+    };
+  } catch (error) {
+    console.error('Error fetching statistics:', error);
+    return null;
+  }
+}
+
 async function getAppointmentTickets(supabase: any, appointmentId: string) {
   const { data, error } = await supabase
     .from('appointment_job_tickets')
@@ -288,6 +321,46 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Specific ticket status count query
+    const ticketStatusPattern = /how many tickets? (?:in|with) status ([a-z_]+)/i;
+    const statusMatch = message.match(ticketStatusPattern);
+    
+    if (statusMatch) {
+      const status = statusMatch[1].toLowerCase();
+      const count = await getSpecificTicketCount(supabaseClient, status);
+      
+      if (count !== null) {
+        const stats = await getCurrentStatistics(supabaseClient);
+        let response = `**Current Statistics:**\n\n`;
+        response += `• Total Clients: ${stats?.totalClients}\n`;
+        response += `• Total Job Tickets: ${stats?.totalTickets}\n`;
+        response += `• Total Appointments: ${stats?.totalAppointments}\n\n`;
+        response += `**Requested Count:**\n`;
+        response += `• Tickets in status "${status}": ${count}`;
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // General statistics query
+    if (message.toLowerCase().includes('statistics') || 
+        message.toLowerCase().includes('current stats') ||
+        message.toLowerCase().includes('show stats')) {
+      const stats = await getCurrentStatistics(supabaseClient);
+      let response = `**Current Statistics:**\n\n`;
+      response += `• Total Clients: ${stats?.totalClients}\n`;
+      response += `• Total Job Tickets: ${stats?.totalTickets}\n`;
+      response += `• Total Appointments: ${stats?.totalAppointments}`;
+      
+      return new Response(
+        JSON.stringify({ response }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Client name query
     const clientNameMatch = message.match(/what (?:car|vehicle|address|phone|appointment|ticket)s? (?:does|has|have) ([a-zA-Z ]+)/i);
     if (clientNameMatch) {
@@ -405,19 +478,6 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-    }
-
-    // Stats query
-    if (message.toLowerCase().includes('count') || message.toLowerCase().includes('how many')) {
-      const stats = await getStats(supabaseClient);
-      let response = "**Current Statistics:**\n\n";
-      response += `- Total Clients: ${stats.clients}\n`;
-      response += `- Total Job Tickets: ${stats.tickets}\n`;
-      response += `- Total Appointments: ${stats.appointments}\n`;
-      return new Response(
-        JSON.stringify({ response }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     // Appointment count queries
