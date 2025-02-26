@@ -15,7 +15,16 @@ serve(async (req) => {
 
   try {
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
     const { message } = await req.json();
+    
+    if (!message || typeof message !== 'string') {
+      throw new Error('Invalid or missing message');
+    }
 
     const systemPrompt = `You are an AI assistant for an auto repair shop management system. You can help with:
 - Understanding database schema and relationships
@@ -26,6 +35,8 @@ serve(async (req) => {
 Current database tables include: appointments, job_tickets, vehicles, clients, service_history, time_entries, and more.
 Provide clear, concise responses and when discussing SQL, provide practical examples.`;
 
+    console.log('Sending request to OpenAI with message:', message);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -33,16 +44,30 @@ Provide clear, concise responses and when discussing SQL, provide practical exam
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',  // Changed to correct model name
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
+        temperature: 0.7,
+        max_tokens: 1000
       }),
     });
 
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API error:', errorData);
+      throw new Error('Failed to get response from OpenAI');
+    }
+
     const data = await response.json();
+    
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response format from OpenAI');
+    }
+
     const assistantResponse = data.choices[0].message.content;
+    console.log('Received response from OpenAI:', assistantResponse.substring(0, 100) + '...');
 
     return new Response(JSON.stringify({ response: assistantResponse }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -50,7 +75,7 @@ Provide clear, concise responses and when discussing SQL, provide practical exam
   } catch (error) {
     console.error('Error in chat-with-gpt function:', error);
     return new Response(JSON.stringify({ 
-      error: 'Failed to process chat request'
+      error: error.message || 'Failed to process chat request'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
