@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,51 +26,26 @@ async function getCurrentStatistics(supabase: any) {
   }
 }
 
-async function countTicketsWithParams(supabase: any, params: {
-  status?: string;
-  clientId?: string;
-  vehicleId?: string;
-  licensePlate?: string;
-  bay?: string;
-  technicianId?: string;
-}) {
-  let query = supabase
-    .from('job_tickets')
-    .select('*', { count: 'exact' });
-  
-  Object.entries(params).forEach(([key, value]) => {
-    if (value) {
-      switch (key) {
-        case 'status':
-          query = query.eq('status', value);
-          break;
-        case 'clientId':
-          query = query.eq('client_id', value);
-          break;
-        case 'vehicleId':
-          query = query.eq('vehicle_id', value);
-          break;
-        case 'licensePlate':
-          query = query.eq('vehicles.license_plate', value);
-          break;
-        case 'bay':
-          query = query.eq('bay', value);
-          break;
-        case 'technicianId':
-          query = query.eq('assigned_technician_id', value);
-          break;
-      }
-    }
-  });
+async function getBookingsForDate(supabase: any, date: Date) {
+  try {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  const { count, error } = await query;
-  
-  if (error) {
-    console.error('Error counting tickets:', error);
+    const { data, error, count } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact' })
+      .gte('start_time', startOfDay.toISOString())
+      .lte('start_time', endOfDay.toISOString());
+
+    if (error) throw error;
+    return { count, appointments: data };
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
     return null;
   }
-  
-  return count;
 }
 
 async function handleGeneralQuery(message: string) {
@@ -82,6 +56,7 @@ async function handleGeneralQuery(message: string) {
   }
 
   try {
+    console.log('Calling Gemini API with message:', message);
     const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
@@ -121,12 +96,21 @@ async function handleGeneralQuery(message: string) {
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      console.error(`Gemini API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      return null;
     }
 
     const data = await response.json();
-    const generatedText = data.candidates[0].content.parts[0].text;
-    return generatedText;
+    console.log('Gemini API response:', data);
+    
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error('Unexpected Gemini API response structure:', data);
+      return null;
+    }
+
+    return data.candidates[0].content.parts[0].text;
   } catch (error) {
     console.error('Error calling Gemini API:', error);
     return null;
@@ -147,36 +131,44 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check for status and statistics queries first
-    const ticketStatusPattern = /(?:count |how many )?tickets?(?: in| with)? status ([a-z_]+)/i;
-    const statusMatch = message.match(ticketStatusPattern);
-    const isStatsQuery = message.toLowerCase().includes('statistics') || 
-                        message.toLowerCase().includes('current stats') || 
-                        message.toLowerCase().includes('show stats');
-    
-    if (statusMatch || isStatsQuery) {
-      const stats = await getCurrentStatistics(supabaseClient);
-      let response = `**Current Statistics:**\n\n`;
-      response += `• Total Clients: ${stats?.totalClients}\n`;
-      response += `• Total Job Tickets: ${stats?.totalTickets}\n`;
-      response += `• Total Appointments: ${stats?.totalAppointments}`;
+    // Check for bookings queries
+    if (message.toLowerCase().includes('bookings') || message.toLowerCase().includes('appointments')) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
       
-      if (statusMatch) {
-        const status = statusMatch[1].toLowerCase();
-        const count = await countTicketsWithParams(supabaseClient, { status });
-        if (count !== null) {
-          response += `\n\n**Requested Count:**\n`;
-          response += `• Tickets in status "${status}": ${count}`;
+      if (message.toLowerCase().includes('tomorrow')) {
+        const bookings = await getBookingsForDate(supabaseClient, tomorrow);
+        if (bookings) {
+          return new Response(
+            JSON.stringify({
+              response: `There ${bookings.count === 1 ? 'is' : 'are'} ${bookings.count} booking${bookings.count === 1 ? '' : 's'} scheduled for tomorrow.`
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
       }
-      
-      return new Response(
-        JSON.stringify({ response }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
-    
+
+    // Check for statistics queries
+    if (message.toLowerCase().includes('statistics') || 
+        message.toLowerCase().includes('stats') || 
+        message.toLowerCase().includes('count')) {
+      const stats = await getCurrentStatistics(supabaseClient);
+      if (stats) {
+        const response = `**Current Statistics:**\n\n` +
+          `• Total Clients: ${stats.totalClients}\n` +
+          `• Total Job Tickets: ${stats.totalTickets}\n` +
+          `• Total Appointments: ${stats.totalAppointments}`;
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // For all other queries, use Gemini
+    console.log('Attempting to handle with Gemini');
     const generatedResponse = await handleGeneralQuery(message);
     if (generatedResponse) {
       return new Response(
@@ -185,7 +177,7 @@ serve(async (req) => {
       );
     }
 
-    // Fallback response if no pattern matches and Gemini fails
+    // Only reach here if both specific handlers and Gemini failed
     return new Response(
       JSON.stringify({ response: "I'm sorry, I didn't understand your request. Please try again." }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
