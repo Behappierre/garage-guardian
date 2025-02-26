@@ -135,6 +135,46 @@ async function handleGeneralQuery(message: string) {
 
 async function attemptBookingCreation(supabase: any, message: string) {
   try {
+    if (message.includes('•')) {
+      const client = await findExactClient(supabase, message);
+      if (client) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(14, 0, 0, 0);
+
+        const { data: appointment, error: appointmentError } = await supabase
+          .from('appointments')
+          .insert({
+            client_id: client.id,
+            vehicle_id: client.vehicles?.[0]?.id,
+            service_type: 'oil change',
+            start_time: tomorrow.toISOString(),
+            end_time: new Date(tomorrow.getTime() + 60 * 60 * 1000).toISOString(),
+            status: 'scheduled'
+          })
+          .select()
+          .single();
+
+        if (appointmentError) {
+          console.error('Failed to create appointment:', appointmentError);
+          return {
+            success: false,
+            message: "Sorry, I couldn't create the appointment due to a technical error."
+          };
+        }
+
+        const vehicle = client.vehicles?.[0];
+        const vehicleInfo = vehicle 
+          ? `\nVehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model} (${vehicle.license_plate})`
+          : '';
+
+        return {
+          success: true,
+          message: `Perfect! I've created an appointment for ${client.first_name} ${client.last_name} tomorrow at 2:00 PM for an oil change.${vehicleInfo}`
+        };
+      }
+    }
+
     const apiKey = Deno.env.get('OPENAI_API_KEY');
     if (!apiKey) return null;
 
@@ -291,6 +331,41 @@ async function attemptBookingCreation(supabase: any, message: string) {
       message: "Sorry, I encountered an error while trying to create the booking."
     };
   }
+}
+
+async function findExactClient(supabase: any, clientDetails: string) {
+  const carMatch = clientDetails.match(/(.+?):\s*•\s*(.+)/);
+  if (!carMatch) return null;
+
+  const [_, clientName, carDetails] = carMatch;
+  const registrationMatch = carDetails.match(/\(([^)]+)\)/);
+  const registration = registrationMatch ? registrationMatch[1] : null;
+
+  const { data: clients, error } = await supabase
+    .from('clients')
+    .select(`
+      id,
+      first_name,
+      last_name,
+      vehicles (
+        id,
+        make,
+        model,
+        year,
+        license_plate
+      )
+    `)
+    .ilike('first_name || \' \' || last_name', clientName.trim());
+
+  if (error || !clients?.length) return null;
+
+  if (registration) {
+    return clients.find(client => 
+      client.vehicles?.some(v => v.license_plate?.toLowerCase() === registration.toLowerCase())
+    );
+  }
+
+  return clients[0];
 }
 
 serve(async (req) => {
