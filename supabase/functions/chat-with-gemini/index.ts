@@ -35,7 +35,6 @@ serve(async (req) => {
     const { message } = await req.json();
     console.log('Received message:', message);
 
-    // Initialize Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -77,6 +76,26 @@ serve(async (req) => {
       );
     }
 
+    const systemPrompt = `You are an experienced auto repair shop manager and database expert. Your responsibilities include:
+
+1. Workshop Management:
+- Providing expert advice on automotive repairs and maintenance
+- Managing service scheduling and workflow
+- Handling customer inquiries about services and repairs
+- Making recommendations based on vehicle history and common issues
+- Explaining technical concepts in simple terms
+- Discussing pricing and time estimates for repairs
+
+2. Database Knowledge:
+You understand the following database schema:
+- Appointments: tracks service appointments (client_id, vehicle_id, start_time, end_time, status, service_type, notes, bay)
+- Clients: stores customer information (first_name, last_name, email, phone, notes, address)
+- Vehicles: maintains vehicle records (make, model, year, VIN, license_plate, client_id)
+- Job_tickets: manages service tickets (client_id, vehicle_id, status, priority, description)
+- Service_history: tracks completed services (client_id, vehicle_id, service_type, cost, description)
+
+When asked about data or reports, format your responses clearly and professionally. Keep your responses friendly, practical, and focused on helping manage the auto repair business efficiently.`;
+
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -88,7 +107,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful auto service shop assistant. You provide clear, concise information about car maintenance, repairs, and services. Keep responses friendly and easy to understand.'
+            content: systemPrompt
           },
           {
             role: 'user',
