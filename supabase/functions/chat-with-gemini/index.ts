@@ -1,8 +1,7 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { addHours } from 'https://esm.sh/date-fns@2.30.0';
+import { addHours, parse, addDays, format } from 'https://esm.sh/date-fns@2.30.0';
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -15,44 +14,102 @@ const corsHeaders = {
 
 // Function to extract date and time from message
 function extractDateTime(message: string): Date | null {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const lowerMessage = message.toLowerCase();
+  const today = new Date();
   
-  // Look for time in format like "2pm" or "2 PM"
-  const timeMatch = message.match(/(\d{1,2})(?:\s*)?(?:am|pm)/i);
-  if (timeMatch) {
+  // Match patterns like "Friday at 3pm" or "Friday at 3 PM"
+  const dayMatch = lowerMessage.match(/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
+  const timeMatch = lowerMessage.match(/at\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+  
+  if (dayMatch && timeMatch) {
+    const dayOfWeek = dayMatch[1];
     const hour = parseInt(timeMatch[1]);
-    const isPM = timeMatch[0].toLowerCase().includes('pm');
+    const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+    const isPM = timeMatch[3].toLowerCase() === 'pm';
     
-    tomorrow.setHours(isPM ? hour + 12 : hour, 0, 0, 0);
-    return tomorrow;
+    // Get the next occurrence of the specified day
+    const targetDate = addDays(today, 1); // Start from tomorrow
+    while (format(targetDate, 'eeee').toLowerCase() !== dayOfWeek) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
+    
+    // Set the time
+    targetDate.setHours(
+      isPM ? (hour === 12 ? 12 : hour + 12) : (hour === 12 ? 0 : hour),
+      minutes,
+      0,
+      0
+    );
+    
+    console.log(`Parsed date: ${targetDate.toISOString()} from message: ${message}`);
+    return targetDate;
   }
+  
   return null;
 }
 
 // Function to create appointment
-async function createAppointment(supabase: any, clientData: any, startTime: Date, serviceType: string) {
+async function createAppointment(supabase: any, clientData: any, startTime: Date, serviceType: string, vehicleDetails: any = null) {
+  console.log('Creating appointment with data:', {
+    clientData,
+    startTime,
+    serviceType,
+    vehicleDetails
+  });
+
   const endTime = addHours(startTime, 2); // Default 2-hour appointment
 
-  try {
-    const { data: appointment, error } = await supabase
-      .from('appointments')
+  // First, ensure we have or create the vehicle
+  let vehicleId = null;
+  if (vehicleDetails) {
+    const { data: vehicle, error: vehicleError } = await supabase
+      .from('vehicles')
       .insert({
         client_id: clientData.id,
-        vehicle_id: clientData.vehicles?.[0]?.id,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        service_type: serviceType,
-        status: 'scheduled',
-        notes: `Service requested: ${serviceType}`
+        make: vehicleDetails.make || 'Unknown',
+        model: vehicleDetails.model || 'Unknown',
+        year: vehicleDetails.year || new Date().getFullYear(),
+        license_plate: vehicleDetails.license_plate
       })
       .select()
       .single();
 
-    if (error) throw error;
+    if (vehicleError) {
+      console.error('Error creating vehicle:', vehicleError);
+      throw vehicleError;
+    }
+
+    vehicleId = vehicle.id;
+  }
+
+  try {
+    const appointmentData = {
+      client_id: clientData.id,
+      vehicle_id: vehicleId || clientData.vehicles?.[0]?.id,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      service_type: serviceType,
+      status: 'scheduled',
+      notes: `Service requested: ${serviceType}`
+    };
+
+    console.log('Inserting appointment with data:', appointmentData);
+
+    const { data: appointment, error } = await supabase
+      .from('appointments')
+      .insert(appointmentData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating appointment:', error);
+      throw error;
+    }
+
+    console.log('Successfully created appointment:', appointment);
     return appointment;
   } catch (error) {
-    console.error('Error creating appointment:', error);
+    console.error('Error in createAppointment:', error);
     throw error;
   }
 }
@@ -77,17 +134,27 @@ serve(async (req) => {
     let contextData = {};
     let appointmentCreated = null;
     
-    // Check for client name in the message and recent messages
-    const allText = [message, ...recentMessages?.map(m => m.message) || []].join(' ').toLowerCase();
+    // Extract all messages for context
+    const allMessages = [message, ...recentMessages?.map(m => m.message) || []];
+    const allText = allMessages.join(' ').toLowerCase();
+    
+    // Extract client name
     const nameMatch = allText.match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
-    const vehicleMatch = allText.match(/(?:alfa|romeo|stelvio|olh878)/);
     
-    // Check if this is a confirmation message
-    const isConfirmation = message.toLowerCase().includes('yes') && 
-      recentMessages?.[0]?.response?.toLowerCase().includes('shall i proceed with the booking');
-    
-    if (nameMatch || vehicleMatch || isConfirmation) {
-      let query = supabase
+    // Extract vehicle details from the most recent message
+    const vehicleInfo = message.match(/(\w+)\s*,?\s*([A-Z0-9]+)/i);
+    let vehicleDetails = null;
+    if (vehicleInfo) {
+      vehicleDetails = {
+        make: vehicleInfo[1],
+        model: '',
+        license_plate: vehicleInfo[2]
+      };
+    }
+
+    if (nameMatch) {
+      const searchName = nameMatch[1].trim();
+      const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select(`
           *,
@@ -97,63 +164,36 @@ serve(async (req) => {
             model,
             year,
             license_plate
-          ),
-          appointments (
-            id,
-            start_time,
-            service_type,
-            status
           )
         `)
-        .order('created_at', { ascending: false });
+        .or(`first_name.ilike.%${searchName}%,last_name.ilike.%${searchName}%`)
+        .single();
 
-      if (nameMatch) {
-        const searchName = nameMatch[1].trim();
-        query = query.or(`first_name.ilike.%${searchName}%,last_name.ilike.%${searchName}%`);
-      }
+      if (!clientError && clientData) {
+        contextData = {
+          client: clientData,
+          vehicleDetails,
+          recentHistory: recentMessages?.map(m => ({
+            message: m.message,
+            response: m.response
+          }))
+        };
 
-      const { data: clientData, error: clientError } = await query;
-
-      if (!clientError && clientData?.length > 0) {
-        // Further filter by vehicle if we have vehicle details
-        if (vehicleMatch) {
-          const matchingClients = clientData.filter(client => 
-            client.vehicles?.some(v => 
-              v.license_plate?.toLowerCase().includes('olh878') ||
-              v.make?.toLowerCase().includes('alfa') ||
-              v.model?.toLowerCase().includes('stelvio')
-            )
-          );
-          
-          if (matchingClients.length > 0) {
-            contextData = {
-              clients: matchingClients,
-              matchCount: matchingClients.length,
-              exactMatch: matchingClients.length === 1,
-              recentHistory: recentMessages?.map(m => ({
-                message: m.message,
-                response: m.response
-              }))
-            };
-
-            // If this is a confirmation and we have an exact match, create the appointment
-            if (isConfirmation && matchingClients.length === 1) {
-              const startTime = extractDateTime(allText);
-              if (startTime) {
-                try {
-                  appointmentCreated = await createAppointment(
-                    supabase,
-                    matchingClients[0],
-                    startTime,
-                    'Major Service and Brake Check'
-                  );
-                  contextData.appointmentCreated = appointmentCreated;
-                } catch (error) {
-                  console.error('Failed to create appointment:', error);
-                  contextData.appointmentError = error.message;
-                }
-              }
-            }
+        // Try to create appointment if we have date/time information
+        const startTime = extractDateTime(allText);
+        if (startTime) {
+          try {
+            appointmentCreated = await createAppointment(
+              supabase,
+              clientData,
+              startTime,
+              'Service Appointment',
+              vehicleDetails
+            );
+            contextData.appointmentCreated = appointmentCreated;
+          } catch (error) {
+            console.error('Failed to create appointment:', error);
+            contextData.appointmentError = error.message;
           }
         }
       }
@@ -237,7 +277,10 @@ Remember:
     }
 
     return new Response(
-      JSON.stringify({ response: aiResponse }),
+      JSON.stringify({ 
+        response: aiResponse,
+        appointmentCreated: appointmentCreated ? true : false
+      }),
       { 
         headers: { 
           ...corsHeaders, 
