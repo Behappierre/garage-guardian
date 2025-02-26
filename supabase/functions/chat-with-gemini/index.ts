@@ -1,17 +1,9 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface Conversation {
-  clientId?: string;
-  clientName?: string;
-  appointmentTime?: Date;
-  serviceType?: string;
 }
 
 serve(async (req) => {
@@ -35,13 +27,11 @@ serve(async (req) => {
         .from('clients')
         .select('*, vehicles(*)')
 
-      // If we have both first and last name
       if (names.length >= 2) {
         query = query
           .or(`first_name.ilike.%${names[0]}%,first_name.ilike.%${names[1]}%`)
           .or(`last_name.ilike.%${names[0]}%,last_name.ilike.%${names[1]}%`)
       } else {
-        // If we only have one name, search in both first and last name
         query = query.or(`first_name.ilike.%${names[0]}%,last_name.ilike.%${names[0]}%`)
       }
 
@@ -96,7 +86,6 @@ serve(async (req) => {
       const tomorrow = new Date(now)
       tomorrow.setDate(tomorrow.getDate() + 1)
       
-      // Extract time
       const timeMatch = message.match(/(\d{1,2})(?::(\d{2}))?\s*(pm|am)/i)
       if (!timeMatch) return null
       
@@ -107,17 +96,86 @@ serve(async (req) => {
       if (period === 'pm' && hours !== 12) hours += 12
       if (period === 'am' && hours === 12) hours = 0
       
-      // Use tomorrow's date if "tomorrow" is mentioned
       const date = message.toLowerCase().includes('tomorrow') ? tomorrow : now
       date.setHours(hours, minutes, 0, 0)
       
       return date
     }
 
+    async function findRecentAppointment(clientId: string) {
+      const { data: appointment, error } = await supabaseClient
+        .from('appointments')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (error) {
+        console.error('Error finding recent appointment:', error)
+        return null
+      }
+
+      return appointment
+    }
+
+    async function updateAppointment(appointmentId: string, updates: any) {
+      const { data: appointment, error } = await supabaseClient
+        .from('appointments')
+        .update(updates)
+        .eq('id', appointmentId)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating appointment:', error)
+        throw error
+      }
+
+      return appointment
+    }
+
+    async function processMessage(message: string) {
+      console.log('Processing message:', message)
+      
+      const serviceUpdateMatch = message.match(/add\s+(.+?)\s+service\s+(?:to|in|for)\s+(?:the|this|that)\s+booking/i)
+      if (serviceUpdateMatch) {
+        const serviceType = serviceUpdateMatch[1]
+        console.log('Service update requested:', serviceType)
+
+        const nameMatch = message.match(/(?:for|to)\s+([a-zA-Z ]+?)(?:\s|$)/i)
+        if (!nameMatch) {
+          return "I couldn't determine which booking you want to update. Please specify the client name."
+        }
+
+        const client = await findClient(nameMatch[1].trim())
+        if (!client) {
+          return "I couldn't find that client in our system."
+        }
+
+        const recentAppointment = await findRecentAppointment(client.id)
+        if (!recentAppointment) {
+          return "I couldn't find a recent booking for this client."
+        }
+
+        try {
+          const updated = await updateAppointment(recentAppointment.id, {
+            service_type: `${serviceType} Service`
+          })
+
+          return `I've updated the appointment for ${client.first_name} ${client.last_name} to be a ${serviceType} Service.`
+        } catch (error) {
+          console.error('Error updating service type:', error)
+          return "I'm sorry, I couldn't update the service type. Please try again."
+        }
+      }
+
+      return await processBookingRequest(message)
+    }
+
     async function processBookingRequest(message: string) {
       console.log('Processing booking request:', message)
       
-      // Look for both appointment and datetime information
       const bookingMatch = message.match(/(?:book|appointment|booking)\s+(?:for|with)\s+([a-zA-Z ]+?)(?:\s+(?:at|on|tomorrow|for|,|\s)\s*(.*))?$/i)
       
       if (!bookingMatch) {
@@ -134,7 +192,6 @@ serve(async (req) => {
         return `I couldn't find a client named "${clientName}" in our system. Please verify the name or create a new client record first.`
       }
 
-      // If we have time information, try to create the appointment
       if (timeInfo) {
         const appointmentTime = parseDateAndTime(timeInfo)
         
@@ -167,11 +224,10 @@ serve(async (req) => {
         }
       }
 
-      // If we found the client but need time information
       return `I found ${client.first_name} ${client.last_name} in our system. Please provide the preferred date and time for the appointment.`
     }
 
-    const response = await processBookingRequest(message)
+    const response = await processMessage(message)
 
     return new Response(
       JSON.stringify({ response }),
