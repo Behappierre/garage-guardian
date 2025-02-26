@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -23,6 +24,55 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check for vehicle license plate queries
+    const plateMatch = message.toLowerCase().match(/whose car is (\w+)\??/);
+    if (plateMatch) {
+      const licensePlate = plateMatch[1];
+      console.log(`Looking up vehicle with plate: ${licensePlate}`);
+
+      const { data: vehicles, error } = await supabase
+        .from('vehicles')
+        .select(`
+          *,
+          client:clients (
+            first_name,
+            last_name
+          )
+        `)
+        .ilike('license_plate', licensePlate);
+
+      if (error) {
+        console.error('Vehicle lookup error:', error);
+        return new Response(
+          JSON.stringify({ 
+            response: `Sorry, I had trouble looking up that license plate.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (vehicles && vehicles.length > 0) {
+        const vehicle = vehicles[0];
+        const client = vehicle.client;
+        
+        if (client) {
+          return new Response(
+            JSON.stringify({ 
+              response: `The ${vehicle.year} ${vehicle.make} ${vehicle.model} with plate ${vehicle.license_plate} belongs to ${client.first_name} ${client.last_name}.` 
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          response: `I couldn't find a vehicle with license plate ${licensePlate} in our system.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check for bay-specific queries
     const bayMatch = message.toLowerCase().match(/what is in bay (\d+)/);
