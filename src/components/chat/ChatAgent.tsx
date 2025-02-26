@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useAppointments } from "@/hooks/use-appointments";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,6 +18,7 @@ interface Message {
 
 export function ChatAgent() {
   const { user } = useAuth();
+  const { refreshAppointments } = useAppointments();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -76,6 +78,12 @@ export function ChatAgent() {
         role: "assistant", 
         content: formatMessage(data.response)
       }]);
+
+      // If the response indicates an appointment was created, refresh the appointments data
+      if (data.response.toLowerCase().includes('booking is confirmed') || 
+          data.response.toLowerCase().includes('appointment created')) {
+        refreshAppointments();
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to get response from AI assistant");

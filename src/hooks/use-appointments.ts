@@ -1,10 +1,12 @@
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { AppointmentWithRelations, DBJobTicket } from "@/types/appointment";
+import type { AppointmentWithRelations } from "@/types/appointment";
 
 export const useAppointments = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ["appointments"],
     queryFn: async () => {
       const { data: appointmentsData, error: appointmentsError } = await supabase
@@ -32,4 +34,14 @@ export const useAppointments = () => {
       return appointments;
     },
   });
+
+  // Add this function to allow manual refreshing
+  const refreshAppointments = () => {
+    queryClient.invalidateQueries({ queryKey: ["appointments"] });
+  };
+
+  return {
+    ...query,
+    refreshAppointments,
+  };
 };
