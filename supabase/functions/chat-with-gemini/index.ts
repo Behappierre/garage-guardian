@@ -77,20 +77,29 @@ serve(async (req) => {
       );
     }
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', {
+    const geminiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-      },
-      params: {
-        key: GEMINI_API_KEY
       },
       body: JSON.stringify({
         contents: [{
           parts: [{
             text: `You are an auto service shop assistant. Answer the following question: ${message}`
           }]
-        }]
+        }],
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_DANGEROUS",
+            threshold: "BLOCK_NONE"
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 1,
+          topP: 1,
+          maxOutputTokens: 2048,
+        }
       })
     });
 
