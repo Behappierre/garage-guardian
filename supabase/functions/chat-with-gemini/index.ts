@@ -23,11 +23,15 @@ serve(async (req) => {
 
     // First, let's fetch relevant client information
     let contextData = {};
-    const nameMatch = message.toLowerCase().match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
     
-    if (nameMatch) {
-      const searchName = nameMatch[1].trim();
-      const { data: clientData, error: clientError } = await supabase
+    // Check for client name in the message
+    const nameMatch = message.toLowerCase().match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
+    // Also check for vehicle details
+    const vehicleMatch = message.toLowerCase().match(/(?:alfa|romeo|stelvio|olh878)/);
+    
+    // If we have a name match or vehicle details, search for the client
+    if (nameMatch || vehicleMatch) {
+      let query = supabase
         .from('clients')
         .select(`
           *,
@@ -45,37 +49,69 @@ serve(async (req) => {
             status
           )
         `)
-        .or(`first_name.ilike.%${searchName}%,last_name.ilike.%${searchName}%`)
         .order('created_at', { ascending: false });
 
+      if (nameMatch) {
+        const searchName = nameMatch[1].trim();
+        query = query.or(`first_name.ilike.%${searchName}%,last_name.ilike.%${searchName}%`);
+      }
+
+      const { data: clientData, error: clientError } = await query;
+
       if (!clientError && clientData?.length > 0) {
-        contextData = {
-          clients: clientData,
-          matchCount: clientData.length
-        };
+        // Further filter by vehicle if we have vehicle details
+        if (vehicleMatch) {
+          const matchingClients = clientData.filter(client => 
+            client.vehicles?.some(v => 
+              v.license_plate?.toLowerCase().includes('olh878') ||
+              v.make?.toLowerCase().includes('alfa') ||
+              v.model?.toLowerCase().includes('stelvio')
+            )
+          );
+          
+          if (matchingClients.length > 0) {
+            contextData = {
+              clients: matchingClients,
+              matchCount: matchingClients.length,
+              exactMatch: matchingClients.length === 1
+            };
+          }
+        } else {
+          contextData = {
+            clients: clientData,
+            matchCount: clientData.length
+          };
+        }
       }
     }
 
     // System message to guide AI responses
-    const systemMessage = `You are an AI assistant helping a garage manager with their automotive service management system. 
-    
-Important guidelines:
-1. Always speak TO THE GARAGE MANAGER about their clients, not to the clients directly
-2. Use "the client" or "Mr./Mrs. [Last Name]" when referring to clients
-3. When processing booking requests:
-   - If client is found in database, confirm their details
-   - If multiple matches found, ask the manager for clarification
-   - If no match found, inform the manager that the client needs to be registered
+    const systemMessage = `You are an AI assistant helping a garage manager with their automotive service management system.
+
+Role: You are speaking TO THE GARAGE MANAGER about their clients.
 
 Current context: ${JSON.stringify(contextData)}
 
-Example responses:
-✅ "I found Mr. Andre in the system. His Alfa Romeo Stelvio is due for service..."
-✅ "I found multiple clients with that name. Could you confirm which client by their vehicle details?"
-✅ "This client isn't in our system. Would you like to register them first?"
+Key requirements:
+1. NEVER address the client directly - you are speaking to the garage manager
+2. Use "the client" or "Mr./Mrs. [Last Name]" when referring to clients
+3. When handling bookings:
+   - Confirm client details found in the database
+   - For exact matches, help process the booking
+   - For multiple matches, ask for clarification
+   - For no matches, suggest client registration
 
-❌ Don't say: "Could you provide your vehicle details?" (Don't speak to the client)
-❌ Don't say: "Thank you for contacting us" (Don't speak to the client)`;
+Correct response examples:
+✅ "I've found Mr. Andre's record. His Alfa Romeo Stelvio (OLH878) is in the system. Shall I proceed with booking for tomorrow at 2 PM?"
+✅ "There are multiple matches for this client. Would you like me to list them with their vehicle details?"
+✅ "I can't find this client in the system. Would you like to register them as a new client?"
+
+Incorrect responses:
+❌ "Could you provide your vehicle details?"
+❌ "When would you like to schedule your appointment?"
+❌ "Thank you for contacting us"
+
+Remember: You are ALWAYS speaking to the garage manager about their clients, never to the clients themselves.`;
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
