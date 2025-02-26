@@ -22,18 +22,72 @@ serve(async (req) => {
       throw new Error('Configuration error');
     }
 
-    // Check if it's a vehicle query first
+    // Initialize Supabase client early as we'll need it for multiple queries
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check for specific client vehicle query
+    const clientVehicleMatch = message.toLowerCase().match(/what is ([a-zA-Z ]+)'s vehicle/);
+    if (clientVehicleMatch) {
+      const clientName = clientVehicleMatch[1].trim();
+      
+      // Split the name into first and last name
+      const nameParts = clientName.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+      const { data: vehicles, error: vehiclesError } = await supabase
+        .from('vehicles')
+        .select(`
+          *,
+          clients (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('clients.first_name', firstName)
+        .eq('clients.last_name', lastName);
+
+      if (vehiclesError) {
+        console.error('Vehicle lookup error:', vehiclesError);
+        return new Response(
+          JSON.stringify({ 
+            response: `I couldn't find any vehicles for ${clientName} in our system.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (vehicles && vehicles.length > 0) {
+        const vehicleList = vehicles.map(v => 
+          `${v.year} ${v.make} ${v.model}${v.license_plate ? ` (plate: ${v.license_plate})` : ''}`
+        ).join(', ');
+        return new Response(
+          JSON.stringify({ 
+            response: `${clientName} has ${vehicles.length} vehicle${vehicles.length > 1 ? 's' : ''} registered with us: ${vehicleList}` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          response: `I couldn't find any vehicles registered for ${clientName}.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check for license plate query
     const licensePlateMatch = message.toLowerCase().match(/whose car is ([a-z0-9]+)/);
     if (licensePlateMatch) {
       const licensePlate = licensePlateMatch[1];
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        throw new Error('Missing Supabase configuration');
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
       
       const { data: vehicle, error: vehicleError } = await supabase
         .from('vehicles')
