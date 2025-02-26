@@ -207,6 +207,21 @@ async function getTicketAppointments(supabase: any, ticketId: string) {
   return data;
 }
 
+function isGeneralAutomotiveQuery(message: string): boolean {
+  const generalPatterns = [
+    /how many (cylinders|hp|cc|doors|seats)/i,
+    /(what|which) engine/i,
+    /fuel (consumption|economy)/i,
+    /(mpg|fuel type|transmission)/i,
+    /specifications? for/i,
+    /specs? (of|for)/i,
+    /what (year|model|make)/i,
+    /engine (size|capacity|displacement)/i
+  ];
+
+  return generalPatterns.some(pattern => pattern.test(message));
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -215,6 +230,58 @@ serve(async (req) => {
   try {
     const { message } = await req.json();
     console.log('Received message:', message);
+
+    if (isGeneralAutomotiveQuery(message)) {
+      console.log('Processing general automotive query with OpenAI');
+      const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+      
+      if (!OPENAI_API_KEY) {
+        console.error('OPENAI_API_KEY is not configured');
+        return new Response(
+          JSON.stringify({ 
+            error: 'OPENAI_API_KEY is not configured',
+            response: 'Configuration error - please contact support.'
+          }),
+          { 
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an automotive expert with deep knowledge of vehicle specifications, 
+              particularly modern cars. Provide accurate, concise answers about vehicle specifications 
+              and technical details. If you're not completely sure about a specific detail, 
+              acknowledge that and provide any relevant information you are confident about.
+              Format your responses with markdown for better readability.`
+            },
+            {
+              role: 'user',
+              content: message
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+        })
+      });
+
+      const openAiData = await response.json();
+      return new Response(
+        JSON.stringify({ response: openAiData.choices[0].message.content }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
