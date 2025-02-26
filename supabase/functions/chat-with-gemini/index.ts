@@ -33,6 +33,7 @@ serve(async (req) => {
 
   try {
     const { message } = await req.json();
+    console.log('Received message:', message);
 
     // Initialize Supabase client
     const supabaseClient = createClient(
@@ -41,6 +42,7 @@ serve(async (req) => {
     );
 
     if (isAppointmentQuery(message)) {
+      console.log('Processing as appointment query');
       const appointments = await fetchRelevantAppointments(message, supabaseClient);
       if (appointments.length === 0) {
         return new Response(
@@ -59,8 +61,15 @@ serve(async (req) => {
     }
 
     // For non-appointment queries, use the Gemini API
+    console.log('Processing with Gemini API');
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + GEMINI_API_KEY, {
+    
+    if (!GEMINI_API_KEY) {
+      console.error('Missing GEMINI_API_KEY');
+      throw new Error('GEMINI_API_KEY is not configured');
+    }
+
+    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + GEMINI_API_KEY, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -74,7 +83,19 @@ serve(async (req) => {
       })
     });
 
-    const data = await response.json();
+    if (!geminiResponse.ok) {
+      console.error('Gemini API error:', await geminiResponse.text());
+      throw new Error(`Gemini API returned ${geminiResponse.status}`);
+    }
+
+    const data = await geminiResponse.json();
+    console.log('Gemini API response:', data);
+
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error('Unexpected Gemini API response format:', data);
+      throw new Error('Invalid response format from Gemini API');
+    }
+
     const aiResponse = data.candidates[0].content.parts[0].text;
 
     return new Response(
@@ -83,10 +104,16 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error processing request:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal Server Error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        response: "I apologize, but I'm having trouble processing your request at the moment. Please try again later.",
+        error: error.message 
+      }),
+      { 
+        status: 200, // Return 200 even for errors to avoid FunctionsHttpError
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 });
