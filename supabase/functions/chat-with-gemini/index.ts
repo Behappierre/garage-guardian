@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -24,6 +23,87 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check for appointment schedule queries
+    const tomorrowMatch = message.toLowerCase().includes('tomorrow') && 
+      (message.toLowerCase().includes('booking') || message.toLowerCase().includes('appointment'));
+    
+    if (tomorrowMatch) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const tomorrowEnd = new Date(tomorrow);
+      tomorrowEnd.setHours(23, 59, 59, 999);
+
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          client:clients (
+            first_name,
+            last_name,
+            phone
+          ),
+          vehicle:vehicles (
+            make,
+            model,
+            year,
+            license_plate
+          )
+        `)
+        .gte('start_time', tomorrow.toISOString())
+        .lte('start_time', tomorrowEnd.toISOString())
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Appointments lookup error:', error);
+        return new Response(
+          JSON.stringify({ 
+            response: `Error retrieving tomorrow's schedule. Please check system logs.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (appointments && appointments.length > 0) {
+        let response = `Schedule for tomorrow (${tomorrow.toLocaleDateString()}):\n\n`;
+        
+        appointments.forEach((appointment, index) => {
+          const startTime = new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const endTime = new Date(appointment.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const vehicle = appointment.vehicle;
+          const client = appointment.client;
+          
+          response += `${index + 1}. ${startTime}-${endTime}\n`;
+          if (client) {
+            response += `   Customer: ${client.first_name} ${client.last_name}\n`;
+            if (client.phone) response += `   Phone: ${client.phone}\n`;
+          }
+          if (vehicle) {
+            response += `   Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+            if (vehicle.license_plate) response += ` (${vehicle.license_plate})`;
+            response += '\n';
+          }
+          response += `   Service: ${appointment.service_type}\n`;
+          if (appointment.bay) response += `   Location: Bay ${appointment.bay.replace('bay', '')}\n`;
+          if (appointment.notes) response += `   Notes: ${appointment.notes}\n`;
+          response += '\n';
+        });
+
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({ 
+            response: `No appointments scheduled for tomorrow (${tomorrow.toLocaleDateString()}).` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     // Check for vehicle license plate queries
     const plateMatch = message.toLowerCase().match(/whose car is (\w+)\??/);
@@ -241,7 +321,7 @@ You assist technicians and staff with technical information, parts lookup, diagn
 Analyze this request and respond professionally: ${message}
 
 If this is about:
-- Appointments: Respond with exactly: QUERY_APPOINTMENTS
+- Any appointments or scheduling: Respond with exactly: QUERY_APPOINTMENTS
 - Job tickets/status: Respond with exactly: QUERY_JOB_TICKETS
 - Client records: Respond with exactly: QUERY_CLIENTS
 
