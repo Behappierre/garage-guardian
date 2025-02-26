@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
@@ -8,21 +7,86 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Appointment {
-  start_time: string;
-  end_time: string;
-  service_type: string;
-  status: string;
-  bay: string | null;
-  client: {
-    first_name: string;
-    last_name: string;
-  };
-  vehicle?: {
-    make: string;
-    model: string;
-    year: number;
-    license_plate: string | null;
+async function queryClientByName(supabase: any, name: string) {
+  const names = name.toLowerCase().split(' ');
+  const { data, error } = await supabase
+    .from('clients')
+    .select(`
+      *,
+      vehicles (
+        *
+      ),
+      appointments:appointments(
+        *
+      ),
+      job_tickets(
+        *
+      )
+    `)
+    .or(`first_name.ilike.%${names[0]}%,last_name.ilike.%${names[0]}%`);
+
+  if (error) {
+    console.error('Error querying client:', error);
+    return null;
+  }
+
+  return data;
+}
+
+async function queryTicketsByStatus(supabase: any, status: string) {
+  const { data, error } = await supabase
+    .from('job_tickets')
+    .select(`
+      *,
+      client:clients(*),
+      vehicle:vehicles(*)
+    `)
+    .eq('status', status);
+
+  if (error) {
+    console.error('Error querying tickets by status:', error);
+    return null;
+  }
+
+  return data;
+}
+
+async function queryBayStatus(supabase: any, bay?: string) {
+  let query = supabase
+    .from('appointments')
+    .select(`
+      *,
+      client:clients(*),
+      vehicle:vehicles(*),
+      job_tickets(*)
+    `)
+    .eq('status', 'scheduled');
+
+  if (bay) {
+    query = query.eq('bay', bay);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error querying bay status:', error);
+    return null;
+  }
+
+  return data;
+}
+
+async function getStats(supabase: any) {
+  const [clients, tickets, appointments] = await Promise.all([
+    supabase.from('clients').select('count', { count: 'exact' }),
+    supabase.from('job_tickets').select('count', { count: 'exact' }),
+    supabase.from('appointments').select('count', { count: 'exact' })
+  ]);
+
+  return {
+    clients: clients.count,
+    tickets: tickets.count,
+    appointments: appointments.count
   };
 }
 
@@ -40,7 +104,55 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Check for vehicle ownership query
+    // Client name query
+    const clientNameMatch = message.match(/what (?:car|vehicle|address|phone|appointment|ticket)s? (?:does|has|have) ([a-zA-Z ]+)/i);
+    if (clientNameMatch) {
+      const clientName = clientNameMatch[1];
+      const clientData = await queryClientByName(supabaseClient, clientName);
+      
+      if (clientData && clientData.length > 0) {
+        const client = clientData[0];
+        let response = `**Information for ${client.first_name} ${client.last_name}:**\n\n`;
+        
+        if (message.toLowerCase().includes('car') || message.toLowerCase().includes('vehicle')) {
+          response += "**Vehicles:**\n";
+          client.vehicles.forEach((vehicle: any) => {
+            response += `- ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+            if (vehicle.license_plate) response += ` (${vehicle.license_plate})`;
+            response += '\n';
+          });
+        }
+        
+        if (message.toLowerCase().includes('address')) {
+          response += `\n**Address:** ${client.address || 'No address on file'}\n`;
+        }
+        
+        if (message.toLowerCase().includes('phone')) {
+          response += `\n**Phone:** ${client.phone || 'No phone number on file'}\n`;
+        }
+        
+        if (message.toLowerCase().includes('appointment')) {
+          response += "\n**Appointments:**\n";
+          client.appointments.forEach((apt: any) => {
+            response += `- ${format(new Date(apt.start_time), "MMM dd, yyyy HH:mm")} - ${apt.service_type}\n`;
+          });
+        }
+        
+        if (message.toLowerCase().includes('ticket')) {
+          response += "\n**Job Tickets:**\n";
+          client.job_tickets.forEach((ticket: any) => {
+            response += `- ${ticket.ticket_number} - Status: ${ticket.status}\n`;
+          });
+        }
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Vehicle ownership query
     const licensePlateMatch = message.match(/whose(?:\s+car(?:\s+is)?|\s+vehicle(?:\s+is)?)?\s+([a-zA-Z0-9]+)/i);
     if (licensePlateMatch) {
       const licensePlate = licensePlateMatch[1];
@@ -58,23 +170,70 @@ serve(async (req) => {
         .eq('license_plate', licensePlate)
         .single();
 
-      if (vehicleError) {
-        console.error('Error fetching vehicle data:', vehicleError);
-        return new Response(
-          JSON.stringify({
-            response: `I apologize, but I couldn't find any information about the vehicle with license plate ${licensePlate}.`
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (vehicleData?.client) {
+      if (!vehicleError && vehicleData?.client) {
         const response = `The vehicle with license plate ${licensePlate} belongs to ${vehicleData.client.first_name} ${vehicleData.client.last_name}.\n\n`;
         return new Response(
           JSON.stringify({ response }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+    }
+
+    // Status query
+    const statusMatch = message.match(/(?:show|list|get|what are)(?: the)? tickets? (?:with )?status(?: of)? ([a-zA-Z_]+)/i);
+    if (statusMatch) {
+      const status = statusMatch[1].toLowerCase();
+      const tickets = await queryTicketsByStatus(supabaseClient, status);
+      if (tickets) {
+        let response = `**Job Tickets with status "${status}":**\n\n`;
+        tickets.forEach((ticket: any) => {
+          response += `- Ticket ${ticket.ticket_number}\n`;
+          response += `  Client: ${ticket.client?.first_name} ${ticket.client?.last_name}\n`;
+          if (ticket.vehicle) {
+            response += `  Vehicle: ${ticket.vehicle.year} ${ticket.vehicle.make} ${ticket.vehicle.model}\n`;
+          }
+          response += '\n';
+        });
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Bay query
+    const bayMatch = message.match(/(?:what|who)(?:'s| is)(?: in)? bay ([0-9]+)/i);
+    if (bayMatch) {
+      const bay = bayMatch[1];
+      const appointments = await queryBayStatus(supabaseClient, bay);
+      if (appointments) {
+        let response = `**Current status for Bay ${bay}:**\n\n`;
+        appointments.forEach((apt: any) => {
+          response += `- ${format(new Date(apt.start_time), "HH:mm")} - ${apt.service_type}\n`;
+          response += `  Client: ${apt.client?.first_name} ${apt.client?.last_name}\n`;
+          if (apt.vehicle) {
+            response += `  Vehicle: ${apt.vehicle.year} ${apt.vehicle.make} ${apt.vehicle.model}\n`;
+          }
+          response += '\n';
+        });
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Stats query
+    if (message.toLowerCase().includes('count') || message.toLowerCase().includes('how many')) {
+      const stats = await getStats(supabaseClient);
+      let response = "**Current Statistics:**\n\n";
+      response += `- Total Clients: ${stats.clients}\n`;
+      response += `- Total Job Tickets: ${stats.tickets}\n`;
+      response += `- Total Appointments: ${stats.appointments}\n`;
+      return new Response(
+        JSON.stringify({ response }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (isAppointmentQuery(message)) {
