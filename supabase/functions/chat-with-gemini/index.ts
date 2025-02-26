@@ -24,24 +24,20 @@ serve(async (req) => {
 
     // Generate content using Gemini API
     const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiKey}`,
+      'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: "gemini-pro",
           contents: [
             {
-              role: "user",
               parts: [
-                {
-                  text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
+                { text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
 
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
-Otherwise, provide a helpful response about auto repair, maintenance, or general information.`
-                }
+Otherwise, provide a helpful response about auto repair, maintenance, or general information.` }
               ]
             }
           ]
@@ -91,24 +87,20 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
 
       // Format appointments with Gemini
       const formatResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiKey}`,
+        'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: "gemini-pro",
             contents: [
               {
-                role: "user",
                 parts: [
-                  {
-                    text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
+                  { text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
                     
 Use emojis and clear formatting. If there are no appointments, just say so in a friendly way.
-Be concise and clear.`
-                  }
+Be concise and clear.` }
                 ]
               }
             ]
