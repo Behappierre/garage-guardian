@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -24,6 +23,79 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check for bay-specific queries
+    const bayMatch = message.toLowerCase().match(/what is in bay (\d+)/);
+    if (bayMatch) {
+      const bayNumber = bayMatch[1];
+      const bay = `bay${bayNumber}`;
+
+      console.log(`Looking up appointments in ${bay}`);
+
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          client:clients (
+            first_name,
+            last_name
+          ),
+          vehicle:vehicles (
+            make,
+            model,
+            year,
+            license_plate
+          )
+        `)
+        .eq('bay', bay)
+        .eq('status', 'scheduled')
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(1);
+
+      if (error) {
+        console.error('Bay lookup error:', error);
+        return new Response(
+          JSON.stringify({ 
+            response: `Sorry, I had trouble checking Bay ${bayNumber}.` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (appointments && appointments.length > 0) {
+        const appointment = appointments[0];
+        const client = appointment.client;
+        const vehicle = appointment.vehicle;
+        
+        let response = `Bay ${bayNumber} currently has `;
+        
+        if (vehicle) {
+          response += `a ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+          if (vehicle.license_plate) {
+            response += ` (Plate: ${vehicle.license_plate})`;
+          }
+        }
+        
+        if (client) {
+          response += ` for ${client.first_name} ${client.last_name}`;
+        }
+        
+        response += `. Service type: ${appointment.service_type}`;
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          response: `Bay ${bayNumber} is currently empty.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Check for "list vehicles" queries
     const listVehiclesMatch = message.toLowerCase().match(/list ([a-zA-Z ]+)'s vehicles/);
