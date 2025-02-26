@@ -24,7 +24,7 @@ serve(async (req) => {
 
     // Generate content using Gemini API
     const aiResponse = await fetch(
-      'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
+      'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
       {
         method: 'POST',
         headers: {
@@ -88,7 +88,7 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
 
       // Format appointments with Gemini
       const formatResponse = await fetch(
-        'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
+        'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent',
         {
           method: 'POST',
           headers: {
