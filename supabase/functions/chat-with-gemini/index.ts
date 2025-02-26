@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -24,82 +25,155 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check for appointment schedule queries
-    const tomorrowMatch = message.toLowerCase().includes('tomorrow') && 
-      (message.toLowerCase().includes('booking') || message.toLowerCase().includes('appointment'));
-    
-    if (tomorrowMatch) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      
-      const tomorrowEnd = new Date(tomorrow);
-      tomorrowEnd.setHours(23, 59, 59, 999);
+    // Check for client information queries
+    const clientNameMatch = message.toLowerCase().match(/(?:phone|number|contact|address|info|details) (?:for|of) ([a-zA-Z ]+)/i);
+    if (clientNameMatch) {
+      const clientName = clientNameMatch[1].trim();
+      console.log(`Looking up client info for: ${clientName}`);
 
-      const { data: appointments, error } = await supabase
-        .from('appointments')
+      const { data: clients, error } = await supabase
+        .from('clients')
         .select(`
           *,
-          client:clients (
-            first_name,
-            last_name,
-            phone
-          ),
-          vehicle:vehicles (
+          vehicles (
+            id,
             make,
             model,
             year,
             license_plate
+          ),
+          appointments (
+            id,
+            start_time,
+            service_type,
+            status,
+            bay
           )
         `)
-        .gte('start_time', tomorrow.toISOString())
-        .lte('start_time', tomorrowEnd.toISOString())
-        .order('start_time', { ascending: true });
+        .or(`first_name.ilike.%${clientName}%,last_name.ilike.%${clientName}%`)
+        .limit(1);
 
       if (error) {
-        console.error('Appointments lookup error:', error);
+        console.error('Client lookup error:', error);
         return new Response(
           JSON.stringify({ 
-            response: `Error retrieving tomorrow's schedule. Please check system logs.` 
+            response: `Database error during client lookup. Please check system logs.` 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      if (appointments && appointments.length > 0) {
-        let response = `Schedule for tomorrow (${tomorrow.toLocaleDateString()}):\n\n`;
+      if (clients && clients.length > 0) {
+        const client = clients[0];
+        let response = `Client Information:\n`;
+        response += `Name: ${client.first_name} ${client.last_name}\n`;
+        response += `Phone: ${client.phone || 'Not recorded'}\n`;
+        response += `Email: ${client.email || 'Not recorded'}\n`;
+        response += `Address: ${client.address || 'Not recorded'}\n`;
         
-        appointments.forEach((appointment, index) => {
-          const startTime = new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const endTime = new Date(appointment.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const vehicle = appointment.vehicle;
-          const client = appointment.client;
-          
-          response += `${index + 1}. ${startTime}-${endTime}\n`;
-          if (client) {
-            response += `   Customer: ${client.first_name} ${client.last_name}\n`;
-            if (client.phone) response += `   Phone: ${client.phone}\n`;
-          }
-          if (vehicle) {
-            response += `   Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+        if (client.vehicles && client.vehicles.length > 0) {
+          response += `\nVehicles:\n`;
+          client.vehicles.forEach((vehicle: any) => {
+            response += `- ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
             if (vehicle.license_plate) response += ` (${vehicle.license_plate})`;
             response += '\n';
-          }
-          response += `   Service: ${appointment.service_type}\n`;
-          if (appointment.bay) response += `   Location: Bay ${appointment.bay.replace('bay', '')}\n`;
-          if (appointment.notes) response += `   Notes: ${appointment.notes}\n`;
-          response += '\n';
-        });
+          });
+        }
+
+        if (client.appointments && client.appointments.length > 0) {
+          response += `\nUpcoming Appointments:\n`;
+          const now = new Date();
+          client.appointments
+            .filter((apt: any) => new Date(apt.start_time) > now)
+            .sort((a: any, b: any) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+            .forEach((apt: any) => {
+              response += `- ${new Date(apt.start_time).toLocaleDateString()} ${new Date(apt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              response += ` - ${apt.service_type}`;
+              if (apt.bay) response += ` (Bay ${apt.bay.replace('bay', '')})`;
+              response += ` [${apt.status}]\n`;
+            });
+        }
 
         return new Response(
           JSON.stringify({ response }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
-      } else {
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          response: `No client record found for "${clientName}". Please verify the name or check if they need to be added to the system.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check for ticket status summary
+    const ticketSummaryMatch = message.toLowerCase().includes('ticket') && 
+      (message.toLowerCase().includes('summary') || message.toLowerCase().includes('status') || 
+       message.toLowerCase().includes('count') || message.toLowerCase().includes('list'));
+    
+    if (ticketSummaryMatch) {
+      const { data: tickets, error } = await supabase
+        .from('job_tickets')
+        .select(`
+          *,
+          client:clients (
+            first_name,
+            last_name
+          ),
+          vehicle:vehicles (
+            make,
+            model,
+            license_plate
+          )
+        `);
+
+      if (error) {
+        console.error('Ticket summary error:', error);
         return new Response(
           JSON.stringify({ 
-            response: `No appointments scheduled for tomorrow (${tomorrow.toLocaleDateString()}).` 
+            response: `Error retrieving ticket summary. Please check system logs.` 
           }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (tickets) {
+        // Count by status
+        const statusCounts: {[key: string]: number} = {};
+        tickets.forEach(ticket => {
+          statusCounts[ticket.status] = (statusCounts[ticket.status] || 0) + 1;
+        });
+
+        let response = `Job Ticket Summary:\n\n`;
+        
+        // Overall counts
+        response += `Total Tickets: ${tickets.length}\n\n`;
+        
+        // Status breakdown
+        response += `Status Breakdown:\n`;
+        Object.entries(statusCounts).forEach(([status, count]) => {
+          response += `${status.toUpperCase()}: ${count}\n`;
+        });
+
+        // List recent tickets
+        response += `\nRecent Tickets:\n`;
+        tickets
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5)
+          .forEach(ticket => {
+            const client = ticket.client;
+            const vehicle = ticket.vehicle;
+            response += `- ${ticket.ticket_number} [${ticket.status.toUpperCase()}]`;
+            if (client) response += ` - ${client.first_name} ${client.last_name}`;
+            if (vehicle) response += ` - ${vehicle.make} ${vehicle.model}`;
+            if (vehicle.license_plate) response += ` (${vehicle.license_plate})`;
+            response += '\n';
+          });
+
+        return new Response(
+          JSON.stringify({ response }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -316,23 +390,17 @@ Special Tools Required:
             {
               parts: [
                 { text: `You are an experienced automotive workshop manager with deep technical knowledge. 
-You assist technicians and staff with technical information, parts lookup, diagnostic procedures, and workshop management.
+You assist staff with workshop management, client information, and technical details.
 
 Analyze this request and respond professionally: ${message}
 
 If this is about:
 - Any appointments or scheduling: Respond with exactly: QUERY_APPOINTMENTS
-- Job tickets/status: Respond with exactly: QUERY_JOB_TICKETS
-- Client records: Respond with exactly: QUERY_CLIENTS
+- Job tickets or status summaries: Respond with exactly: QUERY_JOB_TICKETS
+- Client information or records: Respond with exactly: QUERY_CLIENTS
+- Bay or workshop space management: Respond with exactly: QUERY_BAYS
 
-Otherwise, provide technical automotive advice focusing on:
-- Repair procedures
-- Technical specifications
-- Diagnostic steps
-- Parts information
-- Workshop safety protocols
-
-Keep responses technical and precise, suitable for professional automotive technicians.` }
+Keep responses focused on workshop operations and management.` }
               ]
             }
           ]
