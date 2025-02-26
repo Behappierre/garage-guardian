@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,18 +35,49 @@ async function getBookingsForDate(supabase: any, date: Date) {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const { data, error, count } = await supabase
+    const { data: appointments, error } = await supabase
       .from('appointments')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        client:clients(first_name, last_name),
+        vehicle:vehicles(make, model, year, license_plate),
+        job_tickets(*)
+      `)
       .gte('start_time', startOfDay.toISOString())
-      .lte('start_time', endOfDay.toISOString());
+      .lte('start_time', endOfDay.toISOString())
+      .order('start_time');
 
     if (error) throw error;
-    return { count, appointments: data };
+    return appointments;
   } catch (error) {
     console.error('Error fetching bookings:', error);
     return null;
   }
+}
+
+async function formatBookingDetails(bookings: any[]) {
+  if (!bookings || bookings.length === 0) {
+    return "There are no bookings scheduled for tomorrow.";
+  }
+
+  const formattedBookings = bookings.map(booking => {
+    const startTime = new Date(booking.start_time);
+    const endTime = new Date(booking.end_time);
+    const clientName = booking.client ? `${booking.client.first_name} ${booking.client.last_name}` : 'No client assigned';
+    const vehicle = booking.vehicle ? 
+      `${booking.vehicle.year} ${booking.vehicle.make} ${booking.vehicle.model}${booking.vehicle.license_plate ? ` (${booking.vehicle.license_plate})` : ''}` : 
+      'No vehicle specified';
+
+    return `🕒 ${format(startTime, "h:mm a")} - ${format(endTime, "h:mm a")}\n` +
+           `👤 Client: ${clientName}\n` +
+           `🚗 Vehicle: ${vehicle}\n` +
+           `🔧 Service: ${booking.service_type}\n` +
+           `📍 Bay: ${booking.bay || 'Not assigned'}\n` +
+           `${booking.notes ? `📝 Notes: ${booking.notes}\n` : ''}` +
+           `Status: ${booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}`;
+  });
+
+  return `**Bookings for Tomorrow:**\n\n${formattedBookings.join('\n\n')}`;
 }
 
 async function handleGeneralQuery(message: string) {
@@ -121,16 +153,21 @@ serve(async (req) => {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       
-      if (message.toLowerCase().includes('tomorrow')) {
-        const bookings = await getBookingsForDate(supabaseClient, tomorrow);
-        if (bookings) {
-          return new Response(
-            JSON.stringify({
-              response: `There ${bookings.count === 1 ? 'is' : 'are'} ${bookings.count} booking${bookings.count === 1 ? '' : 's'} scheduled for tomorrow.`
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
+      const isDetailRequest = message.toLowerCase().includes('detail') || 
+                            message.toLowerCase().includes('more info') ||
+                            message.toLowerCase().includes('tell me more');
+      
+      const bookings = await getBookingsForDate(supabaseClient, tomorrow);
+      
+      if (bookings) {
+        const response = isDetailRequest || message.toLowerCase().includes('tomorrow') ? 
+          await formatBookingDetails(bookings) :
+          `There ${bookings.length === 1 ? 'is' : 'are'} ${bookings.length} booking${bookings.length === 1 ? '' : 's'} scheduled for tomorrow.`;
+        
+        return new Response(
+          JSON.stringify({ response }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
