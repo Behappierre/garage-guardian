@@ -18,53 +18,71 @@ serve(async (req) => {
 
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiKey) {
-      throw new Error('Missing Gemini API key');
+      console.error('Missing Gemini API key');
+      throw new Error('Configuration error');
     }
 
-    // First, get AI response to understand user's intent
+    // First attempt to understand user intent with Gemini
     const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`,
+      'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${geminiKey}`,
+        },
         body: JSON.stringify({
-          contents: [{
-            parts: [{ 
-              text: `You are a friendly auto repair shop assistant. Help the user with their question: ${message}
-              
-If they ask about appointments or schedule, respond with QUERY_APPOINTMENTS.
-If they ask about maintenance or repairs, provide helpful advice.
-For general questions, provide a friendly and informative response.
-              
-Remember to be friendly and helpful in your responses.`
-            }]
-          }],
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
+
+If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
+Otherwise, provide a helpful response about auto repair, maintenance, or general information.`
+                }
+              ]
+            }
+          ],
           generationConfig: {
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
             maxOutputTokens: 1024,
           },
-        }),
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_MEDIUM_AND_ABOVE"
+            }
+          ]
+        })
       }
     );
 
     if (!aiResponse.ok) {
-      console.error('Gemini API error:', await aiResponse.text());
-      throw new Error('Failed to get AI response');
+      const errorText = await aiResponse.text();
+      console.error('Gemini API error:', errorText);
+      throw new Error(`Gemini API error: ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
-    console.log('AI response:', aiData);
+    console.log('AI response data:', aiData);
 
     if (!aiData.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error('Invalid AI response format');
+      console.error('Invalid AI response format:', aiData);
+      throw new Error('Invalid response from AI');
     }
 
     const aiText = aiData.candidates[0].content.parts[0].text;
-    console.log('AI text:', aiText);
+    console.log('Processed AI text:', aiText);
 
-    // If AI indicates we should query appointments
+    // Handle appointment queries
     if (aiText.includes('QUERY_APPOINTMENTS')) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL');
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -77,18 +95,7 @@ Remember to be friendly and helpful in your responses.`
       
       const { data: appointments, error } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          clients (
-            first_name,
-            last_name
-          ),
-          vehicles (
-            make,
-            model,
-            year
-          )
-        `)
+        .select('*, clients ( first_name, last_name ), vehicles ( make, model, year )')
         .order('start_time', { ascending: true })
         .gte('start_time', new Date().toISOString())
         .limit(5);
@@ -98,28 +105,34 @@ Remember to be friendly and helpful in your responses.`
         throw error;
       }
 
-      // Get another AI response to format the appointments data
+      // Use Gemini to format the appointment data
       const formatResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`,
+        'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${geminiKey}`,
+          },
           body: JSON.stringify({
-            contents: [{
-              parts: [{ 
-                text: `Given these appointments: ${JSON.stringify(appointments, null, 2)}
-                
-Format them into a friendly, easy to read response. Use emojis and proper formatting.
-If there are no appointments, let the user know in a friendly way.
-                
-Be concise but friendly in your response.`
-              }]
-            }],
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
+                    
+Use emojis and clear formatting. If there are no appointments, just say so in a friendly way.
+Be concise and clear.`
+                  }
+                ]
+              }
+            ],
             generationConfig: {
               temperature: 0.7,
               maxOutputTokens: 1024,
-            },
-          }),
+            }
+          })
         }
       );
 
