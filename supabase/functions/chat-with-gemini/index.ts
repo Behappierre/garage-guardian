@@ -28,7 +28,8 @@ serve(async (req) => {
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-goog-api-key': geminiKey
         },
         body: JSON.stringify({
           contents: [
@@ -91,7 +92,8 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-goog-api-key': geminiKey
           },
           body: JSON.stringify({
             contents: [
