@@ -181,6 +181,9 @@ async function attemptBookingCreation(supabase: any, message: string) {
       return null;
     }
 
+    const nameParts = bookingDetails.client_name.toLowerCase().split(' ');
+    console.log('Searching for client with name parts:', nameParts);
+
     const { data: clients, error: clientError } = await supabase
       .from('clients')
       .select(`
@@ -195,7 +198,11 @@ async function attemptBookingCreation(supabase: any, message: string) {
           license_plate
         )
       `)
-      .or(`first_name.ilike.%${bookingDetails.client_name}%,last_name.ilike.%${bookingDetails.client_name}%`);
+      .or(
+        nameParts.map(part => 
+          `or(first_name.ilike.%${part}%,last_name.ilike.%${part}%)`
+        ).join(',')
+      );
 
     if (clientError) {
       console.error('Error searching for client:', clientError);
@@ -204,6 +211,8 @@ async function attemptBookingCreation(supabase: any, message: string) {
         message: "Sorry, I encountered an error while searching for the client."
       };
     }
+
+    console.log('Found clients:', clients);
 
     if (!clients?.length) {
       return {
