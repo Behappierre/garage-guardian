@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
@@ -68,39 +69,43 @@ serve(async (req) => {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + GEMINI_API_KEY, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: message
+    try {
+      const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' + GEMINI_API_KEY, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are an auto service shop assistant. ${message}`
+            }]
           }]
-        }]
-      })
-    });
+        })
+      });
 
-    if (!geminiResponse.ok) {
-      console.error('Gemini API error:', await geminiResponse.text());
-      throw new Error(`Gemini API returned ${geminiResponse.status}`);
+      const data = await geminiResponse.json();
+      console.log('Gemini API response:', data);
+
+      if (data.error) {
+        console.error('Gemini API error:', data.error);
+        throw new Error(data.error.message || 'Error from Gemini API');
+      }
+
+      if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        console.error('Unexpected Gemini API response format:', data);
+        throw new Error('Invalid response format from Gemini API');
+      }
+
+      const aiResponse = data.candidates[0].content.parts[0].text;
+      return new Response(
+        JSON.stringify({ response: aiResponse }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (geminiError) {
+      console.error('Error with Gemini API:', geminiError);
+      throw geminiError;
     }
-
-    const data = await geminiResponse.json();
-    console.log('Gemini API response:', data);
-
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('Unexpected Gemini API response format:', data);
-      throw new Error('Invalid response format from Gemini API');
-    }
-
-    const aiResponse = data.candidates[0].content.parts[0].text;
-
-    return new Response(
-      JSON.stringify({ response: aiResponse }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
 
   } catch (error) {
     console.error('Error processing request:', error);
