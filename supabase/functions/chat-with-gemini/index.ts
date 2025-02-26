@@ -15,6 +15,7 @@ serve(async (req) => {
 
   try {
     const { message, user_id } = await req.json()
+    console.log('Received message:', message)
 
     // Initialize Supabase client with service role key for full access
     const supabaseClient = createClient(
@@ -24,18 +25,30 @@ serve(async (req) => {
 
     // Function to search for a client
     async function findClient(name: string) {
-      const names = name.toLowerCase().split(' ')
-      const { data: clients, error } = await supabaseClient
+      console.log('Searching for client:', name)
+      const names = name.toLowerCase().trim().split(' ')
+      let query = supabaseClient
         .from('clients')
         .select('*, vehicles(*)')
-        .filter('LOWER(first_name)', 'ilike', `%${names[0]}%`)
-        .filter('LOWER(last_name)', 'ilike', `%${names[1] || ''}%`)
+
+      // If we have both first and last name
+      if (names.length >= 2) {
+        query = query
+          .ilike('first_name', `%${names[0]}%`)
+          .ilike('last_name', `%${names[1]}%`)
+      } else {
+        // If we only have one name, search in both first and last name
+        query = query.or(`first_name.ilike.%${names[0]}%,last_name.ilike.%${names[0]}%`)
+      }
+
+      const { data: clients, error } = await query
 
       if (error) {
         console.error('Error searching for client:', error)
         return null
       }
 
+      console.log('Found clients:', clients)
       return clients && clients.length > 0 ? clients[0] : null
     }
 
@@ -72,10 +85,11 @@ serve(async (req) => {
     async function processBookingRequest(message: string) {
       console.log('Processing booking request:', message)
       
-      // Extract client name (assuming format "booking for [name]")
-      const nameMatch = message.toLowerCase().match(/for ([a-z ]+)(?: for|\bat\b|tomorrow)/i)
+      // Extract client name (looking for patterns like "book for [name]" or "appointment for [name]")
+      const nameMatch = message.match(/(?:book|appointment|booking)\s+(?:for|with)\s+([a-zA-Z ]+?)(?:\s+(?:at|on|tomorrow|for)|$)/i)
+      
       if (!nameMatch) {
-        return "I couldn't find a client name in your request. Could you please provide the client's full name?"
+        return "I couldn't find a client name in your request. Could you please rephrase with the client's name? For example: 'Book an appointment for John Smith'"
       }
 
       const clientName = nameMatch[1].trim()
@@ -86,58 +100,15 @@ serve(async (req) => {
       console.log('Found client:', client)
 
       if (!client) {
-        return `I couldn't find a client named ${clientName} in our system. Please verify the name or create a new client record first.`
+        return `I couldn't find a client named "${clientName}" in our system. Please verify the name or create a new client record first.`
       }
 
-      // If we don't have vehicle info, ask for it
-      if (!client.vehicles || client.vehicles.length === 0) {
-        return `I found ${client.first_name} ${client.last_name} in our system, but there are no vehicles registered. Please add a vehicle first.`
-      }
+      // If we found the client, acknowledge it and proceed to next step
+      return `I found ${client.first_name} ${client.last_name} in our system. To book an appointment, I'll need:
+1. The preferred date and time
+2. The type of service needed
 
-      // Extract time (looking for specific time mentions or "tomorrow")
-      const timeMatch = message.match(/(\d{1,2})(?::(\d{2}))?\s*(pm|am)/i)
-      const includesTimeInfo = timeMatch || message.toLowerCase().includes('tomorrow')
-      
-      if (!timeMatch && !message.toLowerCase().includes('tomorrow')) {
-        return "Could you please specify the time for the appointment?"
-      }
-
-      // Calculate appointment date/time
-      let appointmentDate = new Date()
-      if (message.toLowerCase().includes('tomorrow')) {
-        appointmentDate.setDate(appointmentDate.getDate() + 1)
-      }
-
-      if (timeMatch) {
-        let hours = parseInt(timeMatch[1])
-        const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0
-        const period = timeMatch[3].toLowerCase()
-
-        if (period === 'pm' && hours !== 12) hours += 12
-        if (period === 'am' && hours === 12) hours = 0
-
-        appointmentDate.setHours(hours, minutes, 0, 0)
-      } else {
-        // Default to 9 AM if no specific time given
-        appointmentDate.setHours(9, 0, 0, 0)
-      }
-
-      console.log('Appointment date/time:', appointmentDate)
-
-      try {
-        // Create the appointment
-        const appointment = await createAppointment(
-          client.id,
-          client.vehicles[0].id,
-          appointmentDate
-        )
-        console.log('Created appointment:', appointment)
-
-        return `Great, I've created the appointment for ${client.first_name} ${client.last_name}'s ${client.vehicles[0].make} ${client.vehicles[0].model} for ${appointmentDate.toLocaleString()}. The booking is confirmed in the system.`
-      } catch (error) {
-        console.error('Error during appointment creation:', error)
-        return "I apologize, but I encountered an error while creating the appointment. Please try again or contact support."
-      }
+Please provide these details.`
     }
 
     // Process the message
