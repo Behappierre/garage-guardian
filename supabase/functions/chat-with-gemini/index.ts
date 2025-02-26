@@ -20,7 +20,7 @@ const formatDateTime = (dateString: string) => {
 
 const formatQueryResults = (data: any[], queryType: string) => {
   if (!data || data.length === 0) {
-    return "No results found.";
+    return "No appointments scheduled at this time.";
   }
 
   switch (queryType) {
@@ -135,20 +135,20 @@ serve(async (req) => {
       console.log('Executing SQL query:', sqlQuery, 'Type:', queryType);
 
       try {
-        const { data: queryResult, error: dbError } = await supabase
-          .from('appointments')
-          .select('*')
-          .order('start_time', { ascending: false })
-          .limit(5);
+        // Execute the actual query from the AI response
+        const { data: queryResult, error: dbError } = await supabase.rpc('execute_read_only_query', {
+          query_text: sqlQuery
+        });
 
         if (dbError) throw dbError;
 
         const formattedResults = formatQueryResults(queryResult, queryType);
-        response = response.replace(/```sql[\s\S]*?```.*?\[QueryType:\s*\w+\]/, 
-          "Here are the results:\n\n" + formattedResults);
+        
+        // Replace the SQL query in the response with the formatted results
+        response = "Let me check the upcoming appointments for you:\n\n" + formattedResults;
       } catch (dbError) {
         console.error('Database query error:', dbError);
-        response += "\n\nSorry, I encountered an error while querying the database.";
+        response = "I apologize, but I encountered an error while retrieving the appointments. Please try again in a moment.";
       }
     }
 
