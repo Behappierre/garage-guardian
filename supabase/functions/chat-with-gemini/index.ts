@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
@@ -74,14 +75,29 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: message
+            text: `You are an auto service shop assistant. Answer the following question: ${message}`
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 1,
+          topP: 1
+        }
       })
     });
 
+    if (!geminiResponse.ok) {
+      console.error('Gemini API error response:', await geminiResponse.text());
+      throw new Error('Failed to get response from Gemini API');
+    }
+
     const data = await geminiResponse.json();
     console.log('Gemini API raw response:', data);
+
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0].text) {
+      console.error('Invalid response structure from Gemini:', data);
+      throw new Error('Invalid response structure from Gemini API');
+    }
 
     const aiResponse = data.candidates[0].content.parts[0].text;
     return new Response(
