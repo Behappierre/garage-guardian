@@ -64,10 +64,21 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
     
     if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is not configured');
+      console.error('GEMINI_API_KEY is not configured');
+      return new Response(
+        JSON.stringify({ 
+          error: 'GEMINI_API_KEY is not configured',
+          response: 'Configuration error - please contact support.'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
-    const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=' + GEMINI_API_KEY, {
+    const geminiEndpoint = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+    const geminiResponse = await fetch(`${geminiEndpoint}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -89,15 +100,33 @@ serve(async (req) => {
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
       console.error('Gemini API error response:', errorText);
-      throw new Error(`Failed to get response from Gemini API: ${errorText}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Gemini API Error: ${errorText}`,
+          response: 'Failed to get response from AI assistant.'
+        }),
+        { 
+          status: geminiResponse.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     const data = await geminiResponse.json();
     console.log('Gemini API raw response:', data);
 
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0].text) {
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
       console.error('Invalid response structure from Gemini:', data);
-      throw new Error('Invalid response structure from Gemini API');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid response structure from Gemini API',
+          response: 'Unexpected response format from AI assistant.'
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     const aiResponse = data.candidates[0].content.parts[0].text;
@@ -114,7 +143,7 @@ serve(async (req) => {
         response: "I apologize, but I'm having trouble processing your request at the moment. Please try again later."
       }),
       { 
-        status: 200,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
