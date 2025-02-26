@@ -5,119 +5,60 @@ import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+async function getCompletion(message: string): Promise<string | null> {
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    const url = 'https://api.openai.com/v1/chat/completions';
+  
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    };
+  
+    const body = JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an automotive expert with deep knowledge of vehicle specifications, 
+          particularly modern cars. Provide accurate, concise answers about vehicle specifications 
+          and technical details. If you're not completely sure about a specific detail, 
+          acknowledge that and provide any relevant information you are confident about.
+          Format your responses with markdown for better readability.`
+        },
+        { role: 'user', content: message }
+      ],
+      max_tokens: 150,
+      temperature: 0.7,
+    });
+  
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: body
+      });
+  
+      if (!response.ok) {
+        console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
+        return null;
+      }
+  
+      const data = await response.json();
+      const completion = data.choices[0].message.content;
+      return completion;
+  
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      return null;
+    }
 }
 
-interface Database {
-  public: {
-    Tables: {
-      job_tickets: {
-        Row: {
-          id: number
-          created_at: string
-          client_id: number
-          vehicle_id: number
-          description: string
-          status: string
-          bay: string
-          assigned_technician_id: number | null
-        }
-        Insert: {
-          client_id: number
-          vehicle_id: number
-          description: string
-          status: string
-        }
-        Update: {
-          client_id: number
-          vehicle_id: number
-          description: string
-          status: string
-        }
-      },
-      clients: {
-        Row: {
-          id: number
-          created_at: string
-          first_name: string
-          last_name: string
-          phone_number: string
-        }
-        Insert: {
-          first_name: string
-          last_name: string
-          phone_number: string
-        }
-        Update: {
-          first_name: string
-          last_name: string
-          phone_number: string
-        }
-      },
-       vehicles: {
-        Row: {
-          id: number
-          created_at: string
-          client_id: number
-          license_plate: string
-          make: string
-          model: string
-          year: number
-        }
-        Insert: {
-          client_id: number
-          license_plate: string
-          make: string
-          model: string
-          year: number
-        }
-        Update: {
-          client_id: number
-          license_plate: string
-          make: string
-          model: string
-          year: number
-        }
-      },
-      appointments: {
-        Row: {
-          id: number
-          created_at: string
-          client_id: number
-          vehicle_id: number
-          date: string
-          time: string
-          description: string
-        }
-        Insert: {
-          client_id: number
-          vehicle_id: number
-          date: string
-          time: string
-          description: string
-        }
-        Update: {
-          client_id: number
-          vehicle_id: number
-          date: string
-          time: string
-          description: string
-        }
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+function isGeneralAutomotiveQuery(message: string): boolean {
+  const keywords = ['automotive', 'car', 'vehicle', 'maintenance', 'repair', 'service'];
+  const messageLower = message.toLowerCase();
+  return keywords.some(keyword => messageLower.includes(keyword));
 }
 
 async function getCurrentStatistics(supabase: any) {
@@ -185,50 +126,6 @@ async function countTicketsWithParams(supabase: any, params: {
   
   return count;
 }
-
-function isGeneralAutomotiveQuery(message: string): boolean {
-  const keywords = ['automotive', 'car', 'vehicle', 'maintenance', 'repair', 'service'];
-  const messageLower = message.toLowerCase();
-  return keywords.some(keyword => messageLower.includes(keyword));
-}
-
-async function getCompletion(message: string): Promise<string | null> {
-    const apiKey = Deno.env.get('OPENAI_API_KEY');
-    const url = 'https://api.openai.com/v1/chat/completions';
-  
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    };
-  
-    const body = JSON.stringify({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: message }],
-      max_tokens: 150,
-      temperature: 0.7,
-    });
-  
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        body: body
-      });
-  
-      if (!response.ok) {
-        console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
-        return null;
-      }
-  
-      const data = await response.json();
-      const completion = data.choices[0].message.content;
-      return completion;
-  
-    } catch (error) {
-      console.error('Error calling OpenAI API:', error);
-      return null;
-    }
-  }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
