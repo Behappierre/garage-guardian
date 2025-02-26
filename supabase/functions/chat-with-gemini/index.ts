@@ -21,13 +21,21 @@ serve(async (req) => {
     const { message, user_id } = await req.json();
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+    // Fetch recent conversation history
+    const { data: recentMessages } = await supabase
+      .from('chat_messages')
+      .select('message, response, metadata')
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
     // First, let's fetch relevant client information
     let contextData = {};
     
-    // Check for client name in the message
-    const nameMatch = message.toLowerCase().match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
-    // Also check for vehicle details
-    const vehicleMatch = message.toLowerCase().match(/(?:alfa|romeo|stelvio|olh878)/);
+    // Check for client name in the message and recent messages
+    const allText = [message, ...recentMessages?.map(m => m.message) || []].join(' ').toLowerCase();
+    const nameMatch = allText.match(/(?:booking for|client|customer|appointment for)\s+([a-z ]+)/);
+    const vehicleMatch = allText.match(/(?:alfa|romeo|stelvio|olh878)/);
     
     // If we have a name match or vehicle details, search for the client
     if (nameMatch || vehicleMatch) {
@@ -73,13 +81,21 @@ serve(async (req) => {
             contextData = {
               clients: matchingClients,
               matchCount: matchingClients.length,
-              exactMatch: matchingClients.length === 1
+              exactMatch: matchingClients.length === 1,
+              recentHistory: recentMessages?.map(m => ({
+                message: m.message,
+                response: m.response
+              }))
             };
           }
         } else {
           contextData = {
             clients: clientData,
-            matchCount: clientData.length
+            matchCount: clientData.length,
+            recentHistory: recentMessages?.map(m => ({
+              message: m.message,
+              response: m.response
+            }))
           };
         }
       }
@@ -96,22 +112,40 @@ Key requirements:
 1. NEVER address the client directly - you are speaking to the garage manager
 2. Use "the client" or "Mr./Mrs. [Last Name]" when referring to clients
 3. When handling bookings:
-   - Confirm client details found in the database
-   - For exact matches, help process the booking
-   - For multiple matches, ask for clarification
-   - For no matches, suggest client registration
+   - Maintain context from previous messages
+   - For exact matches, proceed with booking details provided
+   - Remember vehicle and service details mentioned earlier
+   - Use all information from previous messages
+
+Conversation flow:
+1. When client is identified, remember their details for the entire conversation
+2. When service details are provided, incorporate them into the booking process
+3. When date/time is confirmed, proceed with the booking
 
 Correct response examples:
 ✅ "I've found Mr. Andre's record. His Alfa Romeo Stelvio (OLH878) is in the system. Shall I proceed with booking for tomorrow at 2 PM?"
-✅ "There are multiple matches for this client. Would you like me to list them with their vehicle details?"
-✅ "I can't find this client in the system. Would you like to register them as a new client?"
+✅ "Based on the previous messages, I'll book a major service and brake check for Mr. Andre's Alfa Romeo tomorrow at 2 PM. Would you like me to confirm this booking?"
+✅ "I understand Mr. Andre needs a major service and brake check. I'll add these details to the booking for tomorrow at 2 PM."
 
 Incorrect responses:
 ❌ "Could you provide your vehicle details?"
-❌ "When would you like to schedule your appointment?"
-❌ "Thank you for contacting us"
+❌ "I need the client's information again"
+❌ "Please provide the service details again"
 
-Remember: You are ALWAYS speaking to the garage manager about their clients, never to the clients themselves.`;
+Remember: 
+- Maintain context from the entire conversation
+- Don't ask for information that was already provided
+- Always proceed with booking when you have all necessary information`;
+
+    // Construct conversation history for the API call
+    const conversationHistory = [
+      { role: 'system', content: systemMessage },
+      ...(recentMessages?.reverse().flatMap(m => [
+        { role: 'user' as const, content: m.message },
+        { role: 'assistant' as const, content: m.response }
+      ]) || []),
+      { role: 'user' as const, content: message }
+    ];
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -121,10 +155,7 @@ Remember: You are ALWAYS speaking to the garage manager about their clients, nev
       },
       body: JSON.stringify({
         model: 'gpt-4',
-        messages: [
-          { role: 'system', content: systemMessage },
-          { role: 'user', content: message }
-        ],
+        messages: conversationHistory,
         temperature: 0.7,
         max_tokens: 500
       }),
