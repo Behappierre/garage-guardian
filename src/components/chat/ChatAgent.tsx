@@ -54,7 +54,7 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
+      const { data, error } = await supabase.functions.invoke('chat-with-gpt', {
         body: { message: userMessage }
       });
 
