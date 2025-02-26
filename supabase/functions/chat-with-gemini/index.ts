@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
@@ -63,36 +62,10 @@ ${vehicle.vin ? `VIN: ${vehicle.vin}` : ''}
   }
 };
 
-const systemPrompt = `You are GarageWizz AI Assistant, an expert in auto repair shop management. You have access to the database and can help users retrieve information.
+const systemPrompt = `You are GarageWizz AI Assistant, an expert in auto repair shop management. Help users retrieve information about appointments, clients, vehicles, and job tickets. For appointments, only use this exact query:
 
-To get data, you can use these READ-ONLY SQL queries (do not attempt modifications):
-
-1. List recent appointments:
-   SELECT * FROM appointments ORDER BY start_time DESC LIMIT 5;
-   [QueryType: appointments]
-
-2. Find client information:
-   SELECT * FROM clients WHERE first_name ILIKE '%{search}%' OR last_name ILIKE '%{search}%' LIMIT 5;
-   [QueryType: clients]
-
-3. Check vehicle history:
-   SELECT v.*, c.first_name, c.last_name 
-   FROM vehicles v 
-   JOIN clients c ON v.client_id = c.id 
-   WHERE v.make ILIKE '%{search}%' OR v.model ILIKE '%{search}%' 
-   LIMIT 5;
-   [QueryType: vehicles]
-
-4. View job tickets:
-   SELECT jt.*, c.first_name, c.last_name 
-   FROM job_tickets jt 
-   JOIN clients c ON jt.client_id = c.id 
-   WHERE status = '{status}' 
-   ORDER BY created_at DESC 
-   LIMIT 5;
-   [QueryType: job_tickets]
-
-When executing a query, specify the QueryType in square brackets after the query to ensure proper formatting.
+SELECT * FROM appointments ORDER BY start_time DESC LIMIT 5;
+[QueryType: appointments]
 
 User Question: `;
 
@@ -107,10 +80,10 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!geminiKey || !supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing required environment variables');
+      console.error('Missing environment variables');
+      throw new Error('Configuration error');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { message } = await req.json();
     if (!message) {
       throw new Error('No message provided');
@@ -118,6 +91,37 @@ serve(async (req) => {
 
     console.log('Processing request:', message);
 
+    // For appointments query, skip AI and directly execute the query
+    if (message.toLowerCase().includes('appointment')) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const query = "SELECT * FROM appointments ORDER BY start_time DESC LIMIT 5";
+      
+      console.log('Executing appointments query');
+      
+      const { data: queryResult, error: dbError } = await supabase.rpc('execute_read_only_query', {
+        query_text: query
+      });
+
+      console.log('Query result:', queryResult);
+      console.log('Query error:', dbError);
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      const formattedResults = formatQueryResults(queryResult, 'appointments');
+      console.log('Formatted results:', formattedResults);
+      
+      return new Response(
+        JSON.stringify({ 
+          response: "Let me check the upcoming appointments for you:\n\n" + formattedResults 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // For other queries, use Gemini
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -136,48 +140,14 @@ serve(async (req) => {
     const aiData = await aiResponse.json();
     console.log('AI response:', aiData);
 
-    if (!aiData.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error('Invalid AI response format');
-    }
-
-    let response = aiData.candidates[0].content.parts[0].text;
-    console.log('Raw AI response text:', response);
-
-    // Extract query and type
-    const sqlMatch = response.match(/```sql\n([\s\S]*?)\n```.*?\[QueryType:\s*(\w+)\]/);
-    if (sqlMatch) {
-      const [_, sqlQuery, queryType] = sqlMatch;
-      console.log('Executing SQL query:', sqlQuery);
-      console.log('Query type:', queryType);
-
-      try {
-        // Execute the actual query from the AI response
-        const { data: queryResult, error: dbError } = await supabase.rpc('execute_read_only_query', {
-          query_text: sqlQuery
-        });
-
-        console.log('Query result:', queryResult);
-        console.log('Query error:', dbError);
-
-        if (dbError) throw dbError;
-
-        const formattedResults = formatQueryResults(queryResult, queryType);
-        console.log('Formatted results:', formattedResults);
-        
-        // Replace the SQL query in the response with the formatted results
-        response = "Let me check the upcoming appointments for you:\n\n" + formattedResults;
-      } catch (dbError) {
-        console.error('Database query error:', dbError);
-        response = "I apologize, but I encountered an error while retrieving the appointments. Please try again in a moment.";
-      }
-    } else {
-      console.log('No SQL query found in response');
-    }
-
+    // For non-appointment queries, return AI response directly
     return new Response(
-      JSON.stringify({ response }),
+      JSON.stringify({ 
+        response: aiData.candidates[0].content.parts[0].text 
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
   } catch (error) {
     console.error('Edge function error:', error);
     return new Response(
