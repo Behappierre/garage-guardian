@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,6 +16,7 @@ interface Message {
 }
 
 export function ChatAgent() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +57,10 @@ export function ChatAgent() {
 
     try {
       const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
-        body: { message: userMessage }
+        body: { 
+          message: userMessage,
+          user_id: user?.id
+        }
       });
 
       if (error) {
