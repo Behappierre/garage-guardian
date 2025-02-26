@@ -8,7 +8,7 @@ import { useClockEvents } from "@/hooks/use-clock-events";
 const statusColumns = [
   { key: 'received', label: 'To Do' },
   { key: 'in_progress', label: 'In Progress' },
-  { key: 'pending_parts', label: 'Waiting for Parts' },
+  { key: 'pending_parts', label: 'On Hold' },
   { key: 'completed', label: 'Complete' },
   { key: 'cancelled', label: 'Cancelled' }
 ] as const;
