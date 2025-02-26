@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 import { format } from "https://deno.land/std@0.182.0/datetime/mod.ts";
@@ -6,60 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-async function getCompletion(message: string): Promise<string | null> {
-    const apiKey = Deno.env.get('OPENAI_API_KEY');
-    const url = 'https://api.openai.com/v1/chat/completions';
-  
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    };
-  
-    const body = JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an automotive expert with deep knowledge of vehicle specifications, 
-          particularly modern cars. Provide accurate, concise answers about vehicle specifications 
-          and technical details. If you're not completely sure about a specific detail, 
-          acknowledge that and provide any relevant information you are confident about.
-          Format your responses with markdown for better readability.`
-        },
-        { role: 'user', content: message }
-      ],
-      max_tokens: 150,
-      temperature: 0.7,
-    });
-  
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        body: body
-      });
-  
-      if (!response.ok) {
-        console.error(`OpenAI API error: ${response.status} ${response.statusText}`);
-        return null;
-      }
-  
-      const data = await response.json();
-      const completion = data.choices[0].message.content;
-      return completion;
-  
-    } catch (error) {
-      console.error('Error calling OpenAI API:', error);
-      return null;
-    }
-}
-
-function isGeneralAutomotiveQuery(message: string): boolean {
-  const keywords = ['automotive', 'car', 'vehicle', 'maintenance', 'repair', 'service'];
-  const messageLower = message.toLowerCase();
-  return keywords.some(keyword => messageLower.includes(keyword));
-}
 
 async function getCurrentStatistics(supabase: any) {
   try {
@@ -90,7 +37,7 @@ async function countTicketsWithParams(supabase: any, params: {
 }) {
   let query = supabase
     .from('job_tickets')
-    .select('*, vehicles!inner(*)', { count: 'exact' });
+    .select('*', { count: 'exact' });
   
   Object.entries(params).forEach(([key, value]) => {
     if (value) {
@@ -127,6 +74,65 @@ async function countTicketsWithParams(supabase: any, params: {
   return count;
 }
 
+async function handleGeneralQuery(message: string) {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) {
+    console.error('GEMINI_API_KEY not found');
+    return null;
+  }
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: message
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1024,
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const generatedText = data.candidates[0].content.parts[0].text;
+    return generatedText;
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -136,35 +142,19 @@ serve(async (req) => {
     const { message } = await req.json();
     console.log('Received message:', message);
 
-    // Check for general automotive queries first
-    if (isGeneralAutomotiveQuery(message)) {
-      const completion = await getCompletion(message);
-        if (completion) {
-          return new Response(
-            JSON.stringify({ response: completion }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          return new Response(
-            JSON.stringify({ response: "I'm having trouble processing your request at the moment. Please try again later." }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-    }
-
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Combined ticket counting and statistics logic
+    // Check for status and statistics queries first
     const ticketStatusPattern = /(?:count |how many )?tickets?(?: in| with)? status ([a-z_]+)/i;
     const statusMatch = message.match(ticketStatusPattern);
+    const isStatsQuery = message.toLowerCase().includes('statistics') || 
+                        message.toLowerCase().includes('current stats') || 
+                        message.toLowerCase().includes('show stats');
     
-    if (statusMatch || message.toLowerCase().includes('statistics') || 
-        message.toLowerCase().includes('current stats') || 
-        message.toLowerCase().includes('show stats')) {
-      
+    if (statusMatch || isStatsQuery) {
       const stats = await getCurrentStatistics(supabaseClient);
       let response = `**Current Statistics:**\n\n`;
       response += `• Total Clients: ${stats?.totalClients}\n`;
@@ -185,108 +175,17 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // New query handler for fetching job ticket details by ID
-    const jobTicketPattern = /job ticket(?: details)?(?: for)?(?: id)? (\d+)/i;
-    const jobTicketMatch = message.match(jobTicketPattern);
-
-    if (jobTicketMatch) {
-      const ticketId = jobTicketMatch[1];
-      const { data: ticket, error } = await supabaseClient
-        .from('job_tickets')
-        .select(`
-          *,
-          clients ( first_name, last_name ),
-          vehicles ( license_plate, make, model, year )
-        `)
-        .eq('id', ticketId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching job ticket:', error);
-        return new Response(
-          JSON.stringify({ response: `Error fetching job ticket with ID ${ticketId}` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (ticket) {
-        const formattedDate = format(new Date(ticket.created_at), 'MMMM dd, yyyy');
-        let response = `**Job Ticket:** ${ticket.id}\n\n`;
-        response += `• Date: ${formattedDate}\n`;
-        response += `• Status: ${ticket.status}\n`;
-        response += `• Bay: ${ticket.bay}\n`;
-        response += `• Vehicle: ${ticket.vehicles?.make} ${ticket.vehicles?.model} (${ticket.vehicles?.year})\n`;
-        response += `• License Plate: ${ticket.vehicles?.license_plate}\n`;
-        response += `• Customer: ${ticket.clients?.first_name} ${ticket.clients?.last_name}\n\n`;
-        response += `**Service Details:**\n${ticket.description}`;
-
-        return new Response(
-          JSON.stringify({ response }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      } else {
-        return new Response(
-          JSON.stringify({ response: `Job ticket with ID ${ticketId} not found` }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    
+    // For all other queries, use Gemini
+    const generatedResponse = await handleGeneralQuery(message);
+    if (generatedResponse) {
+      return new Response(
+        JSON.stringify({ response: generatedResponse }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Query handler for appointments
-    const appointmentPattern = /(?:show|list|view) appointments(?: for)?(?: vehicle)?(?: with license plate)? ?([a-zA-Z0-9-]+)?/i;
-    const appointmentMatch = message.match(appointmentPattern);
-
-    if (appointmentMatch) {
-      const licensePlate = appointmentMatch[1];
-
-      if (licensePlate) {
-        // Fetch appointments for a specific vehicle
-        const { data: appointments, error } = await supabaseClient
-          .from('appointments')
-          .select(`
-            *,
-            vehicles ( license_plate, make, model, year ),
-            clients ( first_name, last_name )
-          `)
-          .eq('vehicles.license_plate', licensePlate);
-
-        if (error) {
-          console.error('Error fetching appointments:', error);
-          return new Response(
-            JSON.stringify({ response: `Error fetching appointments for license plate ${licensePlate}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        if (appointments && appointments.length > 0) {
-          let response = `**Appointments for vehicle ${licensePlate}:**\n\n`;
-          appointments.forEach(appointment => {
-            const formattedDate = format(new Date(appointment.date), 'MMMM dd, yyyy');
-            response += `• Date: ${formattedDate}\n`;
-            response += `• Time: ${appointment.time}\n`;
-            response += `• Description: ${appointment.description}\n\n`;
-          });
-
-          return new Response(
-            JSON.stringify({ response }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        } else {
-          return new Response(
-            JSON.stringify({ response: `No appointments found for vehicle with license plate ${licensePlate}` }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-      } else {
-        // If no license plate is provided, return a default message
-        return new Response(
-          JSON.stringify({ response: "Please specify a license plate to view appointments." }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-
+    // Fallback response if no pattern matches and Gemini fails
     return new Response(
       JSON.stringify({ response: "I'm sorry, I didn't understand your request. Please try again." }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
