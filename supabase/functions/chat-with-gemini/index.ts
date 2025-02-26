@@ -22,29 +22,29 @@ serve(async (req) => {
       throw new Error('Configuration error');
     }
 
-    // First attempt to understand user intent with Gemini
+    // Generate content using Gemini API
     const aiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
+          model: "gemini-pro",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                {
+                  text: `You are an auto repair shop assistant. Analyze this request and respond appropriately: ${message}
 
 If the user is asking about appointments, respond with exactly: QUERY_APPOINTMENTS
 Otherwise, provide a helpful response about auto repair, maintenance, or general information.`
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          }
+                }
+              ]
+            }
+          ]
         })
       }
     );
@@ -58,12 +58,12 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
     const aiData = await aiResponse.json();
     console.log('AI response data:', aiData);
 
-    if (!aiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+    const aiText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!aiText) {
       console.error('Invalid AI response format:', aiData);
       throw new Error('Invalid response from AI');
     }
 
-    const aiText = aiData.candidates[0].content.parts[0].text;
     console.log('Processed AI text:', aiText);
 
     // Handle appointment queries
@@ -89,33 +89,39 @@ Otherwise, provide a helpful response about auto repair, maintenance, or general
         throw error;
       }
 
-      // Use Gemini to format the appointment data
+      // Format appointments with Gemini
       const formatResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiKey}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
-                
+            model: "gemini-pro",
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  {
+                    text: `Format these appointments into a friendly response: ${JSON.stringify(appointments, null, 2)}
+                    
 Use emojis and clear formatting. If there are no appointments, just say so in a friendly way.
 Be concise and clear.`
-              }]
-            }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1024,
-            }
+                  }
+                ]
+              }
+            ]
           })
         }
       );
 
       const formatData = await formatResponse.json();
-      const formattedResponse = formatData.candidates[0].content.parts[0].text;
+      const formattedResponse = formatData.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!formattedResponse) {
+        throw new Error('Failed to format appointments response');
+      }
 
       return new Response(
         JSON.stringify({ response: formattedResponse }),
