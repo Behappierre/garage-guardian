@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,14 @@ export function ChatAgent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +77,7 @@ export function ChatAgent() {
           <SheetTitle>AI Assistant</SheetTitle>
         </SheetHeader>
         <div className="flex flex-col h-[calc(100vh-8rem)]">
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
             <div className="space-y-4 mt-4">
               {messages.map((message, i) => (
                 <div
