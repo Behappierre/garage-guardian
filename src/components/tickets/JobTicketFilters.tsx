@@ -64,7 +64,7 @@ export const JobTicketFilters = ({
               <SelectValue placeholder="Select priority" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All priorities</SelectItem>
+              <SelectItem value="all">All priorities</SelectItem>
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="normal">Normal</SelectItem>
               <SelectItem value="high">High</SelectItem>
