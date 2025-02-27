@@ -139,14 +139,14 @@ export const AppointmentCalendar = ({
         </Select>
       </div>
       
-      <div className="bg-white rounded-lg overflow-hidden">
+      <div className="bg-white rounded-lg overflow-hidden shadow-sm">
         <style>
           {`
             /* Modern Calendar Styling */
             .fc {
               --fc-border-color: #edf2f7;
               --fc-today-bg-color: #f7fafc;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
             
             /* Header with month/year display */
@@ -172,6 +172,7 @@ export const AppointmentCalendar = ({
               text-transform: capitalize;
               box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
               padding: 0.5rem 1rem;
+              border-radius: 0.375rem;
             }
             
             .fc .fc-button-primary:not(:disabled):hover {
@@ -203,26 +204,6 @@ export const AppointmentCalendar = ({
               display: none;
             }
             
-            /* Create custom header content with date and day */
-            .fc .fc-col-header-cell .fc-col-header-cell-cushion:after {
-              content: attr(data-date) " " attr(data-day);
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            }
-            
-            /* Style for the date part */
-            .fc-theme-standard td:first-child, 
-            .fc-theme-standard th:first-child {
-              border-left: 0;
-            }
-            
-            .fc-theme-standard td:last-child, 
-            .fc-theme-standard th:last-child {
-              border-right: 0;
-            }
-            
             /* Custom styling for the day headers */
             .fc-theme-standard thead tr th {
               position: relative;
@@ -246,6 +227,17 @@ export const AppointmentCalendar = ({
               color: #94a3b8;
               margin-top: 0.25rem;
               position: relative;
+            }
+            
+            /* Style for the date part */
+            .fc-theme-standard td:first-child, 
+            .fc-theme-standard th:first-child {
+              border-left: 0;
+            }
+            
+            .fc-theme-standard td:last-child, 
+            .fc-theme-standard th:last-child {
+              border-right: 0;
             }
             
             /* Current day - highlight with modern style */
@@ -287,28 +279,29 @@ export const AppointmentCalendar = ({
             
             /* Events styling */
             .fc-event {
-              border-radius: 4px;
+              border-radius: 6px;
               border: none;
-              padding: 2px 4px;
+              padding: 3px 6px;
               font-size: 0.875rem;
               font-weight: 500;
-              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             }
             
             .fc-daygrid-event {
-              padding: 4px 6px;
-              margin-bottom: 2px;
+              padding: 4px 8px;
+              margin-bottom: 3px;
             }
             
             /* Time grid adjustments */
             .fc-timegrid-event {
-              border-radius: 4px;
-              padding: 4px 6px;
+              border-radius: 6px;
+              padding: 4px 8px;
             }
             
             /* Hover state for events */
             .fc-event:hover {
               box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+              opacity: 0.95;
             }
             
             /* More link styling */
@@ -358,6 +351,7 @@ export const AppointmentCalendar = ({
               if (date) {
                 const dateObj = new Date(date);
                 const day = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                // Format as DD.MM without year
                 const formattedDate = dateObj.getDate().toString().padStart(2, '0') + '.' + 
                                      (dateObj.getMonth() + 1).toString().padStart(2, '0');
                 
