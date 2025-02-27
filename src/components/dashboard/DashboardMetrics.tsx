@@ -66,42 +66,49 @@ export const DashboardMetrics = () => {
       value: metricsData?.activeRepairs.toString() || "0",
       icon: Wrench,
       color: "text-blue-600",
-      bgColor: "bg-blue-50",
+      bgColor: "bg-cyan-100",
+      gradient: "from-cyan-200 to-cyan-100",
     },
     {
       title: "Today's Appointments",
       value: metricsData?.todayAppointments.toString() || "0",
       icon: Calendar,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
+      color: "text-amber-600",
+      bgColor: "bg-amber-100",
+      gradient: "from-amber-200 to-amber-100",
     },
     {
       title: "Completed Today",
       value: metricsData?.completedToday.toString() || "0",
       icon: CheckCircle,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
+      color: "text-emerald-600",
+      bgColor: "bg-emerald-100",
+      gradient: "from-emerald-200 to-emerald-100",
     },
     {
       title: "Booked Hours Ratio",
       value: `${metricsData?.bookedRatio || 0}%`,
       icon: Clock,
       color: "text-purple-600",
-      bgColor: "bg-purple-50",
+      bgColor: "bg-purple-100",
+      gradient: "from-purple-200 to-purple-100",
     },
   ];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
       {metrics.map((metric) => (
-        <div key={metric.title} className="bg-white rounded-lg shadow-sm p-4 flex flex-col min-w-0">
+        <div 
+          key={metric.title} 
+          className={`rounded-lg shadow-sm p-6 flex flex-col min-w-0 bg-gradient-to-br ${metric.gradient} transition-transform duration-200 hover:scale-105`}
+        >
           <div className="flex items-center space-x-3">
-            <div className={`${metric.bgColor} p-2 rounded-lg shrink-0`}>
+            <div className={`p-2 rounded-lg ${metric.bgColor} shrink-0`}>
               <metric.icon className={`h-5 w-5 ${metric.color}`} />
             </div>
-            <h3 className="text-sm font-medium text-gray-900 truncate">{metric.title}</h3>
+            <h3 className="text-sm font-medium text-gray-800 truncate">{metric.title}</h3>
           </div>
-          <p className="text-2xl font-semibold text-gray-900 mt-2">{metric.value}</p>
+          <p className={`text-3xl font-semibold mt-4 ${metric.color}`}>{metric.value}</p>
         </div>
       ))}
     </div>

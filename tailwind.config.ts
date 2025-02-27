@@ -53,6 +53,17 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Pastel colors for dashboard cards
+        pastel: {
+          blue: "#A7D8FD",
+          green: "#A7F0CD",
+          yellow: "#FFE8A3",
+          purple: "#D6BCFA",
+          pink: "#FECDD3",
+          orange: "#FED7AA",
+          cyan: "#67E8F9",
+          lime: "#D9F99D",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

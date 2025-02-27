@@ -159,8 +159,39 @@ export const RecentActivity = () => {
     };
   }, [refetch]);
 
+  // Define activity type colors
+  const getActivityStyles = (type: Activity['type']) => {
+    switch(type) {
+      case 'appointment':
+        return {
+          bg: 'bg-gradient-to-br from-sky-100 to-blue-50',
+          icon: 'bg-sky-200 text-sky-600',
+        };
+      case 'ticket':
+        return {
+          bg: 'bg-gradient-to-br from-amber-100 to-amber-50',
+          icon: 'bg-amber-200 text-amber-600',
+        };
+      case 'completed':
+        return {
+          bg: 'bg-gradient-to-br from-green-100 to-green-50',
+          icon: 'bg-green-200 text-green-600',
+        };
+      case 'client':
+        return {
+          bg: 'bg-gradient-to-br from-purple-100 to-purple-50',
+          icon: 'bg-purple-200 text-purple-600',
+        };
+      default:
+        return {
+          bg: 'bg-gradient-to-br from-gray-100 to-gray-50',
+          icon: 'bg-gray-200 text-gray-600',
+        };
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 text-left">
+    <div className="rounded-lg shadow-sm p-6 text-left bg-white">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
         <ActivitySquare className="h-5 w-5 text-gray-400" />
@@ -169,15 +200,17 @@ export const RecentActivity = () => {
         {recentActivityData?.map((activity) => {
           const isExpanded = expandedItems.has(activity.id);
           const ActivityIcon = activity.icon;
+          const styles = getActivityStyles(activity.type);
           
           return (
             <div
               key={`${activity.type}-${activity.id}`}
-              className="bg-white hover:bg-gray-50 rounded-lg border border-gray-100 p-4 transition-all"
+              className={`${styles.bg} hover:shadow-md rounded-lg border border-gray-100 p-4 transition-all cursor-pointer`}
+              onClick={activity.onClick}
             >
               <div className="flex items-start space-x-4">
-                <div className="bg-gray-100 p-2 rounded-lg shrink-0">
-                  <ActivityIcon className="h-5 w-5 text-gray-600" />
+                <div className={`${styles.icon} p-2 rounded-lg shrink-0`}>
+                  <ActivityIcon className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
@@ -186,7 +219,10 @@ export const RecentActivity = () => {
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0"
-                      onClick={() => toggleItem(activity.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleItem(activity.id);
+                      }}
                     >
                       {isExpanded ? (
                         <ChevronUp className="h-4 w-4" />
