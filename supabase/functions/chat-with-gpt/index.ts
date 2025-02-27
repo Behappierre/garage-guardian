@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { OpenAI } from "https://esm.sh/openai@4.0.0";
@@ -28,11 +29,32 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl as string, supabaseKey as string);
-
-    // Check if this might be a booking request
+    
+    // Check for query intents
+    const isQueryRequest = checkForQueryIntent(message);
     const isBookingRequest = checkForBookingIntent(message);
     
-    // If this seems like a booking request, try to handle it directly
+    // Handle appointment queries (show upcoming appointments)
+    if (isQueryRequest) {
+      console.log("Detected query intent, fetching appointment data");
+      try {
+        const queryResponse = await handleAppointmentQuery(message, supabase);
+        if (queryResponse) {
+          // Store the conversation
+          await storeConversation(user_id, message, queryResponse, supabase);
+          
+          return new Response(
+            JSON.stringify({ response: queryResponse }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } catch (queryError) {
+        console.error("Error handling query:", queryError);
+        // Fall through to standard AI response
+      }
+    }
+    
+    // Handle booking requests
     if (isBookingRequest) {
       console.log("Detected booking intent, attempting to process booking");
       try {
@@ -124,16 +146,14 @@ serve(async (req) => {
               hour12: true
             });
             
+            const response = `Booking is confirmed for ${client.first_name} ${client.last_name} on ${formattedDate}. The appointment has been added to the system. A ${vehicles[0].make} ${vehicles[0].model} has been linked to this booking.`;
+            
+            // Store the conversation
+            await storeConversation(user_id, message, response, supabase);
+            
             return new Response(
-              JSON.stringify({ 
-                response: `Booking is confirmed for ${client.first_name} ${client.last_name} on ${formattedDate}. The appointment has been added to the system. A ${vehicles[0].make} ${vehicles[0].model} has been linked to this booking.` 
-              }),
-              { 
-                headers: { 
-                  ...corsHeaders,
-                  'Content-Type': 'application/json' 
-                } 
-              }
+              JSON.stringify({ response }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           } else {
             console.log("No matching client found");
@@ -145,21 +165,26 @@ serve(async (req) => {
       }
     }
 
-    // If we reached here, either it's not a booking request or booking processing failed
+    // If we reached here, either it's not a special request or processing failed
     // Initialize OpenAI
     const openai = new OpenAI({
       apiKey: openAIApiKey,
     });
 
     // Get context information from database
-    let context = "You are a helpful automotive service assistant. ";
-    context += `
-    You can help with automotive questions and service inquiries.
-    
-    If users ask for bookings or appointments, tell them you can create bookings directly.
-    Ask them for the client name, preferred date/time, and service type.
-    
-    For example, respond with: "I can schedule that for you. Would you like to book [client name] for [suggested date/time]?"
+    let context = `
+      You are a helpful automotive service assistant for the garage management system.
+      
+      You can help with:
+      1. Automotive questions and service inquiries
+      2. Creating bookings for clients
+      3. Providing information about upcoming appointments
+      
+      For bookings, tell users you can create bookings directly.
+      For appointment queries, tell users you can check the schedule.
+      
+      IMPORTANT: NEVER say you don't have access to real-time data. You CAN access appointment data.
+      If someone asks about appointments or bookings, you should ALWAYS try to provide real information.
     `;
 
     // Create a chat completion
@@ -174,41 +199,15 @@ serve(async (req) => {
     });
 
     console.log("OpenAI response:", response);
-
-    // Store the conversation in the database
-    try {
-      const res = await fetch(`${supabaseUrl}/rest/v1/chat_messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-          'apikey': supabaseKey
-        },
-        body: JSON.stringify({
-          user_id,
-          message,
-          response: response.choices[0].message.content,
-          metadata: { model: "gpt-4" }
-        })
-      });
-      
-      if (!res.ok) {
-        console.error('Error storing chat message:', await res.text());
-      }
-    } catch (dbError) {
-      console.error('Error storing chat in database:', dbError);
-    }
+    
+    // Store the conversation
+    await storeConversation(user_id, message, response.choices[0].message.content, supabase);
 
     return new Response(
       JSON.stringify({ 
         response: response.choices[0].message.content 
       }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -229,6 +228,136 @@ serve(async (req) => {
   }
 });
 
+// Helper function for appointment queries
+async function handleAppointmentQuery(message: string, supabase: any): Promise<string | null> {
+  // Determine the time range for the query
+  const timeRange = determineTimeRange(message);
+  if (!timeRange) {
+    return null;
+  }
+  
+  try {
+    // Query appointments in the specified time range
+    const { data: appointments, error: appointmentsError } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        client:clients(*),
+        vehicle:vehicles(*)
+      `)
+      .gte('start_time', timeRange.startTime.toISOString())
+      .lt('start_time', timeRange.endTime.toISOString())
+      .order('start_time', { ascending: true });
+      
+    if (appointmentsError) {
+      console.error("Error fetching appointments:", appointmentsError);
+      throw appointmentsError;
+    }
+    
+    if (!appointments || appointments.length === 0) {
+      return `No appointments found for ${timeRange.description}.`;
+    }
+    
+    // Format the response
+    let response = `Here are the appointments for ${timeRange.description}:\n\n`;
+    
+    appointments.forEach((appointment: any, index: number) => {
+      const startTime = new Date(appointment.start_time);
+      const formattedTime = startTime.toLocaleString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      });
+      
+      const client = appointment.client || { first_name: 'Unknown', last_name: 'Client' };
+      const vehicle = appointment.vehicle || { make: 'Unknown', model: 'Vehicle' };
+      
+      response += `${index + 1}. ${formattedTime} - ${client.first_name} ${client.last_name}\n`;
+      response += `   Service: ${appointment.service_type}\n`;
+      response += `   Vehicle: ${vehicle.make} ${vehicle.model}\n`;
+      response += `   Bay: ${appointment.bay || 'Not assigned'}\n`;
+      response += `   Status: ${appointment.status}\n\n`;
+    });
+    
+    return response;
+    
+  } catch (error) {
+    console.error("Error in handleAppointmentQuery:", error);
+    throw error;
+  }
+}
+
+// Helper function to determine time range from query
+function determineTimeRange(message: string): { startTime: Date, endTime: Date, description: string } | null {
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const today = new Date(now);
+  const nextWeek = new Date(now);
+  nextWeek.setDate(now.getDate() + 7);
+  
+  // Check for specific patterns
+  if (/\btomorrow\b/i.test(message)) {
+    const startTime = new Date(tomorrow);
+    startTime.setHours(0, 0, 0, 0);
+    
+    const endTime = new Date(tomorrow);
+    endTime.setHours(23, 59, 59, 999);
+    
+    return { 
+      startTime, 
+      endTime,
+      description: `tomorrow (${startTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })})`
+    };
+  }
+  
+  if (/\btoday\b/i.test(message)) {
+    const startTime = new Date(today);
+    startTime.setHours(0, 0, 0, 0);
+    
+    const endTime = new Date(today);
+    endTime.setHours(23, 59, 59, 999);
+    
+    return { 
+      startTime, 
+      endTime,
+      description: "today"
+    };
+  }
+  
+  if (/\bnext week\b/i.test(message)) {
+    const startTime = new Date(tomorrow);
+    startTime.setHours(0, 0, 0, 0);
+    
+    const endTime = new Date(nextWeek);
+    endTime.setHours(23, 59, 59, 999);
+    
+    return { 
+      startTime, 
+      endTime,
+      description: "next week"
+    };
+  }
+  
+  // Default to tomorrow if no specific timeframe is mentioned but query seems to be about appointments
+  if (/\bappointments?\b|\bbookings?\b|\bschedule\b/i.test(message)) {
+    const startTime = new Date(tomorrow);
+    startTime.setHours(0, 0, 0, 0);
+    
+    const endTime = new Date(tomorrow);
+    endTime.setHours(23, 59, 59, 999);
+    
+    return { 
+      startTime, 
+      endTime,
+      description: `tomorrow (${startTime.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })})`
+    };
+  }
+  
+  return null;
+}
+
 // Helper function to check if a message appears to be a booking request
 function checkForBookingIntent(message: string): boolean {
   const bookingKeywords = [
@@ -240,6 +369,21 @@ function checkForBookingIntent(message: string): boolean {
   ];
   
   return bookingKeywords.some(keyword => keyword.test(message));
+}
+
+// Helper function to check if a message appears to be a query about appointments
+function checkForQueryIntent(message: string): boolean {
+  // Check for querying patterns
+  const queryPatterns = [
+    /what\s+(?:are\s+the\s+)?(?:bookings|appointments)/i,
+    /show\s+(?:me\s+)?(?:the\s+)?(?:bookings|appointments)/i,
+    /list\s+(?:the\s+)?(?:bookings|appointments)/i,
+    /(?:bookings|appointments)(?:\s+do\s+we\s+have)?(?:\s+for)?/i,
+    /schedule(?:\s+for)?/i,
+    /upcoming(?:\s+appointments)?/i
+  ];
+  
+  return queryPatterns.some(pattern => pattern.test(message));
 }
 
 // Helper function to extract date information from a message
@@ -320,4 +464,24 @@ function assignBay(date: Date): string {
   
   // Otherwise alternate between bay1 and bay2
   return date.getDate() % 2 === 0 ? "bay1" : "bay2";
+}
+
+// Helper function to store conversation in the database
+async function storeConversation(userId: string, message: string, response: string, supabase: any) {
+  try {
+    const res = await supabase
+      .from('chat_messages')
+      .insert({
+        user_id: userId,
+        message,
+        response,
+        metadata: { source: "gpt-function" }
+      });
+      
+    if (res.error) {
+      console.error('Error storing chat message:', res.error);
+    }
+  } catch (error) {
+    console.error('Error in storeConversation:', error);
+  }
 }
