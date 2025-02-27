@@ -116,7 +116,7 @@ export default function Settings() {
       />
       
       <div className="px-8 pb-8 space-y-6">
-        <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
           <div className="space-y-0.5">
             <Label className="text-base">Dark Mode</Label>
             <p className="text-sm text-muted-foreground">
@@ -124,16 +124,16 @@ export default function Settings() {
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Sun className="h-4 w-4" />
+            <Sun className="h-4 w-4 text-muted-foreground" />
             <Switch
               checked={theme === "dark"}
               onCheckedChange={handleThemeChange}
             />
-            <Moon className="h-4 w-4" />
+            <Moon className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
           <div className="space-y-0.5">
             <Label className="text-base">Garage Logo</Label>
             <p className="text-sm text-muted-foreground">
