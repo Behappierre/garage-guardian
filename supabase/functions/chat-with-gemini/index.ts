@@ -32,14 +32,18 @@ serve(async (req) => {
       if (licensePlateMatch) {
         try {
           const licensePlate = licensePlateMatch[1].toUpperCase();
+          console.log('Searching for license plate:', licensePlate);
           
           const { data: vehicle, error } = await supabaseClient
             .from('vehicles')
             .select(`
+              id,
               make,
               model,
               year,
-              client:clients(
+              license_plate,
+              client:clients!inner(
+                id,
                 first_name,
                 last_name,
                 email,
@@ -47,9 +51,14 @@ serve(async (req) => {
               )
             `)
             .eq('license_plate', licensePlate)
-            .single();
+            .maybeSingle();
 
-          if (error) throw error;
+          console.log('Query result:', { vehicle, error });
+
+          if (error) {
+            console.error('Database error:', error);
+            throw error;
+          }
           
           if (!vehicle) {
             return `No vehicle found with license plate ${licensePlate}.`;
@@ -63,7 +72,7 @@ serve(async (req) => {
                  `Contact: ${vehicle.client.phone || 'No phone'} / ${vehicle.client.email || 'No email'}`;
         } catch (error) {
           console.error('Vehicle query error:', error);
-          return "Error fetching vehicle information.";
+          return `Error fetching vehicle information. Details: ${error.message}`;
         }
       }
 
