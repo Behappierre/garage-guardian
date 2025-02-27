@@ -187,7 +187,7 @@ export const ClientList = ({
             <div
               key={client.id}
               className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                selectedClient?.id === client.id ? "bg-primary/5 border-l-4 border-primary" : ""
+                selectedClient?.id === client.id ? "bg-primary/5 border-l-4 border-primary -ml-[4px]" : ""
               }`}
               onClick={() => onSelectClient(client)}
             >
