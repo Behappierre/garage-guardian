@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ interface AppointmentFormProps {
   initialData: AppointmentWithRelations | null;
   selectedDate: Date | null;
   onClose: () => void;
+  preselectedClientId?: string;
 }
 
 interface AppointmentFormData {
@@ -176,12 +178,13 @@ export const AppointmentForm = ({
   initialData,
   selectedDate,
   onClose,
+  preselectedClientId
 }: AppointmentFormProps) => {
   const defaultStartTime = roundToNearestHour(selectedDate || new Date());
   const [duration, setDuration] = useState("60"); // Default 1 hour duration
 
   const [formData, setFormData] = useState<AppointmentFormData>({
-    client_id: initialData?.client_id || null,
+    client_id: initialData?.client_id || preselectedClientId || null,
     vehicle_id: initialData?.vehicle_id || null,
     start_time: initialData?.start_time ? formatDateTimeForInput(initialData.start_time) : 
                 formatDateTimeForInput(defaultStartTime),
@@ -237,6 +240,7 @@ export const AppointmentForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
       toast.success('Appointment created successfully');
       onClose();
     },
@@ -263,6 +267,7 @@ export const AppointmentForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
       toast.success('Appointment updated successfully');
       onClose();
     },
@@ -289,6 +294,7 @@ export const AppointmentForm = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
       toast.success('Appointment cancelled successfully');
       onClose();
     },

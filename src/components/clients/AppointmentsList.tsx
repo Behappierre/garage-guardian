@@ -38,7 +38,7 @@ export const AppointmentsList = ({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
         {showAddButton && (
-          <Button variant="outline" size="sm" onClick={() => setShowAppointmentForm(true)}>
+          <Button variant="outline" size="sm" onClick={onAddService}>
             <Calendar className="mr-2 h-4 w-4" />
             New Appointment
           </Button>
@@ -59,19 +59,6 @@ export const AppointmentsList = ({
           <p className="text-gray-500">No {title.toLowerCase()}</p>
         )}
       </div>
-
-      <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Create New Appointment</DialogTitle>
-          </DialogHeader>
-          <AppointmentForm
-            initialData={null}
-            selectedDate={null}
-            onClose={() => setShowAppointmentForm(false)}
-          />
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

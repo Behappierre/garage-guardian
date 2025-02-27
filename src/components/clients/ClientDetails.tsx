@@ -1,10 +1,13 @@
 
+import { useMemo } from "react";
+import { AppointmentsList } from "./AppointmentsList";
+import { VehiclesList } from "./VehiclesList";
+import { ClientInfo } from "./ClientInfo";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { AppointmentWithRelations } from "@/types/appointment";
-import { ClientInfo } from "./ClientInfo";
-import { VehiclesList } from "./VehiclesList";
-import { AppointmentsList } from "./AppointmentsList";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 
 interface Client {
   id: string;
@@ -14,19 +17,24 @@ interface Client {
   phone: string;
   address: string;
   notes: string;
+  created_at: string;
 }
 
 interface Vehicle {
   id: string;
+  client_id: string;
   make: string;
   model: string;
   year: number;
   license_plate: string;
+  vin: string;
+  color: string;
+  notes: string;
 }
 
 interface ClientDetailsProps {
   client: Client;
-  vehicles: Vehicle[] | undefined;
+  vehicles?: Vehicle[];
   onEditClient: () => void;
   onAddVehicle: () => void;
   onAddService: () => void;
@@ -34,76 +42,114 @@ interface ClientDetailsProps {
 
 export const ClientDetails = ({
   client,
-  vehicles,
+  vehicles = [],
   onEditClient,
   onAddVehicle,
   onAddService,
 }: ClientDetailsProps) => {
-  const { data: appointments } = useQuery({
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+
+  const { data: appointments, isLoading: isLoadingAppointments } = useQuery({
     queryKey: ["client-appointments", client.id],
     queryFn: async () => {
-      const { data: appointmentsData, error: appointmentsError } = await supabase
+      const today = new Date();
+      const { data: upcomingData, error: upcomingError } = await supabase
         .from("appointments")
         .select(`
           *,
           client:clients(*),
-          job_tickets:appointment_job_tickets(
-            job_ticket:job_tickets(
-              *,
-              vehicle:vehicles(*)
-            )
-          )
+          vehicle:vehicles(*),
+          job_tickets:job_tickets(*)
         `)
         .eq("client_id", client.id)
+        .gte("start_time", today.toISOString())
         .order("start_time", { ascending: true });
 
-      if (appointmentsError) throw appointmentsError;
+      if (upcomingError) throw upcomingError;
 
-      const formattedAppointments = appointmentsData.map(appointment => ({
-        ...appointment,
-        job_tickets: appointment.job_tickets.map((t: any) => t.job_ticket).filter(Boolean)
-      })) as AppointmentWithRelations[];
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(today.getDate() - 30);
 
-      return formattedAppointments;
-    }
+      const { data: previousData, error: previousError } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          client:clients(*),
+          vehicle:vehicles(*),
+          job_tickets:job_tickets(*)
+        `)
+        .eq("client_id", client.id)
+        .lt("start_time", today.toISOString())
+        .gte("start_time", thirtyDaysAgo.toISOString())
+        .order("start_time", { ascending: false });
+
+      if (previousError) throw previousError;
+
+      return {
+        upcoming: upcomingData || [],
+        previous: previousData || []
+      };
+    },
   });
 
-  const now = new Date();
-  const upcomingAppointments = appointments?.filter(
-    app => new Date(app.start_time) >= now
-  ) || [];
-  const previousAppointments = appointments?.filter(
-    app => new Date(app.start_time) < now
-  ) || [];
+  const { data: jobTickets } = useQuery({
+    queryKey: ["client-job-tickets", client.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("job_tickets")
+        .select("*")
+        .eq("client_id", client.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const upcomingAppointments = useMemo(() => appointments?.upcoming || [], [appointments]);
+  const previousAppointments = useMemo(() => appointments?.previous || [], [appointments]);
 
   return (
-    <div className="col-span-2 space-y-6">
-      <ClientInfo
-        firstName={client.first_name}
-        lastName={client.last_name}
-        email={client.email}
-        phone={client.phone}
-        address={client.address}
-        notes={client.notes}
-        onEditClient={onEditClient}
-      />
+    <>
+      <div className="col-span-2 space-y-6">
+        <ClientInfo client={client} onEdit={onEditClient} />
 
-      <VehiclesList 
-        vehicles={vehicles}
-        onAddVehicle={onAddVehicle}
-      />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <VehiclesList 
+            vehicles={vehicles} 
+            onAddVehicle={onAddVehicle}
+          />
 
-      <AppointmentsList
-        title="Upcoming Appointments"
-        appointments={upcomingAppointments}
-        showAddButton={true}
-        onAddService={onAddService}
-      />
+          <AppointmentsList
+            title="Upcoming Appointments"
+            appointments={upcomingAppointments}
+            showAddButton={true}
+            onAddService={() => setShowAppointmentForm(true)}
+          />
 
-      <AppointmentsList
-        title="Previous Appointments"
-        appointments={previousAppointments}
-      />
-    </div>
+          {previousAppointments.length > 0 && (
+            <AppointmentsList
+              title="Previous Appointments"
+              appointments={previousAppointments}
+            />
+          )}
+        </div>
+      </div>
+
+      <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Appointment</DialogTitle>
+          </DialogHeader>
+          <AppointmentForm
+            initialData={null}
+            selectedDate={null}
+            onClose={() => setShowAppointmentForm(false)}
+            preselectedClientId={client.id}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
