@@ -1,19 +1,10 @@
 
-import { Mail, Phone, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { ClientCard } from "./ClientCard";
+import { ClientListHeader } from "./ClientListHeader";
+import { sortClients, SortField, SortDirection } from "./utils/sortingUtils";
 
 interface Client {
   id: string;
@@ -33,9 +24,6 @@ interface ClientListProps {
   onSearchChange: (value: string) => void;
   onSelectClient: (client: Client) => void;
 }
-
-type SortField = "first_name" | "last_name" | "created_at";
-type SortDirection = "asc" | "desc";
 
 export const ClientList = ({
   clients,
@@ -84,22 +72,7 @@ export const ClientList = ({
   });
 
   // Sort filtered clients
-  const sortedClients = filteredClients?.sort((a, b) => {
-    if (sortField === "first_name") {
-      return sortDirection === "asc" 
-        ? a.first_name.localeCompare(b.first_name)
-        : b.first_name.localeCompare(a.first_name);
-    }
-    if (sortField === "last_name") {
-      return sortDirection === "asc" 
-        ? a.last_name.localeCompare(b.last_name)
-        : b.last_name.localeCompare(a.last_name);
-    }
-    // Default: sort by created_at
-    return sortDirection === "asc" 
-      ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  const sortedClients = sortClients(filteredClients, sortField, sortDirection);
 
   // Toggle sort direction or change sort field
   const handleSort = (field: SortField) => {
@@ -123,86 +96,27 @@ export const ClientList = ({
     }
   }, [clients, selectedClient, onSelectClient]);
 
-  // Get the sort direction icon for a field
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
-    return sortDirection === "asc" 
-      ? <ChevronUp className="h-4 w-4 text-primary" />
-      : <ChevronDown className="h-4 w-4 text-primary" />;
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-148px)]">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-gray-900">Client List</h2>
-      </div>
-      
-      <div className="p-4 border-b border-gray-200">
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search clients or vehicle registrations..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="flex flex-col space-y-2">
-          <p className="text-sm text-gray-500">Sort by:</p>
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="h-8 px-3 text-xs"
-              onClick={() => handleSort("first_name")}
-            >
-              First Name {getSortIcon("first_name")}
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="h-8 px-3 text-xs"
-              onClick={() => handleSort("last_name")}
-            >
-              Last Name {getSortIcon("last_name")}
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="h-8 px-3 text-xs"
-              onClick={() => handleSort("created_at")}
-            >
-              Date Added {getSortIcon("created_at")}
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ClientListHeader 
+        searchTerm={searchTerm}
+        onSearchChange={onSearchChange}
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+      />
       
       <div className="divide-y divide-gray-200 overflow-y-auto h-[calc(100vh-284px)]">
         {isLoading ? (
           <div className="p-4 text-center text-gray-500">Loading...</div>
         ) : sortedClients && sortedClients.length > 0 ? (
           sortedClients.map((client) => (
-            <div
+            <ClientCard
               key={client.id}
-              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                selectedClient?.id === client.id ? "bg-primary/5 border-l-4 border-primary -ml-[4px]" : ""
-              }`}
+              client={client}
+              isSelected={selectedClient?.id === client.id}
               onClick={() => onSelectClient(client)}
-            >
-              <h3 className="font-medium text-gray-900">
-                {client.first_name} {client.last_name}
-              </h3>
-              <div className="mt-1 flex items-center text-sm text-gray-500">
-                <Mail className="mr-2 h-4 w-4" />
-                {client.email || "No email"}
-              </div>
-              <div className="mt-1 flex items-center text-sm text-gray-500">
-                <Phone className="mr-2 h-4 w-4" />
-                {client.phone || "No phone"}
-              </div>
-            </div>
+            />
           ))
         ) : (
           <div className="p-4 text-center text-gray-500">
