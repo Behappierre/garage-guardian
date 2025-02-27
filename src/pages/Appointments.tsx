@@ -16,6 +16,7 @@ const Appointments = () => {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
 
   const { data: appointments, isLoading } = useAppointments();
 
@@ -46,11 +47,17 @@ const Appointments = () => {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center">
               <div className="bg-gray-100 rounded-md p-0.5 flex">
-                <button className="flex items-center px-3 py-1.5 gap-1.5 rounded bg-white shadow-sm">
+                <button 
+                  className={`flex items-center px-3 py-1.5 gap-1.5 rounded ${viewMode === "calendar" ? "bg-white shadow-sm" : "text-gray-600"}`}
+                  onClick={() => setViewMode("calendar")}
+                >
                   <CalendarIcon className="h-4 w-4 text-gray-600" />
                   <span className="text-sm">Calendar</span>
                 </button>
-                <button className="flex items-center px-3 py-1.5 gap-1.5 rounded text-gray-600">
+                <button 
+                  className={`flex items-center px-3 py-1.5 gap-1.5 rounded ${viewMode === "list" ? "bg-white shadow-sm" : "text-gray-600"}`}
+                  onClick={() => setViewMode("list")}
+                >
                   <List className="h-4 w-4" />
                   <span className="text-sm">List</span>
                 </button>
@@ -103,15 +110,13 @@ const Appointments = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-sm">
-          <TabsContent value="calendar" className="m-0 p-0">
+          {viewMode === "calendar" ? (
             <AppointmentCalendar
               appointments={appointments || []}
               onDateSelect={handleDateSelect}
               onEventClick={handleEventClick}
             />
-          </TabsContent>
-
-          <TabsContent value="list" className="m-0 p-0">
+          ) : (
             <AppointmentList 
               appointments={appointments || []}
               onSelectAppointment={(appointment) => {
@@ -121,7 +126,7 @@ const Appointments = () => {
               onTicketClick={handleTicketClick}
               isLoading={isLoading}
             />
-          </TabsContent>
+          )}
         </div>
 
         <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
