@@ -30,7 +30,7 @@ const Dashboard = () => {
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar isCollapsed={isCollapsed} onCollapse={setIsCollapsed} />
       <main className={cn(
-        "flex-1 transition-all duration-300",
+        "flex-1 transition-all duration-300 w-full",
         isCollapsed ? "ml-16" : "ml-64"
       )}>
         <div className="h-full w-full px-6 py-8">
