@@ -30,6 +30,50 @@ serve(async (req) => {
     async function processMessage(message: string) {
       const lowerMessage = message.toLowerCase();
 
+      // Job Tickets in Progress Query
+      if (lowerMessage.includes('job tickets in progress') || lowerMessage.includes('show all job tickets in progress')) {
+        const { data: tickets, error } = await supabaseClient
+          .from('job_tickets')
+          .select(`
+            *,
+            client:clients(
+              first_name,
+              last_name
+            ),
+            vehicle:vehicles(
+              year,
+              make,
+              model,
+              license_plate
+            ),
+            assigned_technician:profiles(
+              first_name,
+              last_name
+            )
+          `)
+          .eq('status', 'in_progress')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Job tickets query error:', error);
+          throw error;
+        }
+
+        if (!tickets?.length) {
+          return 'No job tickets currently in progress.';
+        }
+
+        return `Job tickets in progress:\n\n${tickets.map(ticket => (
+          `Ticket: ${ticket.ticket_number}\n` +
+          `Client: ${ticket.client ? `${ticket.client.first_name} ${ticket.client.last_name}` : 'No client assigned'}\n` +
+          `Vehicle: ${ticket.vehicle ? `${ticket.vehicle.year} ${ticket.vehicle.make} ${ticket.vehicle.model}` : 'No vehicle assigned'}${ticket.vehicle?.license_plate ? ` (${ticket.vehicle.license_plate})` : ''}\n` +
+          `Technician: ${ticket.assigned_technician ? `${ticket.assigned_technician.first_name} ${ticket.assigned_technician.last_name}` : 'Unassigned'}\n` +
+          `Priority: ${ticket.priority}\n` +
+          `Description: ${ticket.description}\n` +
+          '---'
+        )).join('\n\n')}`;
+      }
+
       // Client Vehicle Query
       const clientVehicleMatch = message.match(/vehicles owned by (.+)/i);
       if (clientVehicleMatch) {
