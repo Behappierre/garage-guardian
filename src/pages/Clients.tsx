@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,10 +24,14 @@ interface Client {
 
 interface Vehicle {
   id: string;
+  client_id: string;
   make: string;
   model: string;
   year: number;
   license_plate: string;
+  vin: string;
+  color: string;
+  notes: string;
 }
 
 const Clients = () => {

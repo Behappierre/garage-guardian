@@ -4,10 +4,14 @@ import { Button } from "@/components/ui/button";
 
 interface Vehicle {
   id: string;
+  client_id: string;
   make: string;
   model: string;
   year: number;
   license_plate: string;
+  vin: string;
+  color: string;
+  notes: string;
 }
 
 interface VehiclesListProps {

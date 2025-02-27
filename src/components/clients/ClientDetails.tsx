@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import type { AppointmentWithRelations } from "@/types/appointment";
 
 interface Client {
   id: string;
@@ -85,9 +86,19 @@ export const ClientDetails = ({
 
       if (previousError) throw previousError;
 
+      // Process the job_tickets to ensure it's always an array
+      const processAppointments = (appointments: any[]) => {
+        return appointments.map(appointment => ({
+          ...appointment,
+          job_tickets: Array.isArray(appointment.job_tickets) 
+            ? appointment.job_tickets 
+            : appointment.job_tickets ? [appointment.job_tickets] : []
+        })) as AppointmentWithRelations[];
+      };
+
       return {
-        upcoming: upcomingData || [],
-        previous: previousData || []
+        upcoming: processAppointments(upcomingData || []),
+        previous: processAppointments(previousData || [])
       };
     },
   });
