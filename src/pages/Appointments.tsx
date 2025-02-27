@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar as CalendarIcon, List, Filter } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
@@ -71,26 +71,19 @@ const Appointments = () => {
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex gap-2 items-center">
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded-full bg-orange-500"></span>
-                    <span className="text-gray-600">Bay 1</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded-full bg-blue-500"></span>
-                    <span className="text-gray-600">Bay 2</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-3 w-3 rounded-full bg-purple-500"></span>
-                    <span className="text-gray-600">MOT</span>
-                  </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-orange-500"></span>
+                  <span className="text-gray-600">Bay 1</span>
                 </div>
-                
-                <Button variant="outline" size="sm" className="ml-2 gap-2">
-                  <Filter className="h-4 w-4" />
-                  <span className="hidden sm:inline">Filter</span>
-                </Button>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                  <span className="text-gray-600">Bay 2</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                  <span className="text-gray-600">MOT</span>
+                </div>
               </div>
             </div>
 
