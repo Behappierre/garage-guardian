@@ -8,9 +8,12 @@ import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { Card, CardContent } from "@/components/ui/card";
 import { CalendarPlus, Wrench, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 
 const Dashboard = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const isDashboardRoot = location.pathname === "/dashboard";
@@ -45,7 +48,7 @@ const Dashboard = () => {
                     <div className="space-y-3">
                       <div 
                         className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer flex items-start"
-                        onClick={() => handleQuickAction("/dashboard/appointments")}
+                        onClick={() => setShowAppointmentForm(true)}
                       >
                         <div className="flex-1">
                           <h3 className="text-sm font-medium text-gray-800">Create New Appointment</h3>
@@ -85,6 +88,20 @@ const Dashboard = () => {
           )}
         </div>
       </main>
+
+      {/* Appointment Form Dialog */}
+      <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Appointment</DialogTitle>
+          </DialogHeader>
+          <AppointmentForm
+            initialData={null}
+            selectedDate={null}
+            onClose={() => setShowAppointmentForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
