@@ -200,7 +200,7 @@ export const AppointmentCalendar = ({
             Today
           </Button>
         </div>
-        <h2 className="fc-toolbar-title text-xl font-semibold">{calendarTitle}</h2>
+        <h2 className="fc-toolbar-title text-xl font-medium text-[#111827]">{calendarTitle}</h2>
         <div className="flex items-center gap-2">
           <Select value={selectedBay} onValueChange={(value: BayType) => setSelectedBay(value)}>
             <SelectTrigger className="w-[120px] h-9 text-sm">
@@ -403,6 +403,15 @@ export const AppointmentCalendar = ({
             /* Format column headers to show only DD.MM */
             .fc-col-header a {
               visibility: hidden;
+            }
+
+            /* Calendar title styling to match day/date headers */
+            .fc-toolbar-title {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              font-size: 1.125rem;
+              font-weight: 600;
+              color: #1f2937;
+              letter-spacing: -0.01em;
             }
           `}
         </style>
