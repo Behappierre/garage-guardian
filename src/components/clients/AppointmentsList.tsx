@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { AppointmentItem } from "./AppointmentItem";
+import { useNavigate } from "react-router-dom";
 
 interface AppointmentsListProps {
   title: string;
@@ -21,6 +22,16 @@ export const AppointmentsList = ({
   onAddService
 }: AppointmentsListProps) => {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const navigate = useNavigate();
+
+  const handleAppointmentClick = (appointment: AppointmentWithRelations) => {
+    // Extract the date from the appointment's start_time
+    const appointmentDate = new Date(appointment.start_time);
+    const dateStr = appointmentDate.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    
+    // Navigate to appointments page with the date in URL params and specify day view
+    navigate(`/dashboard/appointments?date=${dateStr}&view=timeGridDay`);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
@@ -36,7 +47,13 @@ export const AppointmentsList = ({
       <div className="space-y-4">
         {appointments.length > 0 ? (
           appointments.map((appointment) => (
-            <AppointmentItem key={appointment.id} appointment={appointment} />
+            <div 
+              key={appointment.id}
+              onClick={() => handleAppointmentClick(appointment)}
+              className="cursor-pointer"
+            >
+              <AppointmentItem appointment={appointment} />
+            </div>
           ))
         ) : (
           <p className="text-gray-500">No {title.toLowerCase()}</p>

@@ -1,23 +1,45 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAppointments } from "@/hooks/use-appointments";
 import type { AppointmentWithRelations } from "@/types/appointment";
 
 const Appointments = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
+  const [calendarViewType, setCalendarViewType] = useState<"dayGridMonth" | "timeGridWeek" | "timeGridDay">("timeGridWeek");
 
   const { data: appointments, isLoading } = useAppointments();
+
+  // Parse URL parameters on component mount and when URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const dateParam = params.get('date');
+    const viewParam = params.get('view') as "dayGridMonth" | "timeGridWeek" | "timeGridDay" | null;
+    
+    if (dateParam) {
+      setSelectedDate(new Date(dateParam));
+    }
+    
+    if (viewParam) {
+      setCalendarViewType(viewParam);
+    }
+    
+    // Always show calendar when date is specified
+    if (dateParam) {
+      setViewMode("calendar");
+    }
+  }, [location.search]);
 
   const handleDateSelect = (arg: { start: Date; end: Date }) => {
     setSelectedDate(arg.start);
@@ -100,6 +122,8 @@ const Appointments = () => {
               appointments={appointments || []}
               onDateSelect={handleDateSelect}
               onEventClick={handleEventClick}
+              initialDate={selectedDate}
+              initialView={calendarViewType}
             />
           ) : (
             <AppointmentList 

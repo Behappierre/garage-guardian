@@ -8,7 +8,7 @@ interface AppointmentItemProps {
 
 export const AppointmentItem = ({ appointment }: AppointmentItemProps) => {
   return (
-    <div className="border rounded-lg p-4">
+    <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
       <div className="flex justify-between items-start">
         <div>
           <h4 className="font-medium">{appointment.service_type}</h4>

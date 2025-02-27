@@ -24,18 +24,37 @@ interface AppointmentCalendarProps {
   appointments: AppointmentWithBay[];
   onDateSelect: (arg: { start: Date; end: Date }) => void;
   onEventClick: (appointment: AppointmentWithBay) => void;
+  initialDate?: Date | null;
+  initialView?: CalendarViewType;
 }
 
 export const AppointmentCalendar = ({
   appointments,
   onDateSelect,
   onEventClick,
+  initialDate = null,
+  initialView = 'timeGridWeek'
 }: AppointmentCalendarProps) => {
   const [selectedBay, setSelectedBay] = useState<BayType>('all');
-  const [currentView, setCurrentView] = useState<CalendarViewType>('timeGridWeek');
+  const [currentView, setCurrentView] = useState<CalendarViewType>(initialView);
   const [calendarTitle, setCalendarTitle] = useState('');
   const calendarRef = useRef<FullCalendar | null>(null);
   const queryClient = useQueryClient();
+
+  // Update the calendar when initialDate or initialView changes
+  useEffect(() => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      if (initialDate) {
+        calendarApi.gotoDate(initialDate);
+      }
+      if (initialView) {
+        calendarApi.changeView(initialView);
+        setCurrentView(initialView);
+      }
+      setCalendarTitle(calendarApi.view.title);
+    }
+  }, [initialDate, initialView]);
 
   const updateAppointmentMutation = useMutation({
     mutationFn: async ({ id, start_time, end_time }: { id: string, start_time: string, end_time: string }) => {
@@ -418,7 +437,8 @@ export const AppointmentCalendar = ({
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          initialView={initialView}
+          initialDate={initialDate || undefined}
           headerToolbar={false}
           height="auto"
           events={calendarEvents}
