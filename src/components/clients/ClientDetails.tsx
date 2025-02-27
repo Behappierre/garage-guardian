@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useState } from "react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import type { AppointmentWithRelations } from "@/types/appointment";
+import { TabsContent, Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Client {
   id: string;
@@ -49,6 +50,7 @@ export const ClientDetails = ({
   onAddService,
 }: ClientDetailsProps) => {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
 
   const { data: appointments, isLoading: isLoadingAppointments } = useQuery({
     queryKey: ["client-appointments", client.id],
@@ -123,29 +125,53 @@ export const ClientDetails = ({
 
   return (
     <>
-      <div className="col-span-2 space-y-6">
+      <div className="col-span-2 h-[calc(100vh-148px)] overflow-auto">
         <ClientInfo client={client} onEdit={onEditClient} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <VehiclesList 
-            vehicles={vehicles} 
-            onAddVehicle={onAddVehicle}
-          />
-
-          <AppointmentsList
-            title="Upcoming Appointments"
-            appointments={upcomingAppointments}
-            showAddButton={true}
-            onAddService={() => setShowAppointmentForm(true)}
-          />
-
-          {previousAppointments.length > 0 && (
-            <AppointmentsList
-              title="Previous Appointments"
-              appointments={previousAppointments}
+        <Tabs 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          className="mt-6"
+        >
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="vehicles">
+              Vehicles ({vehicles?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="appointments">
+              Appointments ({upcomingAppointments.length})
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="details" className="mt-4 space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <ClientInfo client={client} onEdit={onEditClient} />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="vehicles" className="mt-4">
+            <VehiclesList 
+              vehicles={vehicles} 
+              onAddVehicle={onAddVehicle}
             />
-          )}
-        </div>
+          </TabsContent>
+          
+          <TabsContent value="appointments" className="mt-4 space-y-6">
+            <AppointmentsList
+              title="Upcoming Appointments"
+              appointments={upcomingAppointments}
+              showAddButton={true}
+              onAddService={() => setShowAppointmentForm(true)}
+            />
+
+            {previousAppointments.length > 0 && (
+              <AppointmentsList
+                title="Previous Appointments"
+                appointments={previousAppointments}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>

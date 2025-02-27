@@ -1,10 +1,19 @@
 
-import { Mail, Phone } from "lucide-react";
+import { Mail, Phone, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 interface Client {
   id: string;
@@ -25,6 +34,9 @@ interface ClientListProps {
   onSelectClient: (client: Client) => void;
 }
 
+type SortField = "first_name" | "last_name" | "created_at";
+type SortDirection = "asc" | "desc";
+
 export const ClientList = ({
   clients,
   isLoading,
@@ -33,6 +45,9 @@ export const ClientList = ({
   onSearchChange,
   onSelectClient,
 }: ClientListProps) => {
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
   // Fetch all vehicles for registration search
   const { data: vehicles } = useQuery({
     queryKey: ["all-vehicles"],
@@ -53,7 +68,7 @@ export const ClientList = ({
       ).map(v => v.client_id)
     : [];
 
-  // Memoize filtered clients to prevent unnecessary re-renders
+  // Filter clients based on search term
   const filteredClients = clients?.filter(client => {
     const searchLower = searchTerm.toLowerCase();
     
@@ -68,6 +83,36 @@ export const ClientList = ({
     );
   });
 
+  // Sort filtered clients
+  const sortedClients = filteredClients?.sort((a, b) => {
+    if (sortField === "first_name") {
+      return sortDirection === "asc" 
+        ? a.first_name.localeCompare(b.first_name)
+        : b.first_name.localeCompare(a.first_name);
+    }
+    if (sortField === "last_name") {
+      return sortDirection === "asc" 
+        ? a.last_name.localeCompare(b.last_name)
+        : b.last_name.localeCompare(a.last_name);
+    }
+    // Default: sort by created_at
+    return sortDirection === "asc" 
+      ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  // Toggle sort direction or change sort field
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
   // Ensure selected client stays selected after updates
   useEffect(() => {
     if (selectedClient && clients) {
@@ -78,31 +123,71 @@ export const ClientList = ({
     }
   }, [clients, selectedClient, onSelectClient]);
 
+  // Get the sort direction icon for a field
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+    return sortDirection === "asc" 
+      ? <ChevronUp className="h-4 w-4 text-primary" />
+      : <ChevronDown className="h-4 w-4 text-primary" />;
+  };
+
   return (
-    <div className="col-span-1 bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-148px)]">
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden h-[calc(100vh-148px)]">
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-900">Client List</h2>
       </div>
+      
       <div className="p-4 border-b border-gray-200">
-        <div className="relative">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Search clients..."
+            placeholder="Search clients or vehicle registrations..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
+        
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-500">Sort by:</p>
+          <div className="flex space-x-2">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => handleSort("first_name")}
+            >
+              First Name {getSortIcon("first_name")}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => handleSort("last_name")}
+            >
+              Last Name {getSortIcon("last_name")}
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => handleSort("created_at")}
+            >
+              Date Added {getSortIcon("created_at")}
+            </Button>
+          </div>
+        </div>
       </div>
+      
       <div className="divide-y divide-gray-200 overflow-y-auto h-[calc(100vh-264px)]">
         {isLoading ? (
           <div className="p-4 text-center text-gray-500">Loading...</div>
-        ) : filteredClients && filteredClients.length > 0 ? (
-          filteredClients.map((client) => (
+        ) : sortedClients && sortedClients.length > 0 ? (
+          sortedClients.map((client) => (
             <div
               key={client.id}
               className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                selectedClient?.id === client.id ? "bg-primary/5" : ""
+                selectedClient?.id === client.id ? "bg-primary/5 border-l-4 border-primary" : ""
               }`}
               onClick={() => onSelectClient(client)}
             >

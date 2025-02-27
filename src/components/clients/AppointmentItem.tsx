@@ -1,39 +1,82 @@
 
 import { format } from "date-fns";
 import type { AppointmentWithRelations } from "@/types/appointment";
+import { Calendar, Clock, Car } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface AppointmentItemProps {
   appointment: AppointmentWithRelations;
 }
 
 export const AppointmentItem = ({ appointment }: AppointmentItemProps) => {
+  // Get the appropriate status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 hover:bg-green-200';
+      case 'confirmed':
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 hover:bg-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-200';
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, "MMM d, yyyy");
+  };
+
+  // Format time for display
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, "h:mm a");
+  };
+
+  // Get vehicle details if available
+  const vehicle = appointment.vehicle || 
+    (appointment.job_tickets && appointment.job_tickets[0]?.vehicle);
+
   return (
-    <div className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
-      <div className="flex justify-between items-start">
-        <div>
-          <h4 className="font-medium">{appointment.service_type}</h4>
-          <div className="text-sm text-gray-500 space-y-1">
-            <p>Start: {format(new Date(appointment.start_time), "MMM d, yyyy h:mm a")}</p>
-            <p>End: {format(new Date(appointment.end_time), "MMM d, yyyy h:mm a")}</p>
-            {appointment.job_tickets?.[0]?.vehicle && (
-              <p className="text-sm text-gray-600">
-                Vehicle: {appointment.job_tickets[0].vehicle.year} {appointment.job_tickets[0].vehicle.make} {appointment.job_tickets[0].vehicle.model}
-                {appointment.job_tickets[0].vehicle.license_plate && (
-                  <span className="ml-1">({appointment.job_tickets[0].vehicle.license_plate})</span>
-                )}
-              </p>
-            )}
-            {appointment.notes && <p className="text-gray-600">{appointment.notes}</p>}
+    <div className="border rounded-lg overflow-hidden hover:shadow-md transition-all">
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+        <h4 className="font-medium text-gray-900">{appointment.service_type}</h4>
+        <Badge className={`${getStatusColor(appointment.status)}`}>
+          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+        </Badge>
+      </div>
+      
+      <div className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-sm text-gray-700">
+            <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+            {formatDate(appointment.start_time)}
+          </div>
+          <div className="flex items-center text-sm text-gray-700">
+            <Clock className="h-4 w-4 text-gray-400 mr-2" />
+            {formatTime(appointment.start_time)} - {formatTime(appointment.end_time)}
           </div>
         </div>
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-          ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-            appointment.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-            appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-            'bg-gray-100 text-gray-800'}`}
-        >
-          {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-        </span>
+        
+        {vehicle && (
+          <div className="flex items-center text-sm text-gray-700">
+            <Car className="h-4 w-4 text-gray-400 mr-2" />
+            <span>
+              {vehicle.year} {vehicle.make} {vehicle.model}
+              {vehicle.license_plate && (
+                <span className="ml-1 text-gray-500">({vehicle.license_plate})</span>
+              )}
+            </span>
+          </div>
+        )}
+        
+        {appointment.notes && (
+          <div className="text-sm text-gray-600 pt-2 border-t border-gray-100 mt-2">
+            {appointment.notes}
+          </div>
+        )}
       </div>
     </div>
   );

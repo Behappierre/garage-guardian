@@ -1,6 +1,7 @@
 
-import { Car } from "lucide-react";
+import { Car, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface Vehicle {
   id: string;
@@ -21,27 +22,67 @@ interface VehiclesListProps {
 
 export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white rounded-lg shadow-sm">
+      <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">Vehicles</h3>
-        <Button variant="outline" size="sm" onClick={onAddVehicle}>
-          <Car className="mr-2 h-4 w-4" />
+        <Button variant="outline" size="sm" onClick={onAddVehicle} className="gap-1">
+          <Plus className="h-4 w-4" />
           Add Vehicle
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        {vehicles?.map((vehicle) => (
-          <div key={vehicle.id} className="border rounded-lg p-4">
-            <h4 className="font-medium">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </h4>
-            <p className="text-sm text-gray-500">
-              License: {vehicle.license_plate || "No plate"}
-            </p>
+      
+      <div className="p-6">
+        {vehicles && vehicles.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {vehicles.map((vehicle) => (
+              <div key={vehicle.id} className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 p-3 border-b border-gray-200 flex items-center">
+                  <Car className="h-5 w-5 text-gray-500 mr-2" />
+                  <h4 className="font-medium text-gray-900">
+                    {vehicle.year} {vehicle.make} {vehicle.model}
+                  </h4>
+                </div>
+                <div className="p-4 space-y-2">
+                  {vehicle.license_plate && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">License Plate:</span>
+                      <Badge variant="outline" className="font-mono">
+                        {vehicle.license_plate}
+                      </Badge>
+                    </div>
+                  )}
+                  {vehicle.vin && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">VIN:</span>
+                      <span className="text-sm font-mono">{vehicle.vin}</span>
+                    </div>
+                  )}
+                  {vehicle.color && (
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Color:</span>
+                      <span className="text-sm">{vehicle.color}</span>
+                    </div>
+                  )}
+                  {vehicle.notes && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <span className="text-sm text-gray-500 block mb-1">Notes:</span>
+                      <p className="text-sm text-gray-700">{vehicle.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-        {(!vehicles || vehicles.length === 0) && (
-          <div className="col-span-2 text-gray-500">No vehicles added</div>
+        ) : (
+          <div className="text-center py-8">
+            <Car className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-gray-500 mb-1">No vehicles added</h3>
+            <p className="text-sm text-gray-400 mb-4">Add a vehicle to track maintenance and services</p>
+            <Button variant="outline" size="sm" onClick={onAddVehicle}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Vehicle
+            </Button>
+          </div>
         )}
       </div>
     </div>

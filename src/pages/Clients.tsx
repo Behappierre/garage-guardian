@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { ClientDetails } from "@/components/clients/ClientDetails";
 import { ClientForm } from "@/components/forms/ClientForm";
 import { VehicleForm } from "@/components/forms/VehicleForm";
 import { ServiceForm } from "@/components/forms/ServiceForm";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Client {
   id: string;
@@ -35,6 +36,7 @@ interface Vehicle {
 }
 
 const Clients = () => {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
@@ -69,7 +71,19 @@ const Clients = () => {
         .eq("client_id", selectedClientId);
 
       if (error) throw error;
-      return data as Vehicle[];
+      
+      // Cast to Vehicle type and add default values for any missing properties
+      return (data || []).map(vehicle => ({
+        id: vehicle.id,
+        client_id: vehicle.client_id,
+        make: vehicle.make,
+        model: vehicle.model,
+        year: vehicle.year,
+        license_plate: vehicle.license_plate || "",
+        vin: vehicle.vin || "",
+        color: vehicle.color || "",
+        notes: vehicle.notes || ""
+      })) as Vehicle[];
     },
     enabled: !!selectedClientId,
   });
@@ -86,22 +100,50 @@ const Clients = () => {
     }
   };
 
-  const handleCloseClientDialog = () => {
+  const handleCloseClientDialog = (success = false) => {
     setShowClientDialog(false);
     setEditingClient(null);
     queryClient.invalidateQueries({ queryKey: ["clients"] });
-  };
-
-  const handleCloseVehicleDialog = () => {
-    setShowVehicleDialog(false);
-    if (selectedClientId) {
-      queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClientId] });
+    
+    if (success) {
+      toast({
+        title: editingClient ? "Client updated" : "Client added",
+        description: `Client has been successfully ${editingClient ? "updated" : "added"}.`,
+      });
     }
   };
 
-  const handleCloseServiceDialog = () => {
-    setShowServiceDialog(false);
+  const handleCloseVehicleDialog = (success = false) => {
+    setShowVehicleDialog(false);
+    if (selectedClientId) {
+      queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClientId] });
+      
+      if (success) {
+        toast({
+          title: "Vehicle added",
+          description: "Vehicle has been successfully added to client.",
+        });
+      }
+    }
   };
+
+  const handleCloseServiceDialog = (success = false) => {
+    setShowServiceDialog(false);
+    
+    if (success) {
+      toast({
+        title: "Appointment scheduled",
+        description: "The appointment has been successfully scheduled.",
+      });
+    }
+  };
+
+  // Auto-select first client when the page loads if none is selected
+  useEffect(() => {
+    if (!selectedClientId && clients && clients.length > 0) {
+      setSelectedClientId(clients[0].id);
+    }
+  }, [clients, selectedClientId]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -111,13 +153,13 @@ const Clients = () => {
             <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
             <p className="text-gray-500">Manage your client records and appointments</p>
           </div>
-          <Button onClick={handleAddClient}>
-            <UserPlus className="mr-2 h-4 w-4" />
+          <Button onClick={handleAddClient} className="gap-2">
+            <UserPlus className="h-4 w-4" />
             Add New Client
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ClientList
             clients={clients}
             isLoading={isLoading}
@@ -137,7 +179,9 @@ const Clients = () => {
             />
           ) : (
             <div className="col-span-2 bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
-              Select a client to view details
+              {clients && clients.length > 0 
+                ? "Select a client to view details" 
+                : "No clients available. Add a new client to get started."}
             </div>
           )}
         </div>
@@ -148,10 +192,10 @@ const Clients = () => {
             if (!open) handleCloseClientDialog();
           }}
         >
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[500px]">
             <ClientForm
               initialData={editingClient || undefined}
-              onClose={handleCloseClientDialog}
+              onClose={(success) => handleCloseClientDialog(success)}
             />
           </DialogContent>
         </Dialog>
@@ -162,11 +206,11 @@ const Clients = () => {
             if (!open) handleCloseVehicleDialog();
           }}
         >
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[500px]">
             {selectedClient && (
               <VehicleForm
                 clientId={selectedClient.id}
-                onClose={handleCloseVehicleDialog}
+                onClose={(success) => handleCloseVehicleDialog(success)}
               />
             )}
           </DialogContent>
@@ -182,7 +226,7 @@ const Clients = () => {
             {selectedClient && (
               <ServiceForm
                 clientId={selectedClient.id}
-                onClose={handleCloseServiceDialog}
+                onClose={(success) => handleCloseServiceDialog(success)}
                 vehicles={clientVehicles}
               />
             )}

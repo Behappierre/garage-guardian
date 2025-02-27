@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Calendar } from "lucide-react";
+import { Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
@@ -21,7 +21,6 @@ export const AppointmentsList = ({
   showAddButton = false,
   onAddService
 }: AppointmentsListProps) => {
-  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const navigate = useNavigate();
 
   const handleAppointmentClick = (appointment: AppointmentWithRelations) => {
@@ -34,29 +33,44 @@ export const AppointmentsList = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white rounded-lg shadow-sm">
+      <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
         <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        {showAddButton && (
-          <Button variant="outline" size="sm" onClick={onAddService}>
-            <Calendar className="mr-2 h-4 w-4" />
+        {showAddButton && onAddService && (
+          <Button variant="outline" size="sm" onClick={onAddService} className="gap-1">
+            <Plus className="h-4 w-4" />
             New Appointment
           </Button>
         )}
       </div>
-      <div className="space-y-4">
+      
+      <div className="p-6">
         {appointments.length > 0 ? (
-          appointments.map((appointment) => (
-            <div 
-              key={appointment.id}
-              onClick={() => handleAppointmentClick(appointment)}
-              className="cursor-pointer"
-            >
-              <AppointmentItem appointment={appointment} />
-            </div>
-          ))
+          <div className="space-y-4">
+            {appointments.map((appointment) => (
+              <div 
+                key={appointment.id}
+                onClick={() => handleAppointmentClick(appointment)}
+                className="cursor-pointer"
+              >
+                <AppointmentItem appointment={appointment} />
+              </div>
+            ))}
+          </div>
         ) : (
-          <p className="text-gray-500">No {title.toLowerCase()}</p>
+          <div className="text-center py-8">
+            <Calendar className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-gray-500 mb-1">No {title.toLowerCase()}</h3>
+            {showAddButton && onAddService && (
+              <>
+                <p className="text-sm text-gray-400 mb-4">Schedule a new appointment</p>
+                <Button variant="outline" size="sm" onClick={onAddService}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Appointment
+                </Button>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>
