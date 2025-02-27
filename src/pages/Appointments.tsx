@@ -57,24 +57,24 @@ const Appointments = () => {
   };
 
   return (
-    <div className="w-full h-full">
-      <main className="w-full h-full">
-        <PageHeader
-          title="Appointments"
-          description="Manage service appointments and schedules"
+    <div className="flex flex-col w-full h-full">
+      <PageHeader
+        title="Appointments"
+        description="Manage service appointments and schedules"
+      >
+        <PageActionButton
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => {
+            setSelectedAppointment(null);
+            setSelectedDate(null);
+            setShowAppointmentForm(true);
+          }}
         >
-          <PageActionButton
-            icon={<Plus className="h-4 w-4" />}
-            onClick={() => {
-              setSelectedAppointment(null);
-              setSelectedDate(null);
-              setShowAppointmentForm(true);
-            }}
-          >
-            New Appointment
-          </PageActionButton>
-        </PageHeader>
+          New Appointment
+        </PageActionButton>
+      </PageHeader>
 
+      <div className="px-8 pb-8">
         <div className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center">
@@ -134,26 +134,26 @@ const Appointments = () => {
             />
           )}
         </div>
+      </div>
 
-        <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedAppointment ? "Edit Appointment" : "Create New Appointment"}
-              </DialogTitle>
-            </DialogHeader>
-            <AppointmentForm
-              initialData={selectedAppointment}
-              selectedDate={selectedDate}
-              onClose={() => {
-                setShowAppointmentForm(false);
-                setSelectedAppointment(null);
-                setSelectedDate(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      </main>
+      <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedAppointment ? "Edit Appointment" : "Create New Appointment"}
+            </DialogTitle>
+          </DialogHeader>
+          <AppointmentForm
+            initialData={selectedAppointment}
+            selectedDate={selectedDate}
+            onClose={() => {
+              setShowAppointmentForm(false);
+              setSelectedAppointment(null);
+              setSelectedDate(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

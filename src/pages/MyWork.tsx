@@ -45,13 +45,13 @@ const MyWork = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-8">
-        <PageHeader
-          title="My Work"
-          description="Manage your assigned job tickets"
-        />
+    <div className="flex flex-col w-full h-full">
+      <PageHeader
+        title="My Work"
+        description="Manage your assigned job tickets"
+      />
 
+      <div className="px-8 pb-8">
         <div className="grid grid-cols-5 gap-4">
           {statusColumns.map(column => (
             <StatusColumn

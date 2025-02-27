@@ -125,23 +125,23 @@ const JobTickets = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="p-8">
-        <PageHeader
-          title="Job Tickets"
-          description="Manage service job tickets"
+    <div className="flex flex-col w-full h-full">
+      <PageHeader
+        title="Job Tickets"
+        description="Manage service job tickets"
+      >
+        <PageActionButton
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => {
+            setSelectedTicket(null);
+            setShowTicketForm(true);
+          }}
         >
-          <PageActionButton
-            icon={<Plus className="h-4 w-4" />}
-            onClick={() => {
-              setSelectedTicket(null);
-              setShowTicketForm(true);
-            }}
-          >
-            New Job Ticket
-          </PageActionButton>
-        </PageHeader>
+          New Job Ticket
+        </PageActionButton>
+      </PageHeader>
 
+      <div className="px-8 pb-8">
         <JobTicketFilters
           nameFilter={nameFilter}
           dateFilter={dateFilter}
@@ -164,36 +164,36 @@ const JobTickets = () => {
             setShowTicketForm(true);
           }}
         />
+      </div>
 
-        <Dialog 
-          open={showTicketForm} 
-          onOpenChange={(open) => {
-            setShowTicketForm(open);
-            if (!open) {
+      <Dialog 
+        open={showTicketForm} 
+        onOpenChange={(open) => {
+          setShowTicketForm(open);
+          if (!open) {
+            setSelectedTicket(null);
+            // Clear the URL parameter if dialog is closed
+            window.history.pushState({}, '', '/dashboard/job-tickets');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
+            </DialogTitle>
+          </DialogHeader>
+          <JobTicketForm
+            initialData={selectedTicket}
+            onClose={() => {
+              setShowTicketForm(false);
               setSelectedTicket(null);
-              // Clear the URL parameter if dialog is closed
+              // Clear the URL parameter when closing the form
               window.history.pushState({}, '', '/dashboard/job-tickets');
-            }
-          }}
-        >
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
-              </DialogTitle>
-            </DialogHeader>
-            <JobTicketForm
-              initialData={selectedTicket}
-              onClose={() => {
-                setShowTicketForm(false);
-                setSelectedTicket(null);
-                // Clear the URL parameter when closing the form
-                window.history.pushState({}, '', '/dashboard/job-tickets');
-              }}
-            />
-          </DialogContent>
-        </Dialog>
-      </main>
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

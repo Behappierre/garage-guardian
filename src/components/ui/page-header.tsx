@@ -12,14 +12,19 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, children, className }: PageHeaderProps) {
   return (
-    <div className={cn("mb-6 flex flex-wrap items-center justify-between gap-4", className)}>
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
-        {description && (
-          <p className="mt-1 text-sm text-gray-600">{description}</p>
-        )}
+    <div className={cn(
+      "sticky top-0 z-10 bg-gray-50 py-6 px-8 border-b border-gray-200 mb-6",
+      className
+    )}>
+      <div className="flex flex-wrap items-center justify-between gap-4 max-w-[1400px] mx-auto">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          {description && (
+            <p className="mt-1 text-sm text-gray-600">{description}</p>
+          )}
+        </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }

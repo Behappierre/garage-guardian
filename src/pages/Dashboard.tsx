@@ -33,9 +33,9 @@ const Dashboard = () => {
         "flex-1 transition-all duration-300 w-full",
         isCollapsed ? "ml-16" : "ml-64"
       )}>
-        <div className="h-full w-full px-6 py-8">
-          {isDashboardRoot ? (
-            <div className="mx-auto w-full max-w-[1400px]">
+        {isDashboardRoot ? (
+          <div className="h-full w-full">
+            <div className="p-8">
               <WelcomeHeader />
               <DashboardMetrics />
               
@@ -87,10 +87,12 @@ const Dashboard = () => {
                 </Card>
               </div>
             </div>
-          ) : (
+          </div>
+        ) : (
+          <div className="h-full w-full">
             <Outlet />
-          )}
-        </div>
+          </div>
+        )}
       </main>
 
       {/* Appointment Form Dialog */}

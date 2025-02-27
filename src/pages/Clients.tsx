@@ -114,20 +114,20 @@ const Clients = () => {
   }, [clients, selectedClientId]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="p-8">
-        <PageHeader
-          title="Clients"
-          description="Manage your client records and appointments"
+    <div className="flex flex-col w-full h-full">
+      <PageHeader
+        title="Clients"
+        description="Manage your client records and appointments"
+      >
+        <PageActionButton
+          icon={<UserPlus className="h-4 w-4" />}
+          onClick={handleAddClient}
         >
-          <PageActionButton
-            icon={<UserPlus className="h-4 w-4" />}
-            onClick={handleAddClient}
-          >
-            Add New Client
-          </PageActionButton>
-        </PageHeader>
+          Add New Client
+        </PageActionButton>
+      </PageHeader>
 
+      <div className="px-8 pb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ClientList
             clients={clients}
@@ -154,54 +154,54 @@ const Clients = () => {
             </div>
           )}
         </div>
+      </div>
 
-        <Dialog 
-          open={showClientDialog} 
-          onOpenChange={(open) => {
-            if (!open) handleCloseClientDialog();
-          }}
-        >
-          <DialogContent className="sm:max-w-[500px]">
-            <ClientForm
-              initialData={editingClient || undefined}
-              onClose={handleCloseClientDialog}
+      <Dialog 
+        open={showClientDialog} 
+        onOpenChange={(open) => {
+          if (!open) handleCloseClientDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <ClientForm
+            initialData={editingClient || undefined}
+            onClose={handleCloseClientDialog}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog 
+        open={showVehicleDialog}
+        onOpenChange={(open) => {
+          if (!open) handleCloseVehicleDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          {selectedClient && (
+            <VehicleForm
+              clientId={selectedClient.id}
+              onClose={handleCloseVehicleDialog}
             />
-          </DialogContent>
-        </Dialog>
+          )}
+        </DialogContent>
+      </Dialog>
 
-        <Dialog 
-          open={showVehicleDialog}
-          onOpenChange={(open) => {
-            if (!open) handleCloseVehicleDialog();
-          }}
-        >
-          <DialogContent className="sm:max-w-[500px]">
-            {selectedClient && (
-              <VehicleForm
-                clientId={selectedClient.id}
-                onClose={handleCloseVehicleDialog}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog 
-          open={showServiceDialog}
-          onOpenChange={(open) => {
-            if (!open) handleCloseServiceDialog();
-          }}
-        >
-          <DialogContent className="sm:max-w-[600px]">
-            {selectedClient && (
-              <ServiceForm
-                clientId={selectedClient.id}
-                onClose={handleCloseServiceDialog}
-                vehicles={clientVehicles}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-      </main>
+      <Dialog 
+        open={showServiceDialog}
+        onOpenChange={(open) => {
+          if (!open) handleCloseServiceDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-[600px]">
+          {selectedClient && (
+            <ServiceForm
+              clientId={selectedClient.id}
+              onClose={handleCloseServiceDialog}
+              vehicles={clientVehicles}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

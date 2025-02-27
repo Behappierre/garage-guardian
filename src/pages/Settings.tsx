@@ -110,12 +110,12 @@ export default function Settings() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="flex flex-col w-full h-full">
       <PageHeader
         title="Settings"
       />
       
-      <div className="space-y-6">
+      <div className="px-8 pb-8 space-y-6">
         <div className="flex items-center justify-between p-4 border rounded-lg">
           <div className="space-y-0.5">
             <Label className="text-base">Dark Mode</Label>
