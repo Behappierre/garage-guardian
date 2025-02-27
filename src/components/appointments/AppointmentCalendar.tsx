@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppointmentWithRelations } from "@/types/appointment";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type BayType = 'all' | 'bay1' | 'bay2' | 'mot';
 type CalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
@@ -173,24 +175,30 @@ export const AppointmentCalendar = ({
     <div className="space-y-2">
       <div className="fc-toolbar-container flex items-center justify-between mb-4">
         <div className="flex items-center space-x-1">
-          <button 
-            className="fc-nav-button px-3 py-1.5 bg-white border border-gray-200 rounded-l-md text-gray-700 hover:bg-gray-50"
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-l-md rounded-r-none"
             onClick={handlePrev}
           >
-            <span className="fc-icon fc-icon-chevron-left text-lg">‹</span>
-          </button>
-          <button 
-            className="fc-nav-button px-3 py-1.5 bg-white border border-gray-200 rounded-r-md text-gray-700 hover:bg-gray-50"
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-l-none rounded-r-md"
             onClick={handleNext}
           >
-            <span className="fc-icon fc-icon-chevron-right text-lg">›</span>
-          </button>
-          <button 
-            className="fc-today-button ml-2 px-4 py-1.5 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="ml-2"
             onClick={handleToday}
           >
             Today
-          </button>
+          </Button>
         </div>
         <h2 className="fc-toolbar-title text-xl font-semibold">{calendarTitle}</h2>
         <div className="flex items-center gap-2">
@@ -205,25 +213,31 @@ export const AppointmentCalendar = ({
               <SelectItem value="mot">MOT</SelectItem>
             </SelectContent>
           </Select>
-          <div className="fc-view-buttons flex items-center space-x-1">
-            <button 
-              className={`px-4 py-1.5 border border-gray-200 rounded-l-md ${currentView === 'dayGridMonth' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+          <div className="fc-view-buttons flex items-center space-x-0">
+            <Button
+              variant={currentView === 'dayGridMonth' ? 'default' : 'outline'}
+              size="sm"
+              className="rounded-l-md rounded-r-none"
               onClick={() => handleViewChange('dayGridMonth')}
             >
               Month
-            </button>
-            <button 
-              className={`px-4 py-1.5 border border-gray-200 ${currentView === 'timeGridWeek' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            </Button>
+            <Button
+              variant={currentView === 'timeGridWeek' ? 'default' : 'outline'}
+              size="sm"
+              className="rounded-none border-x-0"
               onClick={() => handleViewChange('timeGridWeek')}
             >
               Week
-            </button>
-            <button 
-              className={`px-4 py-1.5 border border-gray-200 rounded-r-md ${currentView === 'timeGridDay' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+            </Button>
+            <Button
+              variant={currentView === 'timeGridDay' ? 'default' : 'outline'}
+              size="sm"
+              className="rounded-r-md rounded-l-none"
               onClick={() => handleViewChange('timeGridDay')}
             >
               Day
-            </button>
+            </Button>
           </div>
         </div>
       </div>
