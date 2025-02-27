@@ -320,6 +320,26 @@ export const AppointmentCalendar = ({
             .fc .fc-timegrid-slot-minor {
               border-top-style: dotted;
             }
+            
+            /* Custom column header styling to hide YYYY-MM-DD format */
+            .fc-col-header-cell-cushion {
+              visibility: hidden !important;
+            }
+            
+            /* Remove YYYY-MM-DD date headers in week view */
+            .fc-timegrid-axis-frame, .fc-timegrid-col-frame {
+              background-color: transparent !important;
+            }
+            
+            /* Hide default column headers in timegrid */
+            .fc-timegrid-col-frame .fc-timegrid-col-header {
+              visibility: visible;
+            }
+            
+            /* Format column headers to show only DD.MM */
+            .fc-col-header a {
+              visibility: hidden;
+            }
           `}
         </style>
         <FullCalendar
@@ -342,23 +362,76 @@ export const AppointmentCalendar = ({
           editable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
-          dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
+          // Override the dayHeaderFormat to use DD.MM format
+          dayHeaderFormat={{ day: '2-digit', month: '2-digit', omitCommas: true, separator: '.' }}
           viewDidMount={(view) => {
-            // Add custom date and day attributes to header cells
-            const headerCells = document.querySelectorAll('.fc-col-header-cell');
-            headerCells.forEach(cell => {
-              const date = cell.getAttribute('data-date');
-              if (date) {
-                const dateObj = new Date(date);
-                const day = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-                // Format as DD.MM without year
-                const formattedDate = dateObj.getDate().toString().padStart(2, '0') + '.' + 
-                                     (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                
-                cell.setAttribute('data-date', formattedDate);
-                cell.setAttribute('data-day', day);
+            // This function fixes header display for any view
+            setTimeout(() => {
+              // Get all column header cells
+              const headerCells = document.querySelectorAll('.fc-col-header-cell');
+              
+              headerCells.forEach(cell => {
+                const date = cell.getAttribute('data-date');
+                if (date) {
+                  const dateObj = new Date(date);
+                  const day = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                  
+                  // Format as DD.MM without year
+                  const formattedDate = dateObj.getDate().toString().padStart(2, '0') + '.' + 
+                                      (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                  
+                  // Manually override any existing data attributes
+                  cell.setAttribute('data-date', formattedDate);
+                  cell.setAttribute('data-day', day);
+                  
+                  // Also fix any displayed date content
+                  const headerContent = cell.querySelector('.fc-col-header-cell-cushion');
+                  if (headerContent) {
+                    // Hide the original content
+                    headerContent.style.visibility = 'hidden';
+                    
+                    // If a custom display element doesn't exist yet, create one
+                    let customDisplay = cell.querySelector('.custom-date-display');
+                    if (!customDisplay) {
+                      customDisplay = document.createElement('div');
+                      customDisplay.className = 'custom-date-display';
+                      cell.appendChild(customDisplay);
+                    }
+                    
+                    // Apply our custom DD.MM format
+                    customDisplay.innerHTML = `
+                      <div style="text-align: center;">
+                        <div style="font-size: 0.875rem; font-weight: 500; color: #94a3b8;">${day}</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #000;">${formattedDate}</div>
+                      </div>
+                    `;
+                  }
+                }
+              });
+              
+              // For week view, specifically handle the column headers
+              if (view.view.type === 'timeGridWeek') {
+                const colHeaders = document.querySelectorAll('.fc-timegrid-col-header');
+                colHeaders.forEach(header => {
+                  const headerContent = header.querySelector('.fc-timegrid-col-header-cushion');
+                  if (headerContent) {
+                    const dateText = headerContent.textContent || '';
+                    // If it contains a date in YYYY-MM-DD format, replace it
+                    if (dateText.match(/\d{4}-\d{2}-\d{2}/)) {
+                      try {
+                        const dateParts = dateText.split('-');
+                        if (dateParts.length === 3) {
+                          const newFormat = `${dateParts[2]}.${dateParts[1]}`;
+                          headerContent.textContent = newFormat;
+                        }
+                      } catch (e) {
+                        console.error('Error formatting date:', e);
+                      }
+                    }
+                  }
+                });
               }
-            });
+            }, 100); // Small delay to ensure DOM is fully rendered
           }}
         />
       </div>
