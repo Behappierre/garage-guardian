@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { JobTicket } from "@/types/job-ticket";
 import { StatusColumn } from "@/components/tickets/StatusColumn";
 import { useClockEvents } from "@/hooks/use-clock-events";
+import { PageHeader } from "@/components/ui/page-header";
 
 const statusColumns = [
   { key: 'received', label: 'To Do' },
@@ -46,10 +47,10 @@ const MyWork = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">My Work</h1>
-          <p className="text-gray-500">Manage your assigned job tickets</p>
-        </div>
+        <PageHeader
+          title="My Work"
+          description="Manage your assigned job tickets"
+        />
 
         <div className="grid grid-cols-5 gap-4">
           {statusColumns.map(column => (

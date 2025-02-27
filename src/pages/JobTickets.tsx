@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { JobTicketForm } from "@/components/tickets/JobTicketForm";
@@ -11,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useParams } from "react-router-dom";
 import type { TicketPriority } from "@/types/job-ticket";
+import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
@@ -127,39 +127,34 @@ const JobTickets = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="p-8">
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Job Tickets</h1>
-              <p className="text-gray-500">Manage service job tickets</p>
-            </div>
-            <Button
-              size="lg"
-              onClick={() => {
-                setSelectedTicket(null);
-                setShowTicketForm(true);
-              }}
-              className="gap-2"
-            >
-              <Plus className="h-5 w-5" />
-              New Job Ticket
-            </Button>
-          </div>
+        <PageHeader
+          title="Job Tickets"
+          description="Manage service job tickets"
+        >
+          <PageActionButton
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => {
+              setSelectedTicket(null);
+              setShowTicketForm(true);
+            }}
+          >
+            New Job Ticket
+          </PageActionButton>
+        </PageHeader>
 
-          <JobTicketFilters
-            nameFilter={nameFilter}
-            dateFilter={dateFilter}
-            registrationFilter={registrationFilter}
-            priorityFilter={priorityFilter}
-            sortField={sortField}
-            sortOrder={sortOrder}
-            onNameFilterChange={setNameFilter}
-            onDateFilterChange={setDateFilter}
-            onRegistrationFilterChange={setRegistrationFilter}
-            onPriorityFilterChange={setPriorityFilter}
-            onSortChange={toggleSort}
-          />
-        </div>
+        <JobTicketFilters
+          nameFilter={nameFilter}
+          dateFilter={dateFilter}
+          registrationFilter={registrationFilter}
+          priorityFilter={priorityFilter}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onNameFilterChange={setNameFilter}
+          onDateFilterChange={setDateFilter}
+          onRegistrationFilterChange={setRegistrationFilter}
+          onPriorityFilterChange={setPriorityFilter}
+          onSortChange={toggleSort}
+        />
 
         <JobTicketsList
           tickets={tickets || []}

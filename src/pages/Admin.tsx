@@ -16,6 +16,8 @@ import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { PasswordResetDialog } from "@/components/admin/PasswordResetDialog";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { User } from '@supabase/supabase-js';
+import { PageHeader, PageActionButton } from "@/components/ui/page-header";
+import { UserPlus } from "lucide-react";
 
 interface UserData {
   id: string;
@@ -123,12 +125,16 @@ const Admin = () => {
   if (!users || users.length === 0) {
     return (
       <div className="container mx-auto py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">User Management</h1>
-          <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+        <PageHeader 
+          title="User Management"
+        >
+          <PageActionButton 
+            icon={<UserPlus className="h-4 w-4" />}
+            onClick={() => setIsCreateUserDialogOpen(true)}
+          >
             Create User
-          </Button>
-        </div>
+          </PageActionButton>
+        </PageHeader>
         <div className="text-center py-8">No users found</div>
         <CreateUserDialog
           open={isCreateUserDialogOpen}
@@ -140,12 +146,16 @@ const Admin = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">User Management</h1>
-        <Button onClick={() => setIsCreateUserDialogOpen(true)}>
+      <PageHeader 
+        title="User Management"
+      >
+        <PageActionButton 
+          icon={<UserPlus className="h-4 w-4" />}
+          onClick={() => setIsCreateUserDialogOpen(true)}
+        >
           Create User
-        </Button>
-      </div>
+        </PageActionButton>
+      </PageHeader>
       <Table>
         <TableHeader>
           <TableRow>

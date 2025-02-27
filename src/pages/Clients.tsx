@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { UserPlus } from "lucide-react";
 import { ClientList } from "@/components/clients/ClientList";
@@ -11,6 +10,7 @@ import { ClientForm } from "@/components/forms/ClientForm";
 import { VehicleForm } from "@/components/forms/VehicleForm";
 import { ServiceForm } from "@/components/forms/ServiceForm";
 import { useToast } from "@/components/ui/use-toast";
+import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 
 interface Client {
   id: string;
@@ -116,16 +116,17 @@ const Clients = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="p-8">
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Clients</h1>
-            <p className="text-gray-500">Manage your client records and appointments</p>
-          </div>
-          <Button onClick={handleAddClient} className="gap-2">
-            <UserPlus className="h-4 w-4" />
+        <PageHeader
+          title="Clients"
+          description="Manage your client records and appointments"
+        >
+          <PageActionButton
+            icon={<UserPlus className="h-4 w-4" />}
+            onClick={handleAddClient}
+          >
             Add New Client
-          </Button>
-        </div>
+          </PageActionButton>
+        </PageHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <ClientList

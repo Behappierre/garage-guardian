@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
@@ -9,6 +8,7 @@ import { AppointmentCalendar } from "@/components/appointments/AppointmentCalend
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppointments } from "@/hooks/use-appointments";
 import type { AppointmentWithRelations } from "@/types/appointment";
+import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 
 const Appointments = () => {
   const navigate = useNavigate();
@@ -59,10 +59,21 @@ const Appointments = () => {
   return (
     <div className="w-full h-full">
       <main className="w-full h-full">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage service appointments and schedules</p>
-        </div>
+        <PageHeader
+          title="Appointments"
+          description="Manage service appointments and schedules"
+        >
+          <PageActionButton
+            icon={<Plus className="h-4 w-4" />}
+            onClick={() => {
+              setSelectedAppointment(null);
+              setSelectedDate(null);
+              setShowAppointmentForm(true);
+            }}
+          >
+            New Appointment
+          </PageActionButton>
+        </PageHeader>
 
         <div className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -98,20 +109,6 @@ const Appointments = () => {
                   <span className="text-xs text-gray-600">MOT</span>
                 </div>
               </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={() => {
-                  setSelectedAppointment(null);
-                  setSelectedDate(null);
-                  setShowAppointmentForm(true);
-                }}
-                className="bg-primary hover:bg-primary/90 text-white rounded-md p-2 flex items-center gap-1"
-              >
-                <Plus className="h-4 w-4" />
-                <span>New Appointment</span>
-              </Button>
             </div>
           </div>
         </div>

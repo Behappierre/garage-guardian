@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/ui/page-header";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -110,7 +111,9 @@ export default function Settings() {
 
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+      <PageHeader
+        title="Settings"
+      />
       
       <div className="space-y-6">
         <div className="flex items-center justify-between p-4 border rounded-lg">
