@@ -68,31 +68,26 @@ export function ChatAgent() {
         throw new Error('User not authenticated');
       }
 
-      // Direct fetch to Edge Function as a fallback
-      const response = await fetch(`${supabase.functions.url}/chat-with-gemini`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          user_id: user.id
-        })
-      });
-
-      console.log('Raw response:', response);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Edge Function error response:', errorText);
-        throw new Error(`Edge Function returned ${response.status}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
       }
 
-      const data = await response.json();
-      console.log('Parsed response data:', data);
+      const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
+        body: { 
+          message: userMessage,
+          user_id: user.id
+        }
+      });
 
-      if (!data.response) {
+      console.log('Response from Edge Function:', { data, error });
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
+      }
+
+      if (!data?.response) {
         throw new Error('No response received from AI assistant');
       }
 
