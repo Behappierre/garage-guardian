@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MessagesSquare, Send, Trash2, Maximize2, Minimize2 } from "lucide-react";
+import { MessagesSquare, Send, Trash2, Maximize2, Minimize2, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -143,7 +143,7 @@ export function ChatAgent() {
           closeButton={false}
         >
           <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
-            <DialogTitle className="text-lg">AI Assistant</DialogTitle>
+            <DialogTitle className="text-lg">AI Wizzard</DialogTitle>
             <div className="flex gap-2">
               <Button 
                 variant="ghost" 
@@ -174,7 +174,7 @@ export function ChatAgent() {
                 className="h-8 w-8"
                 title="Close"
               >
-                <Maximize2 className="h-4 w-4 rotate-45" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </DialogHeader>
