@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 import { Moon, Sun, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
@@ -110,62 +109,63 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className="flex flex-col w-full h-full bg-black">
       <PageHeader
         title="Settings"
+        className="bg-black"
       />
       
       <div className="px-8 pb-8 space-y-6">
-        <div className="flex items-center justify-between p-6 border rounded-lg bg-card">
-          <div className="space-y-0.5">
-            <h2 className="text-lg font-medium">Dark Mode</h2>
-            <p className="text-sm text-muted-foreground">
-              Toggle between light and dark theme
-            </p>
+        <div className="flex flex-col p-6 border border-gray-800 rounded-lg bg-black">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-white">Dark Mode</h2>
+            <div className="flex items-center space-x-2">
+              <Sun className="h-5 w-5 text-gray-400" />
+              <Switch
+                checked={theme === "dark"}
+                onCheckedChange={handleThemeChange}
+                className="data-[state=checked]:bg-rose-500"
+              />
+              <Moon className="h-5 w-5 text-gray-400" />
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <Sun className="h-5 w-5 text-muted-foreground" />
-            <Switch
-              checked={theme === "dark"}
-              onCheckedChange={handleThemeChange}
-              className="data-[state=checked]:bg-rose-500"
-            />
-            <Moon className="h-5 w-5 text-muted-foreground" />
-          </div>
+          <p className="text-sm text-gray-400">
+            Toggle between light and dark theme
+          </p>
         </div>
 
-        <div className="flex items-center justify-between p-6 border rounded-lg bg-card">
-          <div className="space-y-0.5">
-            <h2 className="text-lg font-medium">Garage Logo</h2>
-            <p className="text-sm text-muted-foreground">
-              Upload your garage logo (recommended size: 200x50px)
-            </p>
-          </div>
-          <div className="flex items-center space-x-4">
-            {settings?.logo_url && (
-              <img
-                src={settings.logo_url}
-                alt="Garage logo"
-                className="h-12 object-contain"
+        <div className="flex flex-col p-6 border border-gray-800 rounded-lg bg-black">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-medium text-white">Garage Logo</h2>
+            <div className="flex items-center space-x-4">
+              {settings?.logo_url && (
+                <img
+                  src={settings.logo_url}
+                  alt="Garage logo"
+                  className="h-12 object-contain"
+                />
+              )}
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 border-gray-700 hover:bg-gray-900 text-white"
+                disabled={uploading}
+                onClick={() => document.getElementById("logo-upload")?.click()}
+              >
+                <Upload className="h-4 w-4" />
+                <span>Upload Logo</span>
+              </Button>
+              <input
+                id="logo-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
               />
-            )}
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={uploading}
-              onClick={() => document.getElementById("logo-upload")?.click()}
-            >
-              <Upload className="h-4 w-4" />
-              <span>{uploading ? "Uploading..." : "Upload Logo"}</span>
-            </Button>
-            <input
-              id="logo-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
+            </div>
           </div>
+          <p className="text-sm text-gray-400">
+            Upload your garage logo (recommended size: 200x50px)
+          </p>
         </div>
       </div>
     </div>
