@@ -1,6 +1,6 @@
 
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
-import { format, startOfToday, endOfToday, parseISO, isValid } from 'https://esm.sh/date-fns@2.30.0'
+import { format, startOfDay, endOfDay, parseISO } from 'https://esm.sh/date-fns@2.30.0'
 
 export async function handleBookingQuery(
   message: string, 
@@ -34,15 +34,26 @@ export async function handleBookingQuery(
 }
 
 async function getTodayAppointments(supabase: SupabaseClient): Promise<string> {
+  const today = new Date();
+  const startOfToday = startOfDay(today).toISOString();
+  const endOfToday = endOfDay(today).toISOString();
+
+  console.log('Fetching appointments between:', startOfToday, 'and', endOfToday);
+
   const { data: appointments, error } = await supabase
     .from('appointments')
     .select(`
-      *,
+      id,
+      start_time,
+      end_time,
+      service_type,
+      status,
+      bay,
       client:clients(first_name, last_name),
       vehicle:vehicles(make, model, year)
     `)
-    .gte('start_time', startOfToday().toISOString())
-    .lte('start_time', endOfToday().toISOString())
+    .gte('start_time', startOfToday)
+    .lte('start_time', endOfToday)
     .order('start_time');
 
   if (error) {
@@ -61,12 +72,17 @@ async function getBayAppointments(supabase: SupabaseClient, bayNumber: string): 
   const { data: appointments, error } = await supabase
     .from('appointments')
     .select(`
-      *,
+      id,
+      start_time,
+      end_time,
+      service_type,
+      status,
+      bay,
       client:clients(first_name, last_name),
       vehicle:vehicles(make, model, year)
     `)
     .eq('bay', `Bay ${bayNumber}`)
-    .gte('start_time', startOfToday().toISOString())
+    .gte('start_time', new Date().toISOString())
     .order('start_time');
 
   if (error) {
@@ -85,7 +101,12 @@ async function getCancelledAppointments(supabase: SupabaseClient): Promise<strin
   const { data: appointments, error } = await supabase
     .from('appointments')
     .select(`
-      *,
+      id,
+      start_time,
+      end_time,
+      service_type,
+      status,
+      bay,
       client:clients(first_name, last_name),
       vehicle:vehicles(make, model, year)
     `)
