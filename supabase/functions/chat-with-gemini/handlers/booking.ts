@@ -9,63 +9,89 @@ export async function handleBookingQuery(
 ): Promise<string> {
   const lowerMessage = message.toLowerCase();
 
-  // Handle different types of appointment queries
-  if (lowerMessage.includes('today')) {
-    return await getTodayAppointments(supabase);
-  }
-  
-  if (lowerMessage.includes('bay')) {
-    const bayNumber = message.match(/bay\s*(\d+)/i)?.[1];
-    if (bayNumber) {
-      return await getBayAppointments(supabase, bayNumber);
+  try {
+    // Handle different types of appointment queries
+    if (lowerMessage.includes('today')) {
+      return await getTodayAppointments(supabase);
     }
+    
+    if (lowerMessage.includes('bay')) {
+      const bayNumber = message.match(/bay\s*(\d+)/i)?.[1];
+      if (bayNumber) {
+        return await getBayAppointments(supabase, bayNumber);
+      }
+    }
+    
+    if (lowerMessage.includes('cancelled')) {
+      return await getCancelledAppointments(supabase);
+    }
+    
+    // Default response for booking-related queries
+    return "I can help you with appointments. Try asking:\n" +
+           "- Show me all appointments for today\n" +
+           "- What appointments are in Bay [number]?\n" +
+           "- Show cancelled appointments\n" +
+           "- Book a new appointment";
+  } catch (error) {
+    console.error('Error in handleBookingQuery:', error);
+    return "I apologize, but I encountered an error while fetching the appointments. Please try again.";
   }
-  
-  if (lowerMessage.includes('cancelled')) {
-    return await getCancelledAppointments(supabase);
-  }
-  
-  // Default response for booking-related queries
-  return "I can help you with appointments. Try asking:\n" +
-         "- Show me all appointments for today\n" +
-         "- What appointments are in Bay [number]?\n" +
-         "- Show cancelled appointments\n" +
-         "- Book a new appointment";
 }
 
 async function getTodayAppointments(supabase: SupabaseClient): Promise<string> {
-  const today = new Date();
-  const startOfToday = startOfDay(today).toISOString();
-  const endOfToday = endOfDay(today).toISOString();
+  try {
+    const today = new Date();
+    const startTime = startOfDay(today).toISOString();
+    const endTime = endOfDay(today).toISOString();
 
-  console.log('Fetching appointments between:', startOfToday, 'and', endOfToday);
+    console.log('Query parameters:', {
+      startTime,
+      endTime,
+      currentTime: new Date().toISOString()
+    });
 
-  const { data: appointments, error } = await supabase
-    .from('appointments')
-    .select(`
-      id,
-      start_time,
-      end_time,
-      service_type,
-      status,
-      bay,
-      client:clients(first_name, last_name),
-      vehicle:vehicles(make, model, year)
-    `)
-    .gte('start_time', startOfToday)
-    .lte('start_time', endOfToday)
-    .order('start_time');
+    // First, let's check if we can query the table at all
+    const { data: testData, error: testError } = await supabase
+      .from('appointments')
+      .select('id')
+      .limit(1);
 
-  if (error) {
-    console.error('Error fetching appointments:', error);
-    return "Sorry, I couldn't fetch today's appointments. Please try again.";
+    if (testError) {
+      console.error('Test query error:', testError);
+      throw new Error('Failed to access appointments table');
+    }
+
+    // Now perform the actual query
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        start_time,
+        end_time,
+        service_type,
+        status,
+        bay,
+        client:clients(first_name, last_name),
+        vehicle:vehicles(make, model, year)
+      `)
+      .gte('start_time', startTime)
+      .lt('end_time', endTime)
+      .order('start_time');
+
+    if (error) {
+      console.error('Appointment query error:', error);
+      throw error;
+    }
+
+    if (!appointments || appointments.length === 0) {
+      return "There are no appointments scheduled for today.";
+    }
+
+    return formatAppointmentsList(appointments, "Today's appointments");
+  } catch (error) {
+    console.error('Error in getTodayAppointments:', error);
+    throw error;
   }
-
-  if (!appointments || appointments.length === 0) {
-    return "There are no appointments scheduled for today.";
-  }
-
-  return formatAppointmentsList(appointments, "Today's appointments");
 }
 
 async function getBayAppointments(supabase: SupabaseClient, bayNumber: string): Promise<string> {
@@ -87,7 +113,7 @@ async function getBayAppointments(supabase: SupabaseClient, bayNumber: string): 
 
   if (error) {
     console.error('Error fetching bay appointments:', error);
-    return `Sorry, I couldn't fetch appointments for Bay ${bayNumber}. Please try again.`;
+    throw error;
   }
 
   if (!appointments || appointments.length === 0) {
@@ -115,7 +141,7 @@ async function getCancelledAppointments(supabase: SupabaseClient): Promise<strin
 
   if (error) {
     console.error('Error fetching cancelled appointments:', error);
-    return "Sorry, I couldn't fetch cancelled appointments. Please try again.";
+    throw error;
   }
 
   if (!appointments || appointments.length === 0) {
