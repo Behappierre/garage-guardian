@@ -160,6 +160,7 @@ export const AppointmentCalendar = ({
               font-size: 1.75rem;
               font-weight: 800;
               color: #111827;
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             }
             
             /* Navigation buttons */
@@ -190,16 +191,74 @@ export const AppointmentCalendar = ({
               box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #2dd4bf;
             }
             
-            /* Day headers - cleaner look */
+            /* Modern day header style with date and day */
             .fc .fc-col-header-cell {
-              padding: 0.75rem 0;
+              padding: 1rem 0;
               background-color: #ffffff;
+              border-bottom: 2px solid #edf2f7;
             }
             
+            /* Hide the default header content */
             .fc .fc-col-header-cell-cushion {
-              padding: 6px 4px;
-              font-weight: 600;
-              color: #64748b;
+              display: none;
+            }
+            
+            /* Create custom header content with date and day */
+            .fc .fc-col-header-cell .fc-col-header-cell-cushion:after {
+              content: attr(data-date) " " attr(data-day);
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            }
+            
+            /* Style for the date part */
+            .fc-theme-standard td:first-child, 
+            .fc-theme-standard th:first-child {
+              border-left: 0;
+            }
+            
+            .fc-theme-standard td:last-child, 
+            .fc-theme-standard th:last-child {
+              border-right: 0;
+            }
+            
+            /* Custom styling for the day headers */
+            .fc-theme-standard thead tr th {
+              position: relative;
+            }
+            
+            .fc-theme-standard thead tr th:after {
+              content: attr(data-date);
+              display: block;
+              font-size: 1.25rem;
+              font-weight: 700;
+              color: #000;
+              margin-bottom: 0.25rem;
+              position: relative;
+            }
+            
+            .fc-theme-standard thead tr th:before {
+              content: attr(data-day);
+              display: block;
+              font-size: 0.875rem;
+              font-weight: 500;
+              color: #94a3b8;
+              margin-top: 0.25rem;
+              position: relative;
+            }
+            
+            /* Current day - highlight with modern style */
+            .fc .fc-day-today {
+              background-color: #f8fafc !important;
+            }
+            
+            .fc .fc-day-today:after {
+              color: #2563eb !important;
+            }
+            
+            .fc .fc-day-today:before {
+              color: #93c5fd !important;
             }
             
             /* Day numbers - bolder and cleaner */
@@ -208,22 +267,6 @@ export const AppointmentCalendar = ({
               font-weight: 700;
               color: #0f172a;
               padding: 8px;
-            }
-            
-            /* Current day - highlight with modern style */
-            .fc .fc-day-today {
-              background-color: #f8fafc !important;
-            }
-            
-            .fc .fc-day-today .fc-daygrid-day-number {
-              background-color: #2dd4bf;
-              color: white;
-              border-radius: 50%;
-              width: 28px;
-              height: 28px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
             }
             
             /* Week view specifics */
@@ -307,6 +350,22 @@ export const AppointmentCalendar = ({
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
           dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
+          viewDidMount={(view) => {
+            // Add custom date and day attributes to header cells
+            const headerCells = document.querySelectorAll('.fc-col-header-cell');
+            headerCells.forEach(cell => {
+              const date = cell.getAttribute('data-date');
+              if (date) {
+                const dateObj = new Date(date);
+                const day = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const formattedDate = dateObj.getDate().toString().padStart(2, '0') + '.' + 
+                                     (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                
+                cell.setAttribute('data-date', formattedDate);
+                cell.setAttribute('data-day', day);
+              }
+            });
+          }}
         />
       </div>
     </div>
