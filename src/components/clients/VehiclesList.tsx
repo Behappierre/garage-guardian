@@ -3,16 +3,17 @@ import { Car, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
+// Updated to match the Vehicle interface in Clients.tsx
 interface Vehicle {
   id: string;
   client_id: string;
   make: string;
   model: string;
   year: number;
-  license_plate: string;
-  vin: string;
-  color: string;
-  notes: string;
+  license_plate: string | null;
+  vin: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface VehiclesListProps {
@@ -55,18 +56,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">VIN:</span>
                       <span className="text-sm font-mono">{vehicle.vin}</span>
-                    </div>
-                  )}
-                  {vehicle.color && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Color:</span>
-                      <span className="text-sm">{vehicle.color}</span>
-                    </div>
-                  )}
-                  {vehicle.notes && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <span className="text-sm text-gray-500 block mb-1">Notes:</span>
-                      <p className="text-sm text-gray-700">{vehicle.notes}</p>
                     </div>
                   )}
                 </div>

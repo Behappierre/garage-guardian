@@ -22,16 +22,17 @@ interface Client {
   created_at: string;
 }
 
+// Updated to match the Vehicle interface in Clients.tsx
 interface Vehicle {
   id: string;
   client_id: string;
   make: string;
   model: string;
   year: number;
-  license_plate: string;
-  vin: string;
-  color: string;
-  notes: string;
+  license_plate: string | null;
+  vin: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 interface ClientDetailsProps {
