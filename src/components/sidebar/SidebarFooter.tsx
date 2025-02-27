@@ -16,7 +16,7 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
 
   return (
     <div className={cn(
-      "p-4 border-t border-gray-200",
+      "p-4 border-t border-sidebar-border",
       isCollapsed && "flex flex-col items-center"
     )}>
       <ul className="space-y-1 w-full">
@@ -25,8 +25,8 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
             to="/dashboard/settings"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-gray-700 hover:bg-gray-100",
-                isActive && "bg-primary/5 text-primary hover:bg-primary/5",
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
+                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
                 isCollapsed && "justify-center px-2"
               )
             }
@@ -40,7 +40,7 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
           <Button
             variant="ghost"
             className={cn(
-              "w-full flex items-center justify-start gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md",
+              "w-full flex items-center justify-start gap-2 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md",
               isCollapsed && "justify-center px-2"
             )}
             onClick={handleSignOut}

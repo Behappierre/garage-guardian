@@ -37,7 +37,8 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
   return (
     <div 
       className={cn(
-        "fixed left-0 top-0 h-screen bg-white border-r border-gray-200 transition-all duration-300 z-10",
+        "fixed left-0 top-0 h-screen bg-sidebar-background border-r border-sidebar-border transition-all duration-300 z-10",
+        "dark:bg-sidebar-background dark:border-sidebar-border",
         isCollapsed ? "w-16" : "w-64"
       )}
     >
@@ -47,7 +48,7 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-16 bg-white border shadow-sm z-20"
+          className="absolute -right-3 top-16 bg-background border shadow-sm z-20"
           onClick={() => onCollapse(!isCollapsed)}
         >
           {isCollapsed ? (

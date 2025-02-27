@@ -52,7 +52,7 @@ export default function Settings() {
 
       toast({
         title: "Success",
-        description: `Theme changed to ${newDarkMode ? "dark" : "light"} mode`,
+        description: `Theme changed to dark mode`,
       });
     } catch (error: any) {
       toast({
@@ -116,26 +116,27 @@ export default function Settings() {
       />
       
       <div className="px-8 pb-8 space-y-6">
-        <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
+        <div className="flex items-center justify-between p-6 border rounded-lg bg-card">
           <div className="space-y-0.5">
-            <Label className="text-base">Dark Mode</Label>
+            <h2 className="text-lg font-medium">Dark Mode</h2>
             <p className="text-sm text-muted-foreground">
               Toggle between light and dark theme
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Sun className="h-4 w-4 text-muted-foreground" />
+            <Sun className="h-5 w-5 text-muted-foreground" />
             <Switch
               checked={theme === "dark"}
               onCheckedChange={handleThemeChange}
+              className="data-[state=checked]:bg-rose-500"
             />
-            <Moon className="h-4 w-4 text-muted-foreground" />
+            <Moon className="h-5 w-5 text-muted-foreground" />
           </div>
         </div>
 
-        <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
+        <div className="flex items-center justify-between p-6 border rounded-lg bg-card">
           <div className="space-y-0.5">
-            <Label className="text-base">Garage Logo</Label>
+            <h2 className="text-lg font-medium">Garage Logo</h2>
             <p className="text-sm text-muted-foreground">
               Upload your garage logo (recommended size: 200x50px)
             </p>
@@ -150,12 +151,12 @@ export default function Settings() {
             )}
             <Button
               variant="outline"
-              className="cursor-pointer"
+              className="flex items-center gap-2"
               disabled={uploading}
               onClick={() => document.getElementById("logo-upload")?.click()}
             >
-              <Upload className="h-4 w-4 mr-2" />
-              {uploading ? "Uploading..." : "Upload Logo"}
+              <Upload className="h-4 w-4" />
+              <span>{uploading ? "Uploading..." : "Upload Logo"}</span>
             </Button>
             <input
               id="logo-upload"
