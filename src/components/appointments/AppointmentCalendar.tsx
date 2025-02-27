@@ -125,21 +125,7 @@ export const AppointmentCalendar = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#F97316' }} />
-            <span className="text-sm text-gray-600">Bay 1</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#0EA5E9' }} />
-            <span className="text-sm text-gray-600">Bay 2</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#8B5CF6' }} />
-            <span className="text-sm text-gray-600">MOT</span>
-          </div>
-        </div>
+      <div className="flex justify-end items-center">
         <Select value={selectedBay} onValueChange={(value: BayType) => setSelectedBay(value)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select bay" />
