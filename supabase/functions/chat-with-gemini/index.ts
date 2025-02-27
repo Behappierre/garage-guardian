@@ -1,9 +1,8 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
 import { OpenAI } from "https://deno.land/x/openai@v4.24.0/mod.ts";
-import { format, addDays, startOfDay, endOfDay } from "https://esm.sh/date-fns@2.30.0";
+import { format, addDays, startOfDay, endOfDay, subMonths } from "https://esm.sh/date-fns@2.30.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +29,124 @@ serve(async (req) => {
 
     async function processMessage(message: string) {
       const lowerMessage = message.toLowerCase();
-      
+
+      // Client Vehicle Query
+      const clientVehicleMatch = message.match(/vehicles owned by (.+)/i);
+      if (clientVehicleMatch) {
+        const clientName = clientVehicleMatch[1].trim();
+        const { data: vehicles, error } = await supabaseClient
+          .from('vehicles')
+          .select(`
+            *,
+            client:clients!inner(
+              first_name,
+              last_name
+            )
+          `)
+          .filter('client.first_name', 'ilike', `%${clientName}%`)
+          .or(`client.last_name.ilike.%${clientName}%`);
+
+        if (error) throw error;
+        if (!vehicles?.length) return `No vehicles found for client "${clientName}"`;
+
+        return `Vehicles owned by ${clientName}:\n\n` + 
+          vehicles.map(v => `• ${v.year} ${v.make} ${v.model}${v.license_plate ? ` (${v.license_plate})` : ''}`).join('\n');
+      }
+
+      // Make-specific Query
+      const makeMatch = message.match(/list all (\w+) vehicles/i);
+      if (makeMatch) {
+        const make = makeMatch[1];
+        const { data: vehicles, error } = await supabaseClient
+          .from('vehicles')
+          .select('*, client:clients(first_name, last_name)')
+          .ilike('make', make);
+
+        if (error) throw error;
+        if (!vehicles?.length) return `No ${make} vehicles found in the system`;
+
+        return `${make} vehicles in system:\n\n` + 
+          vehicles.map(v => `• ${v.year} ${v.make} ${v.model} - Owner: ${v.client?.first_name} ${v.client?.last_name}`).join('\n');
+      }
+
+      // Recent Service History Query
+      if (message.toLowerCase().includes('service history in the last 6 months')) {
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const { data: services, error } = await supabaseClient
+          .from('service_history')
+          .select(`
+            *,
+            vehicle:vehicles(
+              year,
+              make,
+              model,
+              license_plate
+            )
+          `)
+          .gte('service_date', sixMonthsAgo.toISOString())
+          .order('service_date', { ascending: false });
+
+        if (error) throw error;
+        if (!services?.length) return 'No services found in the last 6 months';
+
+        return `Services in last 6 months:\n\n` + 
+          services.map(s => {
+            const vehicle = s.vehicle;
+            return `• ${format(new Date(s.service_date), 'MMM d, yyyy')} - ${s.service_type}\n  Vehicle: ${vehicle?.year} ${vehicle?.make} ${vehicle?.model}\n  Cost: ${s.cost ? `$${s.cost}` : 'N/A'}`;
+          }).join('\n\n');
+      }
+
+      // License Plate Service History
+      const plateHistoryMatch = message.match(/service history for ([A-Z0-9]+)/i);
+      if (plateHistoryMatch) {
+        const plate = plateHistoryMatch[1].toUpperCase();
+        const { data: services, error } = await supabaseClient
+          .from('service_history')
+          .select(`
+            *,
+            vehicle:vehicles!inner(
+              year,
+              make,
+              model,
+              license_plate
+            )
+          `)
+          .eq('vehicle.license_plate', plate)
+          .order('service_date', { ascending: false });
+
+        if (error) throw error;
+        if (!services?.length) return `No service history found for license plate ${plate}`;
+
+        return `Service history for ${plate}:\n\n` + 
+          services.map(s => `• ${format(new Date(s.service_date), 'MMM d, yyyy')} - ${s.service_type}\n  Cost: ${s.cost ? `$${s.cost}` : 'N/A'}`).join('\n\n');
+      }
+
+      // Job Tickets Query
+      if (message.toLowerCase().includes('show all active job tickets')) {
+        const { data: tickets, error } = await supabaseClient
+          .from('job_tickets')
+          .select(`
+            *,
+            client:clients(first_name, last_name),
+            vehicle:vehicles(year, make, model, license_plate),
+            technician:profiles(first_name, last_name)
+          `)
+          .in('status', ['received', 'in_progress', 'pending_parts']);
+
+        if (error) throw error;
+        if (!tickets?.length) return 'No active job tickets found';
+
+        return `Active job tickets:\n\n` + 
+          tickets.map(t => {
+            const client = t.client;
+            const vehicle = t.vehicle;
+            const tech = t.technician;
+            return `Ticket: ${t.ticket_number}\nStatus: ${t.status}\nClient: ${client?.first_name} ${client?.last_name}\nVehicle: ${vehicle?.year} ${vehicle?.make} ${vehicle?.model}\nTechnician: ${tech ? `${tech.first_name} ${tech.last_name}` : 'Unassigned'}\n---`;
+          }).join('\n\n');
+      }
+
       // Check for appointment queries
       if (lowerMessage.includes('booking') || lowerMessage.includes('appointment')) {
         try {
