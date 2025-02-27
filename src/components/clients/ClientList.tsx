@@ -148,13 +148,13 @@ export const ClientList = ({
           />
         </div>
         
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col space-y-2">
           <p className="text-sm text-gray-500">Sort by:</p>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2">
             <Button 
               variant="ghost" 
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-8 px-3 text-xs"
               onClick={() => handleSort("first_name")}
             >
               First Name {getSortIcon("first_name")}
@@ -162,7 +162,7 @@ export const ClientList = ({
             <Button 
               variant="ghost" 
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-8 px-3 text-xs"
               onClick={() => handleSort("last_name")}
             >
               Last Name {getSortIcon("last_name")}
@@ -170,7 +170,7 @@ export const ClientList = ({
             <Button 
               variant="ghost" 
               size="sm"
-              className="h-8 px-2 text-xs"
+              className="h-8 px-3 text-xs"
               onClick={() => handleSort("created_at")}
             >
               Date Added {getSortIcon("created_at")}
@@ -179,7 +179,7 @@ export const ClientList = ({
         </div>
       </div>
       
-      <div className="divide-y divide-gray-200 overflow-y-auto h-[calc(100vh-264px)]">
+      <div className="divide-y divide-gray-200 overflow-y-auto h-[calc(100vh-284px)]">
         {isLoading ? (
           <div className="p-4 text-center text-gray-500">Loading...</div>
         ) : sortedClients && sortedClients.length > 0 ? (
