@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AppointmentWithRelations } from "@/types/appointment";
 
 type BayType = 'all' | 'bay1' | 'bay2' | 'mot';
+type CalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
 
 interface AppointmentWithBay extends AppointmentWithRelations {
   bay?: 'bay1' | 'bay2' | 'mot' | null;
@@ -29,6 +30,9 @@ export const AppointmentCalendar = ({
   onEventClick,
 }: AppointmentCalendarProps) => {
   const [selectedBay, setSelectedBay] = useState<BayType>('all');
+  const [currentView, setCurrentView] = useState<CalendarViewType>('timeGridWeek');
+  const [calendarTitle, setCalendarTitle] = useState('');
+  const calendarRef = useRef<FullCalendar | null>(null);
   const queryClient = useQueryClient();
 
   const updateAppointmentMutation = useMutation({
@@ -123,31 +127,104 @@ export const AppointmentCalendar = ({
     onEventClick(clickInfo.event.extendedProps as AppointmentWithBay);
   };
 
+  // Calendar navigation functions
+  const handlePrev = () => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.prev();
+      setCalendarTitle(calendarApi.view.title);
+    }
+  };
+
+  const handleNext = () => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.next();
+      setCalendarTitle(calendarApi.view.title);
+    }
+  };
+
+  const handleToday = () => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.today();
+      setCalendarTitle(calendarApi.view.title);
+    }
+  };
+
+  const handleViewChange = (view: CalendarViewType) => {
+    setCurrentView(view);
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      calendarApi.changeView(view);
+      setCalendarTitle(calendarApi.view.title);
+    }
+  };
+
+  // Update calendar title when view changes
+  useEffect(() => {
+    const calendarApi = calendarRef.current?.getApi();
+    if (calendarApi) {
+      setCalendarTitle(calendarApi.view.title);
+    }
+  }, [currentView]);
+
   return (
     <div className="space-y-2">
       <div className="fc-toolbar-container flex items-center justify-between mb-4">
         <div className="flex items-center space-x-1">
-          <button className="fc-nav-button px-3 py-1.5 bg-white border border-gray-200 rounded-l-md text-gray-700 hover:bg-gray-50">
+          <button 
+            className="fc-nav-button px-3 py-1.5 bg-white border border-gray-200 rounded-l-md text-gray-700 hover:bg-gray-50"
+            onClick={handlePrev}
+          >
             <span className="fc-icon fc-icon-chevron-left text-lg">‹</span>
           </button>
-          <button className="fc-nav-button px-3 py-1.5 bg-white border border-gray-200 rounded-r-md text-gray-700 hover:bg-gray-50">
+          <button 
+            className="fc-nav-button px-3 py-1.5 bg-white border border-gray-200 rounded-r-md text-gray-700 hover:bg-gray-50"
+            onClick={handleNext}
+          >
             <span className="fc-icon fc-icon-chevron-right text-lg">›</span>
           </button>
-          <button className="fc-today-button ml-2 px-4 py-1.5 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600">
+          <button 
+            className="fc-today-button ml-2 px-4 py-1.5 bg-gray-500 text-white rounded-md text-sm hover:bg-gray-600"
+            onClick={handleToday}
+          >
             Today
           </button>
         </div>
-        <h2 className="fc-toolbar-title text-xl font-semibold">Feb 23 – Mar 1, 2025</h2>
-        <div className="fc-view-buttons flex items-center space-x-1">
-          <button className="px-4 py-1.5 border border-gray-200 rounded-l-md bg-white text-gray-700 hover:bg-gray-50">
-            Month
-          </button>
-          <button className="px-4 py-1.5 border border-gray-200 bg-primary text-white">
-            Week
-          </button>
-          <button className="px-4 py-1.5 border border-gray-200 rounded-r-md bg-white text-gray-700 hover:bg-gray-50">
-            Day
-          </button>
+        <h2 className="fc-toolbar-title text-xl font-semibold">{calendarTitle}</h2>
+        <div className="flex items-center gap-2">
+          <Select value={selectedBay} onValueChange={(value: BayType) => setSelectedBay(value)}>
+            <SelectTrigger className="w-[120px] h-9 text-sm">
+              <SelectValue placeholder="Select bay" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Bays</SelectItem>
+              <SelectItem value="bay1">Bay 1</SelectItem>
+              <SelectItem value="bay2">Bay 2</SelectItem>
+              <SelectItem value="mot">MOT</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="fc-view-buttons flex items-center space-x-1">
+            <button 
+              className={`px-4 py-1.5 border border-gray-200 rounded-l-md ${currentView === 'dayGridMonth' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => handleViewChange('dayGridMonth')}
+            >
+              Month
+            </button>
+            <button 
+              className={`px-4 py-1.5 border border-gray-200 ${currentView === 'timeGridWeek' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => handleViewChange('timeGridWeek')}
+            >
+              Week
+            </button>
+            <button 
+              className={`px-4 py-1.5 border border-gray-200 rounded-r-md ${currentView === 'timeGridDay' ? 'bg-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => handleViewChange('timeGridDay')}
+            >
+              Day
+            </button>
+          </div>
         </div>
       </div>
       
@@ -316,6 +393,7 @@ export const AppointmentCalendar = ({
           `}
         </style>
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           headerToolbar={false}
@@ -332,6 +410,9 @@ export const AppointmentCalendar = ({
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
           dayHeaderFormat={{ weekday: 'short' }}
+          datesSet={(dateInfo) => {
+            setCalendarTitle(dateInfo.view.title);
+          }}
           viewDidMount={(view) => {
             // This function creates our custom header display
             setTimeout(() => {
