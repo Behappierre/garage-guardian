@@ -59,12 +59,6 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
-      console.log('Attempting to invoke Edge Function with:', {
-        functionName: 'chat-with-gemini',
-        message: userMessage,
-        userId: user?.id
-      });
-
       // Basic validation
       if (!user?.id) {
         throw new Error('User not authenticated');
@@ -75,42 +69,13 @@ export function ChatAgent() {
         throw new Error('No active session');
       }
 
-      // Try the Gemini function first
+      // Try GPT first now
       try {
-        const { data: geminiData, error: geminiError } = await supabase.functions.invoke('chat-with-gemini', {
-          body: { 
-            message: userMessage,
-            user_id: user.id
-          }
+        console.log('Attempting to invoke GPT Edge Function with:', {
+          message: userMessage,
+          userId: user.id
         });
-
-        console.log('Response from Gemini Edge Function:', { data: geminiData, error: geminiError });
-
-        if (geminiError) {
-          console.warn('Gemini function error, falling back to GPT:', geminiError);
-          throw geminiError; // This will trigger the fallback
-        }
-
-        if (!geminiData?.response) {
-          console.warn('No response from Gemini, falling back to GPT');
-          throw new Error('No response received from AI assistant');
-        }
-
-        // Success with Gemini
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: formatMessage(geminiData.response)
-        }]);
-
-        if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
-            geminiData.response.toLowerCase().includes('appointment created')) {
-          refreshAppointments();
-        }
-
-        return; // Exit if successful
-      } catch (geminiError) {
-        console.log('Falling back to chat-with-gpt function');
-        // Fall back to GPT function
+        
         const { data: gptData, error: gptError } = await supabase.functions.invoke('chat-with-gpt', {
           body: { 
             message: userMessage,
@@ -121,14 +86,16 @@ export function ChatAgent() {
         console.log('Response from GPT Edge Function:', { data: gptData, error: gptError });
 
         if (gptError) {
-          console.error('GPT function error:', gptError);
-          throw gptError;
+          console.warn('GPT function error, falling back to Gemini:', gptError);
+          throw gptError; // This will trigger the fallback
         }
 
         if (!gptData?.response) {
+          console.warn('No response from GPT, falling back to Gemini');
           throw new Error('No response received from GPT assistant');
         }
 
+        // Success with GPT
         setMessages(prev => [...prev, { 
           role: "assistant", 
           content: formatMessage(gptData.response)
@@ -136,6 +103,40 @@ export function ChatAgent() {
 
         if (gptData.response.toLowerCase().includes('booking is confirmed') || 
             gptData.response.toLowerCase().includes('appointment created')) {
+          refreshAppointments();
+        }
+
+        return; // Exit if successful
+        
+      } catch (gptError) {
+        // Fall back to Gemini function
+        console.log('Falling back to chat-with-gemini function');
+        
+        const { data: geminiData, error: geminiError } = await supabase.functions.invoke('chat-with-gemini', {
+          body: { 
+            message: userMessage,
+            user_id: user.id
+          }
+        });
+
+        console.log('Response from Gemini Edge Function:', { data: geminiData, error: geminiError });
+
+        if (geminiError) {
+          console.error('Gemini function error:', geminiError);
+          throw geminiError;
+        }
+
+        if (!geminiData?.response) {
+          throw new Error('No response received from Gemini assistant');
+        }
+
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: formatMessage(geminiData.response)
+        }]);
+
+        if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
+            geminiData.response.toLowerCase().includes('appointment created')) {
           refreshAppointments();
         }
       }
