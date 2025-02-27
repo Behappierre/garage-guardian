@@ -75,32 +75,69 @@ export function ChatAgent() {
         throw new Error('No active session');
       }
 
-      const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
-        body: { 
-          message: userMessage,
-          user_id: user.id
+      // Try the Gemini function first
+      try {
+        const { data: geminiData, error: geminiError } = await supabase.functions.invoke('chat-with-gemini', {
+          body: { 
+            message: userMessage,
+            user_id: user.id
+          }
+        });
+
+        console.log('Response from Gemini Edge Function:', { data: geminiData, error: geminiError });
+
+        if (geminiError) {
+          console.warn('Gemini function error, falling back to GPT:', geminiError);
+          throw geminiError; // This will trigger the fallback
         }
-      });
 
-      console.log('Response from Edge Function:', { data, error });
+        if (!geminiData?.response) {
+          console.warn('No response from Gemini, falling back to GPT');
+          throw new Error('No response received from AI assistant');
+        }
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
-      }
+        // Success with Gemini
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: formatMessage(geminiData.response)
+        }]);
 
-      if (!data?.response) {
-        throw new Error('No response received from AI assistant');
-      }
+        if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
+            geminiData.response.toLowerCase().includes('appointment created')) {
+          refreshAppointments();
+        }
 
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: formatMessage(data.response)
-      }]);
+        return; // Exit if successful
+      } catch (geminiError) {
+        console.log('Falling back to chat-with-gpt function');
+        // Fall back to GPT function
+        const { data: gptData, error: gptError } = await supabase.functions.invoke('chat-with-gpt', {
+          body: { 
+            message: userMessage,
+            user_id: user.id
+          }
+        });
 
-      if (data.response.toLowerCase().includes('booking is confirmed') || 
-          data.response.toLowerCase().includes('appointment created')) {
-        refreshAppointments();
+        console.log('Response from GPT Edge Function:', { data: gptData, error: gptError });
+
+        if (gptError) {
+          console.error('GPT function error:', gptError);
+          throw gptError;
+        }
+
+        if (!gptData?.response) {
+          throw new Error('No response received from GPT assistant');
+        }
+
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: formatMessage(gptData.response)
+        }]);
+
+        if (gptData.response.toLowerCase().includes('booking is confirmed') || 
+            gptData.response.toLowerCase().includes('appointment created')) {
+          refreshAppointments();
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error);
