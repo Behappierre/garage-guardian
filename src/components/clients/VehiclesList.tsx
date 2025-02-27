@@ -1,7 +1,21 @@
 
-import { Car, Plus } from "lucide-react";
+import { Car, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/use-toast";
 
 // Updated to match the Vehicle interface in Clients.tsx
 interface Vehicle {
@@ -22,6 +36,90 @@ interface VehiclesListProps {
 }
 
 export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+
+  const handleDeleteClick = (vehicle: Vehicle) => {
+    setVehicleToDelete(vehicle);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!vehicleToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // First check if the vehicle is used in any appointments
+      const { data: appointmentsData, error: appointmentsError } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("vehicle_id", vehicleToDelete.id)
+        .limit(1);
+        
+      if (appointmentsError) throw appointmentsError;
+      
+      // If the vehicle is used in appointments, show warning toast
+      if (appointmentsData && appointmentsData.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Cannot delete vehicle",
+          description: "This vehicle is associated with one or more appointments. Remove the appointments first.",
+        });
+        setIsDeleting(false);
+        setVehicleToDelete(null);
+        return;
+      }
+      
+      // Check if vehicle is used in job tickets
+      const { data: ticketsData, error: ticketsError } = await supabase
+        .from("job_tickets")
+        .select("id")
+        .eq("vehicle_id", vehicleToDelete.id)
+        .limit(1);
+        
+      if (ticketsError) throw ticketsError;
+      
+      // If the vehicle is used in job tickets, show warning toast
+      if (ticketsData && ticketsData.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Cannot delete vehicle",
+          description: "This vehicle is associated with one or more job tickets. Remove the job tickets first.",
+        });
+        setIsDeleting(false);
+        setVehicleToDelete(null);
+        return;
+      }
+
+      // If no relationships, delete the vehicle
+      const { error } = await supabase
+        .from("vehicles")
+        .delete()
+        .eq("id", vehicleToDelete.id);
+
+      if (error) throw error;
+
+      // Refresh vehicles data
+      queryClient.invalidateQueries({ queryKey: ["vehicles", vehicleToDelete.client_id] });
+      
+      toast({
+        title: "Vehicle deleted",
+        description: `${vehicleToDelete.year} ${vehicleToDelete.make} ${vehicleToDelete.model} has been removed.`,
+      });
+    } catch (error: any) {
+      console.error("Error deleting vehicle:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete vehicle",
+      });
+    } finally {
+      setIsDeleting(false);
+      setVehicleToDelete(null);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
@@ -37,11 +135,21 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {vehicles.map((vehicle) => (
               <div key={vehicle.id} className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 p-3 border-b border-gray-200 flex items-center">
-                  <Car className="h-5 w-5 text-gray-500 mr-2" />
-                  <h4 className="font-medium text-gray-900">
-                    {vehicle.year} {vehicle.make} {vehicle.model}
-                  </h4>
+                <div className="bg-gray-50 p-3 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <Car className="h-5 w-5 text-gray-500 mr-2" />
+                    <h4 className="font-medium text-gray-900">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </h4>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                    onClick={() => handleDeleteClick(vehicle)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 <div className="p-4 space-y-2">
                   {vehicle.license_plate && (
@@ -74,6 +182,33 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
           </div>
         )}
       </div>
+
+      <AlertDialog open={vehicleToDelete !== null} onOpenChange={(open) => !open && setVehicleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this vehicle? {vehicleToDelete && (
+                <span className="font-medium">
+                  {vehicleToDelete.year} {vehicleToDelete.make} {vehicleToDelete.model}
+                </span>
+              )}
+              <br/><br/>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
