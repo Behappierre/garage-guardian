@@ -22,7 +22,6 @@ interface Client {
   created_at: string;
 }
 
-// Updated to match the Vehicle interface in Clients.tsx
 interface Vehicle {
   id: string;
   client_id: string;
@@ -145,8 +144,12 @@ export const ClientDetails = ({
           </TabsList>
           
           <TabsContent value="details" className="mt-4 space-y-6">
+            {/* Empty content since client info is already displayed above */}
             <div className="grid grid-cols-1 gap-6">
-              <ClientInfo client={client} onEdit={onEditClient} />
+              {/* We can add additional client details here in the future if needed */}
+              <div className="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
+                <p>No additional details available</p>
+              </div>
             </div>
           </TabsContent>
           
