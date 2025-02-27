@@ -146,8 +146,8 @@ export default function Settings() {
                 />
               )}
               <Button
-                variant="outline"
-                className="flex items-center gap-2 border-gray-700 hover:bg-gray-900 text-white"
+                variant="default"
+                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-black"
                 disabled={uploading}
                 onClick={() => document.getElementById("logo-upload")?.click()}
               >
