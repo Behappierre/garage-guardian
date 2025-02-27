@@ -3,16 +3,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ArrowUpDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { TicketPriority } from "@/types/job-ticket";
 
 interface JobTicketFiltersProps {
   nameFilter: string;
   dateFilter: string;
   registrationFilter: string;
+  priorityFilter: TicketPriority | '';
   sortField: "created_at" | "client_name";
   sortOrder: "asc" | "desc";
   onNameFilterChange: (value: string) => void;
   onDateFilterChange: (value: string) => void;
   onRegistrationFilterChange: (value: string) => void;
+  onPriorityFilterChange: (value: TicketPriority | '') => void;
   onSortChange: (field: "created_at" | "client_name") => void;
 }
 
@@ -20,16 +24,18 @@ export const JobTicketFilters = ({
   nameFilter,
   dateFilter,
   registrationFilter,
+  priorityFilter,
   sortField,
   sortOrder,
   onNameFilterChange,
   onDateFilterChange,
   onRegistrationFilterChange,
+  onPriorityFilterChange,
   onSortChange,
 }: JobTicketFiltersProps) => {
   return (
     <div className="mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
         <div className="space-y-2">
           <Label htmlFor="nameFilter">Filter by Customer Name</Label>
           <Input
@@ -47,6 +53,24 @@ export const JobTicketFilters = ({
             value={registrationFilter}
             onChange={(e) => onRegistrationFilterChange(e.target.value)}
           />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="priorityFilter">Filter by Priority</Label>
+          <Select
+            value={priorityFilter}
+            onValueChange={(value) => onPriorityFilterChange(value as TicketPriority | '')}
+          >
+            <SelectTrigger id="priorityFilter">
+              <SelectValue placeholder="Select priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All priorities</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="dateFilter">Filter by Date Created</Label>

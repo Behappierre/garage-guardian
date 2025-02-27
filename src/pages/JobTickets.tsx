@@ -10,6 +10,7 @@ import { JobTicketsList } from "@/components/tickets/JobTicketsList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useParams } from "react-router-dom";
+import type { TicketPriority } from "@/types/job-ticket";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
@@ -26,6 +27,7 @@ const JobTickets = () => {
   const [nameFilter, setNameFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [registrationFilter, setRegistrationFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -54,7 +56,7 @@ const JobTickets = () => {
   });
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, sortField, sortOrder],
+    queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, priorityFilter, sortField, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from("job_tickets")
@@ -72,6 +74,10 @@ const JobTickets = () => {
         
         query = query.gte('created_at', filterDate.toISOString())
                     .lt('created_at', nextDay.toISOString());
+      }
+      
+      if (priorityFilter) {
+        query = query.eq('priority', priorityFilter);
       }
 
       const { data, error } = await query;
@@ -143,11 +149,13 @@ const JobTickets = () => {
             nameFilter={nameFilter}
             dateFilter={dateFilter}
             registrationFilter={registrationFilter}
+            priorityFilter={priorityFilter}
             sortField={sortField}
             sortOrder={sortOrder}
             onNameFilterChange={setNameFilter}
             onDateFilterChange={setDateFilter}
             onRegistrationFilterChange={setRegistrationFilter}
+            onPriorityFilterChange={setPriorityFilter}
             onSortChange={toggleSort}
           />
         </div>
