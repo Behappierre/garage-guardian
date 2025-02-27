@@ -23,16 +23,17 @@ interface Client {
   created_at: string;
 }
 
+// Update Vehicle interface to match Supabase schema
 interface Vehicle {
   id: string;
   client_id: string;
   make: string;
   model: string;
   year: number;
-  license_plate: string;
-  vin: string;
-  color: string;
-  notes: string;
+  license_plate: string | null;
+  vin: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const Clients = () => {
@@ -71,19 +72,7 @@ const Clients = () => {
         .eq("client_id", selectedClientId);
 
       if (error) throw error;
-      
-      // Cast to Vehicle type and add default values for any missing properties
-      return (data || []).map(vehicle => ({
-        id: vehicle.id,
-        client_id: vehicle.client_id,
-        make: vehicle.make,
-        model: vehicle.model,
-        year: vehicle.year,
-        license_plate: vehicle.license_plate || "",
-        vin: vehicle.vin || "",
-        color: vehicle.color || "",
-        notes: vehicle.notes || ""
-      })) as Vehicle[];
+      return data as Vehicle[];
     },
     enabled: !!selectedClientId,
   });
@@ -100,42 +89,21 @@ const Clients = () => {
     }
   };
 
-  const handleCloseClientDialog = (success = false) => {
+  const handleCloseClientDialog = () => {
     setShowClientDialog(false);
     setEditingClient(null);
     queryClient.invalidateQueries({ queryKey: ["clients"] });
-    
-    if (success) {
-      toast({
-        title: editingClient ? "Client updated" : "Client added",
-        description: `Client has been successfully ${editingClient ? "updated" : "added"}.`,
-      });
-    }
   };
 
-  const handleCloseVehicleDialog = (success = false) => {
+  const handleCloseVehicleDialog = () => {
     setShowVehicleDialog(false);
     if (selectedClientId) {
       queryClient.invalidateQueries({ queryKey: ["vehicles", selectedClientId] });
-      
-      if (success) {
-        toast({
-          title: "Vehicle added",
-          description: "Vehicle has been successfully added to client.",
-        });
-      }
     }
   };
 
-  const handleCloseServiceDialog = (success = false) => {
+  const handleCloseServiceDialog = () => {
     setShowServiceDialog(false);
-    
-    if (success) {
-      toast({
-        title: "Appointment scheduled",
-        description: "The appointment has been successfully scheduled.",
-      });
-    }
   };
 
   // Auto-select first client when the page loads if none is selected
@@ -195,7 +163,7 @@ const Clients = () => {
           <DialogContent className="sm:max-w-[500px]">
             <ClientForm
               initialData={editingClient || undefined}
-              onClose={(success) => handleCloseClientDialog(success)}
+              onClose={handleCloseClientDialog}
             />
           </DialogContent>
         </Dialog>
@@ -210,7 +178,7 @@ const Clients = () => {
             {selectedClient && (
               <VehicleForm
                 clientId={selectedClient.id}
-                onClose={(success) => handleCloseVehicleDialog(success)}
+                onClose={handleCloseVehicleDialog}
               />
             )}
           </DialogContent>
@@ -226,7 +194,7 @@ const Clients = () => {
             {selectedClient && (
               <ServiceForm
                 clientId={selectedClient.id}
-                onClose={(success) => handleCloseServiceDialog(success)}
+                onClose={handleCloseServiceDialog}
                 vehicles={clientVehicles}
               />
             )}
