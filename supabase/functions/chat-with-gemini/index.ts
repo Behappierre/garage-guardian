@@ -184,6 +184,56 @@ serve(async (req) => {
     async function handleBookingQuery(message: string): Promise<string> {
       const lowerMessage = message.toLowerCase()
 
+  // ---------------------------------------------------------------------------
+  // 1) CHECK IF USER WANTS TO SEE TODAY'S BOOKINGS
+  // ---------------------------------------------------------------------------
+    if (
+      (lowerMessage.includes('bookings') || lowerMessage.includes('appointments')) &&
+      lowerMessage.includes('today')
+    ) {
+      // Get the start & end of the current day
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      // Query Supabase for today's appointments
+      const { data, error } = await supabaseClient
+        .from('appointments')
+        .select(`
+          id,
+          scheduled_at,
+          service_type,
+          client:clients(
+            first_name,
+            last_name
+          )
+        `)
+        .gte('scheduled_at', startOfDay.toISOString())
+        .lte('scheduled_at', endOfDay.toISOString());
+
+      if (error) {
+        console.error('Error fetching today’s bookings:', error);
+        return "I ran into a problem fetching today's bookings.";
+      }
+
+      if (!data || data.length === 0) {
+        return "No bookings for today.";
+      }
+
+      // Build a simple summary
+      let summary = "Here are today's bookings:\n";
+      for (const appt of data) {
+        const timeStr = new Date(appt.scheduled_at).toLocaleString();
+        summary += `• Appointment #${appt.id} at ${timeStr}, for ${appt.client.first_name} ${appt.client.last_name}, Service: ${appt.service_type}\n`;
+      }
+      return summary;
+    }
+
+  // ---------------------------------------------------------------------------
+  // 2) EXISTING BOOKING LOGIC (BOOK/CANCEL/CHANGE) GOES HERE
+  // ---------------------------------------------------------------------------
+  
+  // For example:
       // Cancel appointment
       if (lowerMessage.includes('cancel') && lowerMessage.includes('appointment')) {
         // If we have an appointment in memory, cancel that
