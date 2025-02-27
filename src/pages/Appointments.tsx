@@ -9,6 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAppointments } from "@/hooks/use-appointments";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
+import { useTheme } from "next-themes";
 
 const Appointments = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ const Appointments = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [calendarViewType, setCalendarViewType] = useState<"dayGridMonth" | "timeGridWeek" | "timeGridDay">("timeGridWeek");
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
 
   const { data: appointments, isLoading } = useAppointments();
 
@@ -57,10 +60,11 @@ const Appointments = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
       <PageHeader
         title="Appointments"
         description="Manage service appointments and schedules"
+        className={isDarkMode ? "bg-black" : ""}
       >
         <PageActionButton
           icon={<Plus className="h-4 w-4" />}
@@ -78,16 +82,32 @@ const Appointments = () => {
         <div className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center">
-              <div className="bg-gray-100 rounded-md p-0.5 flex">
+              <div className={`rounded-md p-0.5 flex ${isDarkMode ? "bg-gray-800" : "bg-gray-100"}`}>
                 <button 
-                  className={`flex items-center px-3 py-1.5 gap-1.5 rounded ${viewMode === "calendar" ? "bg-white shadow-sm" : "text-gray-600"}`}
+                  className={`flex items-center px-3 py-1.5 gap-1.5 rounded ${
+                    viewMode === "calendar" 
+                      ? isDarkMode 
+                        ? "bg-gray-700 shadow-sm" 
+                        : "bg-white shadow-sm" 
+                      : isDarkMode 
+                        ? "text-gray-300" 
+                        : "text-gray-600"
+                  }`}
                   onClick={() => setViewMode("calendar")}
                 >
-                  <CalendarIcon className="h-4 w-4 text-gray-600" />
+                  <CalendarIcon className={`h-4 w-4 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`} />
                   <span className="text-sm">Calendar</span>
                 </button>
                 <button 
-                  className={`flex items-center px-3 py-1.5 gap-1.5 rounded ${viewMode === "list" ? "bg-white shadow-sm" : "text-gray-600"}`}
+                  className={`flex items-center px-3 py-1.5 gap-1.5 rounded ${
+                    viewMode === "list" 
+                      ? isDarkMode 
+                        ? "bg-gray-700 shadow-sm" 
+                        : "bg-white shadow-sm" 
+                      : isDarkMode 
+                        ? "text-gray-300" 
+                        : "text-gray-600"
+                  }`}
                   onClick={() => setViewMode("list")}
                 >
                   <List className="h-4 w-4" />
@@ -98,22 +118,22 @@ const Appointments = () => {
               <div className="ml-6 flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   <span className="h-3 w-3 rounded-full bg-orange-500"></span>
-                  <span className="text-xs text-gray-600">Bay 1</span>
+                  <span className={`text-xs ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Bay 1</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="h-3 w-3 rounded-full bg-blue-500"></span>
-                  <span className="text-xs text-gray-600">Bay 2</span>
+                  <span className={`text-xs ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Bay 2</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="h-3 w-3 rounded-full bg-purple-500"></span>
-                  <span className="text-xs text-gray-600">MOT</span>
+                  <span className={`text-xs ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>MOT</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm w-full">
+        <div className={`rounded-lg shadow-sm w-full ${isDarkMode ? "bg-gray-900" : "bg-white"}`}>
           {viewMode === "calendar" ? (
             <AppointmentCalendar
               appointments={appointments || []}

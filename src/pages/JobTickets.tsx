@@ -11,6 +11,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { useParams } from "react-router-dom";
 import type { TicketPriority } from "@/types/job-ticket";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
+import { useTheme } from "next-themes";
 
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
@@ -30,6 +31,8 @@ const JobTickets = () => {
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
 
   // Fetch specific ticket if ID is provided
   useQuery({
@@ -125,10 +128,11 @@ const JobTickets = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
       <PageHeader
         title="Job Tickets"
         description="Manage service job tickets"
+        className={isDarkMode ? "bg-black" : ""}
       >
         <PageActionButton
           icon={<Plus className="h-4 w-4" />}

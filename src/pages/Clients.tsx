@@ -11,6 +11,7 @@ import { VehicleForm } from "@/components/forms/VehicleForm";
 import { ServiceForm } from "@/components/forms/ServiceForm";
 import { useToast } from "@/components/ui/use-toast";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
+import { useTheme } from "next-themes";
 
 interface Client {
   id: string;
@@ -45,6 +46,8 @@ const Clients = () => {
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
   const [showServiceDialog, setShowServiceDialog] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
 
   const { data: clients, isLoading } = useQuery({
     queryKey: ["clients"],
@@ -114,10 +117,11 @@ const Clients = () => {
   }, [clients, selectedClientId]);
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
       <PageHeader
         title="Clients"
         description="Manage your client records and appointments"
+        className={isDarkMode ? "bg-black" : ""}
       >
         <PageActionButton
           icon={<UserPlus className="h-4 w-4" />}
@@ -147,7 +151,11 @@ const Clients = () => {
               onAddService={() => setShowServiceDialog(true)}
             />
           ) : (
-            <div className="col-span-2 bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
+            <div className={`col-span-2 rounded-lg shadow-sm p-6 text-center ${
+              isDarkMode 
+                ? "bg-gray-900 text-gray-400" 
+                : "bg-white text-gray-500"
+            }`}>
               {clients && clients.length > 0 
                 ? "Select a client to view details" 
                 : "No clients available. Add a new client to get started."}
