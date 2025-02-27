@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MessagesSquare, Send, Trash2, X } from "lucide-react";
+import { MessagesSquare, Send, Trash2, Maximize2, Minimize2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -119,6 +119,10 @@ export function ChatAgent() {
     toast.success("Chat cleared");
   };
 
+  const toggleWidth = () => {
+    setIsWide(prev => !prev);
+  };
+
   return (
     <>
       <Button
@@ -135,10 +139,25 @@ export function ChatAgent() {
             "max-h-[90vh] p-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-300",
             isWide ? "sm:max-w-[800px]" : "sm:max-w-[400px] md:sm:max-w-[540px]"
           )}
+          // This disables the automatic close button that is part of the Dialog component
+          closeButton={false}
         >
           <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
             <DialogTitle className="text-lg">AI Assistant</DialogTitle>
             <div className="flex gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={toggleWidth}
+                className="h-8 w-8"
+                title={isWide ? "Narrow view" : "Wide view"}
+              >
+                {isWide ? (
+                  <Minimize2 className="h-4 w-4" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" />
+                )}
+              </Button>
               <Button 
                 variant="ghost" 
                 size="icon"
@@ -155,7 +174,7 @@ export function ChatAgent() {
                 className="h-8 w-8"
                 title="Close"
               >
-                <X className="h-4 w-4" />
+                <Maximize2 className="h-4 w-4 rotate-45" />
               </Button>
             </div>
           </DialogHeader>
