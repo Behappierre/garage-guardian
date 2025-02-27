@@ -1,11 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
 import OpenAI from 'https://esm.sh/openai@4.0.0'
+
+const openai = new OpenAI({
+  apiKey: Deno.env.get('OPENAI_API_KEY')
+});
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+)
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 // Chat memory for storing context
 const chatMemory: Record<string, {
@@ -51,26 +60,16 @@ const safetyProtocols = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { message, user_id } = await req.json()
-    console.log('Received message:', message, 'from user:', user_id)
+    const { message, user_id } = await req.json();
 
     // Initialize chat memory for this user if not existing
     if (!chatMemory[user_id]) {
       chatMemory[user_id] = {}
     }
-
-    // Create Supabase and OpenAI clients
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY') ?? ''
-    })
 
     // Process the incoming message
     async function processMessage(message: string) {
@@ -208,7 +207,7 @@ serve(async (req) => {
             return `I couldn't find a client named "${clientName}" in our system.`
           }
           // Find the client’s active appointment
-          const { data: appointment, error } = await supabaseClient
+          const { data: appointment, error } = await supabase
             .from('appointments')
             .select('id')
             .eq('client_id', client.id)
@@ -405,7 +404,7 @@ serve(async (req) => {
       const registration = regMatch[1].toUpperCase()
 
       // Lookup the vehicle
-      const { data: vehicles, error } = await supabaseClient
+      const { data: vehicles, error } = await supabase
         .from('vehicles')
         .select(`
           id,
@@ -678,7 +677,7 @@ serve(async (req) => {
       appointmentTime: Date,
       serviceType: string = 'General Service'
     ) {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('appointments')
         .insert({
           client_id: clientId,
@@ -698,7 +697,7 @@ serve(async (req) => {
     }
 
     async function updateAppointmentService(appointmentId: string, serviceType: string) {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('appointments')
         .update({ service_type: serviceType })
         .eq('id', appointmentId)
@@ -712,7 +711,7 @@ serve(async (req) => {
     }
 
     async function cancelAppointment(appointmentId: string) {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('appointments')
         .update({ status: 'cancelled' })
         .eq('id', appointmentId)
@@ -726,7 +725,7 @@ serve(async (req) => {
     }
 
     async function addNewClient(firstName: string, lastName: string, phone?: string, email?: string) {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('clients')
         .insert({
           first_name: firstName,
@@ -751,7 +750,7 @@ serve(async (req) => {
       year?: string,
       color?: string
     ) {
-      const { data, error } = await supabaseClient
+      const { data, error } = await supabase
         .from('vehicles')
         .insert({
           client_id: clientId,
@@ -778,7 +777,7 @@ serve(async (req) => {
       const isEmail = cleanTerm.includes('@')
       const nameParts = cleanTerm.split(' ')
 
-      let query = supabaseClient
+      let query = supabase
         .from('clients')
         .select(`
           id,
