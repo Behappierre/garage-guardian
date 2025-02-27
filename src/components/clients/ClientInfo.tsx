@@ -33,8 +33,8 @@ export const ClientInfo = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+    <div className="bg-white rounded-lg shadow-sm border-l-4 border-primary">
+      <div className="border-b border-gray-200 px-6 py-4 flex justify-between items-center bg-gray-50">
         <h2 className="text-xl font-semibold text-gray-900">
           {client.first_name} {client.last_name}
         </h2>
@@ -44,10 +44,10 @@ export const ClientInfo = ({
         </Button>
       </div>
       
-      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 bg-gradient-to-br from-white to-gray-50">
         <div className="space-y-4">
           <div className="flex items-start">
-            <Mail className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+            <Mail className="h-5 w-5 text-primary mr-3 mt-0.5" />
             <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Email</h3>
               <p className="text-sm text-gray-900">{client.email || "No email"}</p>
@@ -55,7 +55,7 @@ export const ClientInfo = ({
           </div>
           
           <div className="flex items-start">
-            <Phone className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+            <Phone className="h-5 w-5 text-primary mr-3 mt-0.5" />
             <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Phone</h3>
               <p className="text-sm text-gray-900">{client.phone || "No phone"}</p>
@@ -63,7 +63,7 @@ export const ClientInfo = ({
           </div>
           
           <div className="flex items-start">
-            <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+            <MapPin className="h-5 w-5 text-primary mr-3 mt-0.5" />
             <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Address</h3>
               <p className="text-sm text-gray-900 whitespace-pre-line">{client.address || "No address"}</p>
@@ -73,7 +73,7 @@ export const ClientInfo = ({
         
         <div className="space-y-4">
           <div className="flex items-start">
-            <FileText className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+            <FileText className="h-5 w-5 text-primary mr-3 mt-0.5" />
             <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Notes</h3>
               <p className="text-sm text-gray-900 whitespace-pre-line">{client.notes || "No notes added"}</p>
