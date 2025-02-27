@@ -48,7 +48,7 @@ export const ClientInfo = ({
         <div className="space-y-4">
           <div className="flex items-start">
             <Mail className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Email</h3>
               <p className="text-sm text-gray-900">{client.email || "No email"}</p>
             </div>
@@ -56,7 +56,7 @@ export const ClientInfo = ({
           
           <div className="flex items-start">
             <Phone className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Phone</h3>
               <p className="text-sm text-gray-900">{client.phone || "No phone"}</p>
             </div>
@@ -64,7 +64,7 @@ export const ClientInfo = ({
           
           <div className="flex items-start">
             <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Address</h3>
               <p className="text-sm text-gray-900 whitespace-pre-line">{client.address || "No address"}</p>
             </div>
@@ -74,14 +74,14 @@ export const ClientInfo = ({
         <div className="space-y-4">
           <div className="flex items-start">
             <FileText className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
-            <div>
+            <div className="text-left">
               <h3 className="text-sm font-medium text-gray-500">Notes</h3>
               <p className="text-sm text-gray-900 whitespace-pre-line">{client.notes || "No notes added"}</p>
             </div>
           </div>
           
           <div className="flex items-start mt-4">
-            <div className="ml-8">
+            <div className="ml-8 text-left">
               <h3 className="text-sm font-medium text-gray-500">Client since</h3>
               <p className="text-sm text-gray-900">{formatDate(client.created_at)}</p>
             </div>
