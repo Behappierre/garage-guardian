@@ -46,7 +46,8 @@ export function ChatAgent() {
       .replace(/Customer:/g, '**Customer:**')
       .replace(/Service Details:/g, '**Service Details:**')
       .replace(/Job Ticket:/g, '**Job Ticket:**')
-      .replace(/Notes:/g, '**Notes:**');
+      .replace(/Notes:/g, '**Notes:**')
+      .replace(/Booking is confirmed/g, '**Booking is confirmed**');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,11 +70,15 @@ export function ChatAgent() {
         throw new Error('No active session');
       }
 
+      // Check if this might be a booking request to give priority to GPT
+      const isLikelyBookingRequest = checkIfBookingRequest(userMessage);
+
       // Try GPT first now
       try {
         console.log('Attempting to invoke GPT Edge Function with:', {
           message: userMessage,
-          userId: user.id
+          userId: user.id,
+          isLikelyBooking: isLikelyBookingRequest
         });
         
         const { data: gptData, error: gptError } = await supabase.functions.invoke('chat-with-gpt', {
@@ -103,6 +108,7 @@ export function ChatAgent() {
 
         if (gptData.response.toLowerCase().includes('booking is confirmed') || 
             gptData.response.toLowerCase().includes('appointment created')) {
+          console.log("Booking confirmed, refreshing appointments");
           refreshAppointments();
         }
 
@@ -137,6 +143,7 @@ export function ChatAgent() {
 
         if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
             geminiData.response.toLowerCase().includes('appointment created')) {
+          console.log("Booking confirmed, refreshing appointments");
           refreshAppointments();
         }
       }
@@ -150,6 +157,11 @@ export function ChatAgent() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const checkIfBookingRequest = (message: string): boolean => {
+    const bookingTerms = ['book', 'schedule', 'appointment', 'reserve', 'slot'];
+    return bookingTerms.some(term => message.toLowerCase().includes(term));
   };
 
   const handleClearChat = () => {
