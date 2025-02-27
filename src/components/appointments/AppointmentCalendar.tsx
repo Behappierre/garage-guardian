@@ -139,56 +139,150 @@ export const AppointmentCalendar = ({
         </Select>
       </div>
       
-      <div className="bg-white p-4 rounded-lg border">
+      <div className="bg-white rounded-lg overflow-hidden">
         <style>
           {`
-            .fc .fc-toolbar.fc-header-toolbar {
-              margin-bottom: 1em;
+            /* Modern Calendar Styling */
+            .fc {
+              --fc-border-color: #edf2f7;
+              --fc-today-bg-color: #f7fafc;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             }
+            
+            /* Header with month/year display */
+            .fc .fc-toolbar.fc-header-toolbar {
+              margin-bottom: 1.5em;
+              padding: 1.25rem 1.5rem;
+              border-bottom: 1px solid var(--fc-border-color);
+            }
+            
+            .fc .fc-toolbar-title {
+              font-size: 1.75rem;
+              font-weight: 800;
+              color: #111827;
+            }
+            
+            /* Navigation buttons */
             .fc .fc-button-primary {
-              background-color: #f3f4f6;
-              border-color: #e5e7eb;
-              color: #374151;
+              background-color: #f8fafc;
+              border-color: #e2e8f0;
+              color: #1e293b;
               font-weight: 500;
               text-transform: capitalize;
-              padding: 0.375rem 0.75rem;
-              font-size: 0.875rem;
+              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+              padding: 0.5rem 1rem;
             }
+            
             .fc .fc-button-primary:not(:disabled):hover {
-              background-color: #e5e7eb;
-              border-color: #d1d5db;
-              color: #1f2937;
+              background-color: #f1f5f9;
+              border-color: #cbd5e1;
+              color: #0f172a;
             }
+            
             .fc .fc-button-primary:not(:disabled).fc-button-active,
             .fc .fc-button-primary:not(:disabled):active {
               background-color: #2dd4bf;
               border-color: #2dd4bf;
               color: #ffffff;
             }
+            
             .fc .fc-button-primary:focus {
               box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #2dd4bf;
             }
-            .fc .fc-toolbar-title {
-              font-size: 1.25rem;
+            
+            /* Day headers - cleaner look */
+            .fc .fc-col-header-cell {
+              padding: 0.75rem 0;
+              background-color: #ffffff;
+            }
+            
+            .fc .fc-col-header-cell-cushion {
+              padding: 6px 4px;
               font-weight: 600;
-              color: #111827;
+              color: #64748b;
             }
-            .fc .fc-button {
-              padding: 0.375rem 0.75rem;
-              border-radius: 0.375rem;
+            
+            /* Day numbers - bolder and cleaner */
+            .fc .fc-daygrid-day-number {
+              font-size: 1rem;
+              font-weight: 700;
+              color: #0f172a;
+              padding: 8px;
+            }
+            
+            /* Current day - highlight with modern style */
+            .fc .fc-day-today {
+              background-color: #f8fafc !important;
+            }
+            
+            .fc .fc-day-today .fc-daygrid-day-number {
+              background-color: #2dd4bf;
+              color: white;
+              border-radius: 50%;
+              width: 28px;
+              height: 28px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            
+            /* Week view specifics */
+            .fc .fc-timegrid-slot {
+              height: 3em;
+              border-bottom: 1px solid #f1f5f9;
+            }
+            
+            .fc .fc-timegrid-axis {
+              padding: 0.5rem;
+            }
+            
+            .fc .fc-timegrid-axis-cushion {
               font-size: 0.875rem;
-              line-height: 1.25rem;
-              transition: all 150ms ease-in-out;
+              font-weight: 500;
+              color: #64748b;
             }
-            .fc .fc-toolbar {
-              display: flex;
-              align-items: center;
-              gap: 1rem;
+            
+            /* Events styling */
+            .fc-event {
+              border-radius: 4px;
+              border: none;
+              padding: 2px 4px;
+              font-size: 0.875rem;
+              font-weight: 500;
+              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             }
-            .fc .fc-toolbar-chunk {
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
+            
+            .fc-daygrid-event {
+              padding: 4px 6px;
+              margin-bottom: 2px;
+            }
+            
+            /* Time grid adjustments */
+            .fc-timegrid-event {
+              border-radius: 4px;
+              padding: 4px 6px;
+            }
+            
+            /* Hover state for events */
+            .fc-event:hover {
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            
+            /* More link styling */
+            .fc .fc-more-link {
+              font-size: 0.875rem;
+              color: #2dd4bf;
+              font-weight: 600;
+            }
+            
+            /* Selected day highlight */
+            .fc .fc-day-other .fc-daygrid-day-top {
+              opacity: 0.7;
+            }
+            
+            /* Week/day view time slots */
+            .fc .fc-timegrid-slot-minor {
+              border-top-style: dotted;
             }
           `}
         </style>
@@ -212,6 +306,7 @@ export const AppointmentCalendar = ({
           editable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
+          dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
         />
       </div>
     </div>
