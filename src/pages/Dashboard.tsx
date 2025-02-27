@@ -10,10 +10,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CalendarPlus, Wrench, UserPlus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
+import { JobTicketForm } from "@/components/tickets/JobTicketForm";
+import { ClientForm } from "@/components/forms/ClientForm";
 
 const Dashboard = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [showJobTicketForm, setShowJobTicketForm] = useState(false);
+  const [showClientForm, setShowClientForm] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const isDashboardRoot = location.pathname === "/dashboard";
@@ -59,7 +63,7 @@ const Dashboard = () => {
                       
                       <div 
                         className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer flex items-start"
-                        onClick={() => handleQuickAction("/dashboard/job-tickets")}
+                        onClick={() => setShowJobTicketForm(true)}
                       >
                         <div className="flex-1">
                           <h3 className="text-sm font-medium text-gray-800">Create Job Ticket</h3>
@@ -70,7 +74,7 @@ const Dashboard = () => {
                       
                       <div 
                         className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer flex items-start"
-                        onClick={() => handleQuickAction("/dashboard/clients")}
+                        onClick={() => setShowClientForm(true)}
                       >
                         <div className="flex-1">
                           <h3 className="text-sm font-medium text-gray-800">Add New Client</h3>
@@ -99,6 +103,30 @@ const Dashboard = () => {
             initialData={null}
             selectedDate={null}
             onClose={() => setShowAppointmentForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Job Ticket Form Dialog */}
+      <Dialog open={showJobTicketForm} onOpenChange={setShowJobTicketForm}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Create New Job Ticket</DialogTitle>
+          </DialogHeader>
+          <JobTicketForm
+            onClose={() => setShowJobTicketForm(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Form Dialog */}
+      <Dialog open={showClientForm} onOpenChange={setShowClientForm}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+          </DialogHeader>
+          <ClientForm
+            onClose={() => setShowClientForm(false)}
           />
         </DialogContent>
       </Dialog>
