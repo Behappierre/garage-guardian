@@ -1,20 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 import OpenAI from 'https://esm.sh/openai@4.0.0'
-
-const openai = new OpenAI({
-  apiKey: Deno.env.get('OPENAI_API_KEY')
-});
-
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-)
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+}
 
 // Chat memory for storing context
 const chatMemory: Record<string, {
@@ -60,16 +51,26 @@ const safetyProtocols = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { message, user_id } = await req.json();
+    const { message, user_id } = await req.json()
+    console.log('Received message:', message, 'from user:', user_id)
 
     // Initialize chat memory for this user if not existing
     if (!chatMemory[user_id]) {
       chatMemory[user_id] = {}
     }
+
+    // Create Supabase and OpenAI clients
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY') ?? ''
+    })
 
     // Process the incoming message
     async function processMessage(message: string) {
@@ -132,9 +133,8 @@ serve(async (req) => {
       }
 
       // Vehicle registration pattern or context
-      const regPattern = /\b([a-zA-Z0-9]{1,7})\b/
       const regContextWords = ['registration', 'reg', 'plate', 'car with', 'whose car']
-      if (regPattern.test(lowerMessage) && regContextWords.some(word => lowerMessage.includes(word))) {
+      if (regContextWords.some(word => lowerMessage.includes(word))) {
         return 'vehicle_lookup'
       }
 
@@ -207,7 +207,7 @@ serve(async (req) => {
             return `I couldn't find a client named "${clientName}" in our system.`
           }
           // Find the client’s active appointment
-          const { data: appointment, error } = await supabase
+          const { data: appointment, error } = await supabaseClient
             .from('appointments')
             .select('id')
             .eq('client_id', client.id)
@@ -283,15 +283,11 @@ serve(async (req) => {
         return `${client.first_name} ${client.last_name} doesn't have any vehicles registered. Please add a vehicle first.`
       }
 
-      // If multiple vehicles, ask which one
+      // If multiple vehicles, pick the first or prompt
       if (client.vehicles.length > 1) {
-        // Just pick the first for now, or prompt user to choose
-        // For minimal improvement, let’s return a note
-        chatMemory[user_id].lastVehicleId = client.vehicles[0].id
-        // You could do something like: return "Which vehicle do you want to book an appointment for?"
-      } else {
-        chatMemory[user_id].lastVehicleId = client.vehicles[0].id
+        console.log(`Client has multiple vehicles; picking the first by default.`)
       }
+      chatMemory[user_id].lastVehicleId = client.vehicles[0].id
 
       try {
         await createAppointment(client.id, chatMemory[user_id].lastVehicleId!, appointmentTime)
@@ -337,11 +333,10 @@ serve(async (req) => {
         const match = message.match(
           /(?:add|new|register)\s+vehicle\s+(?:for\s+([a-zA-Z ]+))?\s*(make\s+([a-zA-Z]+))?.*(model\s+([a-zA-Z0-9]+))?.*(registration\s+([a-zA-Z0-9]+))?/i
         )
-        // This regex is simplistic; you might parse it more robustly
         if (!match) {
           return "To add a vehicle, please specify the client and basic vehicle info. For example: 'Add vehicle for John Smith make Ford model Focus registration ABC123'."
         }
-        // We might have partial matches, so handle carefully
+
         const clientName = match[1]?.trim()
         if (!clientName) {
           return "Please specify the client's name. E.g., 'Add vehicle for John Smith make Ford model Focus registration ABC123'."
@@ -373,38 +368,66 @@ serve(async (req) => {
 
     // CLIENT LOOKUP
     async function handleClientLookup(message: string): Promise<string> {
-      // Extract name, phone, or email from message
+      // Extract the portion after "client" or "customer"
       const match = message.match(/(?:client|customer)\s+(.*)/i)
       if (!match) {
         return "Please specify which client or customer you're looking for."
       }
-      const searchTerm = match[1].trim()
-      const client = await findClient(searchTerm)
-      if (!client) {
-        return `No client found matching "${searchTerm}".`
+
+      // Remove punctuation and common filler words at the end (like 'what', 'vehicle', etc.)
+      let rawSearch = match[1].replace(/[^\w\s]/g, '').trim() // strip punctuation
+      // If user says "client Olivier Andre what is his vehicle", we want to trim off "what is his vehicle"
+      const fillerWords = ['what','is','his','her','vehicle','car','and','the','their','with','which','client','customer']
+      let parts = rawSearch.split(/\s+/)
+      // If we have more than 2 parts, try removing trailing filler words
+      while (parts.length > 2 && fillerWords.includes(parts[parts.length - 1].toLowerCase())) {
+        parts.pop()
+      }
+      rawSearch = parts.join(' ')
+
+      if (!rawSearch) {
+        return "I couldn't parse a valid client name from your request."
       }
 
-      // If multiple clients, findClient returns the first or best match
-      // If you want to handle multiple matches more gracefully, you can do so here.
+      const client = await findClient(rawSearch)
+      if (!client) {
+        return `No client found matching "${rawSearch}".`
+      }
 
       // Summarize client info
       const vehiclesList = client.vehicles?.map(
         (v: any) => `${v.make} ${v.model} (${v.registration})`
       ).join(', ') || 'No vehicles'
+
       return `Client found: ${client.first_name} ${client.last_name}, Phone: ${client.phone ?? 'N/A'}, Email: ${client.email ?? 'N/A'}, Vehicles: ${vehiclesList}.`
     }
 
-    // VEHICLE LOOKUP
+    // VEHICLE LOOKUP (IMPROVED REGEX)
     async function handleVehicleLookup(message: string): Promise<string> {
-      // Attempt to extract registration from the message
-      const regMatch = message.match(/\b([a-zA-Z0-9]{1,7})\b/)
-      if (!regMatch) {
+      // Find ALL 1–7 letter/number tokens
+      const allMatches = [...message.matchAll(/\b([a-zA-Z0-9]{1,7})\b/g)]
+      if (!allMatches || allMatches.length === 0) {
         return "I couldn't find a registration in your message. Please provide something like 'Check vehicle with reg ABC123'."
       }
-      const registration = regMatch[1].toUpperCase()
 
-      // Lookup the vehicle
-      const { data: vehicles, error } = await supabase
+      // Convert to uppercase and exclude common filler words
+      const excludedWords = [
+        "CAN","YOU","CAR","WHOSE","IS","ME","TELL","THE","WITH","WHAT",
+        "OF","FOR","IT","THIS","TO","PLEASE","ARE","ANY","REG","CHECK",
+        "VEHICLE","IS?","WHOSE?","CLIENT","CUSTOMER","WHATIS","WHOS","WHO","HIS"
+      ]
+      let possiblePlates = allMatches.map(m => m[1].toUpperCase())
+      possiblePlates = possiblePlates.filter(x => !excludedWords.includes(x))
+
+      if (possiblePlates.length === 0) {
+        return "I couldn't find a valid registration in your message. Please provide something like 'Check vehicle with reg ABC123'."
+      }
+
+      // Pick the last one found in the message, often the real plate
+      const registration = possiblePlates[possiblePlates.length - 1]
+
+      // Lookup the vehicle in Supabase
+      const { data: vehicles, error } = await supabaseClient
         .from('vehicles')
         .select(`
           id,
@@ -421,7 +444,11 @@ serve(async (req) => {
         .eq('registration', registration)
         .limit(1)
 
-      if (error || !vehicles || vehicles.length === 0) {
+      if (error) {
+        console.error('Vehicle lookup error:', error)
+        return `I encountered an error while looking up registration "${registration}".`
+      }
+      if (!vehicles || vehicles.length === 0) {
         return `I couldn't find a vehicle with registration "${registration}".`
       }
 
@@ -432,8 +459,7 @@ serve(async (req) => {
     // JOB SHEET (MINIMAL STUB)
     async function handleJobSheetQuery(message: string): Promise<string> {
       // Stub: you can customize to your needs
-      // e.g., fetch repair history, open jobs, etc.
-      return "Job sheet queries are not fully implemented yet. Please specify what details you need, such as repair history or completed work."
+      return "Job sheet queries are not fully implemented yet. Please specify if you need repair history, completed work, etc."
     }
 
     // SAFETY PROTOCOL
@@ -470,7 +496,7 @@ serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: "You are an automotive safety expert for a garage workshop. Provide clear, step-by-step safety procedures for automotive tasks. Format as a short, numbered list. Keep it under 250 words."
+              content: "You are an automotive safety expert for a garage workshop. Provide clear, step-by-step safety procedures. Format as a short, numbered list. Keep it under 250 words."
             },
             {
               role: "user",
@@ -677,7 +703,7 @@ serve(async (req) => {
       appointmentTime: Date,
       serviceType: string = 'General Service'
     ) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('appointments')
         .insert({
           client_id: clientId,
@@ -697,7 +723,7 @@ serve(async (req) => {
     }
 
     async function updateAppointmentService(appointmentId: string, serviceType: string) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('appointments')
         .update({ service_type: serviceType })
         .eq('id', appointmentId)
@@ -711,7 +737,7 @@ serve(async (req) => {
     }
 
     async function cancelAppointment(appointmentId: string) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('appointments')
         .update({ status: 'cancelled' })
         .eq('id', appointmentId)
@@ -725,7 +751,7 @@ serve(async (req) => {
     }
 
     async function addNewClient(firstName: string, lastName: string, phone?: string, email?: string) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('clients')
         .insert({
           first_name: firstName,
@@ -750,7 +776,7 @@ serve(async (req) => {
       year?: string,
       color?: string
     ) {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('vehicles')
         .insert({
           client_id: clientId,
@@ -769,15 +795,16 @@ serve(async (req) => {
       return data
     }
 
+    // More flexible client finder
     async function findClient(searchTerm: string) {
       const cleanTerm = searchTerm.trim()
 
       // Quick phone or email check
       const isPhoneNumber = /^[\d\(\)\+\-\s]{7,}$/.test(cleanTerm)
       const isEmail = cleanTerm.includes('@')
-      const nameParts = cleanTerm.split(' ')
+      const nameParts = cleanTerm.split(/\s+/)
 
-      let query = supabase
+      let query = supabaseClient
         .from('clients')
         .select(`
           id,
@@ -802,7 +829,7 @@ serve(async (req) => {
       } else if (isEmail) {
         query = query.ilike('email', cleanTerm)
       } else {
-        // Name search
+        // Basic name search
         if (nameParts.length === 1) {
           query = query.or(`first_name.ilike.%${nameParts[0]}%,last_name.ilike.%${nameParts[0]}%`)
         } else {
@@ -825,10 +852,8 @@ serve(async (req) => {
       }
 
       if (data.length > 1) {
-        // For simplicity, return the first match
         console.log(`Multiple clients found for "${cleanTerm}". Returning the first match.`)
       }
-
       return data[0]
     }
 
