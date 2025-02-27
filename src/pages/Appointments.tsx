@@ -37,76 +37,91 @@ const Appointments = () => {
   return (
     <div className="w-full max-w-[1400px] mx-auto">
       <main>
-        {/* More compact header section */}
-        <div className="bg-white rounded-lg shadow-sm mb-2 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Appointments</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Manage service appointments and schedules</p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() => {
-                setSelectedAppointment(null);
-                setSelectedDate(null);
-                setShowAppointmentForm(true);
-              }}
-              className="bg-primary hover:bg-primary/90 text-white font-medium gap-1.5 whitespace-nowrap h-9"
-            >
-              <Plus className="h-4 w-4" />
-              New Appointment
-            </Button>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
+          <p className="text-sm text-gray-600 mt-1">Manage service appointments and schedules</p>
+        </div>
 
-          <Tabs defaultValue="calendar" className="w-full">
-            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-              <TabsList className="bg-secondary/50 p-0.5 rounded-md h-8">
-                <TabsTrigger value="calendar" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5 h-7">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  Calendar
-                </TabsTrigger>
-                <TabsTrigger value="list" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5 h-7">
-                  <List className="h-3.5 w-3.5" />
-                  List
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="flex items-center gap-3 text-xs">
+        <div className="mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center">
+              <div className="bg-gray-100 rounded-md p-0.5 flex">
+                <button className="flex items-center px-3 py-1.5 gap-1.5 rounded bg-white shadow-sm">
+                  <CalendarIcon className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm">Calendar</span>
+                </button>
+                <button className="flex items-center px-3 py-1.5 gap-1.5 rounded text-gray-600">
+                  <List className="h-4 w-4" />
+                  <span className="text-sm">List</span>
+                </button>
+              </div>
+              
+              <div className="ml-6 flex items-center gap-3">
                 <div className="flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-orange-500"></span>
-                  <span className="text-gray-600">Bay 1</span>
+                  <span className="h-3 w-3 rounded-full bg-orange-500"></span>
+                  <span className="text-xs text-gray-600">Bay 1</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
-                  <span className="text-gray-600">Bay 2</span>
+                  <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                  <span className="text-xs text-gray-600">Bay 2</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="h-2.5 w-2.5 rounded-full bg-purple-500"></span>
-                  <span className="text-gray-600">MOT</span>
+                  <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                  <span className="text-xs text-gray-600">MOT</span>
                 </div>
               </div>
             </div>
-
-            <TabsContent value="calendar" className="mt-1 p-0">
-              <AppointmentCalendar
-                appointments={appointments || []}
-                onDateSelect={handleDateSelect}
-                onEventClick={handleEventClick}
-              />
-            </TabsContent>
-
-            <TabsContent value="list" className="mt-1 p-0">
-              <AppointmentList 
-                appointments={appointments || []}
-                onSelectAppointment={(appointment) => {
-                  setSelectedAppointment(appointment);
+            
+            <div className="flex items-center gap-4">
+              <div className="relative w-[120px]">
+                <select className="appearance-none block w-full bg-white border border-gray-200 rounded px-3 py-2 pr-8 text-sm focus:outline-none">
+                  <option>All Bays</option>
+                  <option>Bay 1</option>
+                  <option>Bay 2</option>
+                  <option>MOT</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <Button
+                onClick={() => {
+                  setSelectedAppointment(null);
+                  setSelectedDate(null);
                   setShowAppointmentForm(true);
                 }}
-                onTicketClick={handleTicketClick}
-                isLoading={isLoading}
-              />
-            </TabsContent>
-          </Tabs>
+                className="bg-primary hover:bg-primary/90 text-white rounded-md p-2 flex items-center gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                <span>New Appointment</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm">
+          <TabsContent value="calendar" className="m-0 p-0">
+            <AppointmentCalendar
+              appointments={appointments || []}
+              onDateSelect={handleDateSelect}
+              onEventClick={handleEventClick}
+            />
+          </TabsContent>
+
+          <TabsContent value="list" className="m-0 p-0">
+            <AppointmentList 
+              appointments={appointments || []}
+              onSelectAppointment={(appointment) => {
+                setSelectedAppointment(appointment);
+                setShowAppointmentForm(true);
+              }}
+              onTicketClick={handleTicketClick}
+              isLoading={isLoading}
+            />
+          </TabsContent>
         </div>
 
         <Dialog open={showAppointmentForm} onOpenChange={setShowAppointmentForm}>
