@@ -18,7 +18,7 @@ serve(async (req) => {
     const { message, user_id } = await req.json();
     console.log('Received message:', message, 'from user:', user_id);
 
-    // Create Supabase and OpenAI clients
+    // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -30,6 +30,61 @@ serve(async (req) => {
 
     // Process the incoming message
     async function processMessage(message: string) {
+      const lowerMessage = message.toLowerCase();
+      
+      // Check if message is about bookings/appointments
+      if (lowerMessage.includes('booking') || lowerMessage.includes('appointment') || 
+          lowerMessage.includes('schedule') || lowerMessage.includes("today's")) {
+        
+        try {
+          // Get today's appointments
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+
+          const { data: appointments, error } = await supabaseClient
+            .from('appointments')
+            .select(`
+              *,
+              client:clients(first_name, last_name),
+              vehicle:vehicles(make, model)
+            `)
+            .gte('start_time', today.toISOString())
+            .lt('start_time', tomorrow.toISOString())
+            .order('start_time');
+
+          if (error) {
+            console.error('Database error:', error);
+            throw new Error('Failed to fetch appointments');
+          }
+
+          if (!appointments || appointments.length === 0) {
+            return "There are no appointments scheduled for today.";
+          }
+
+          // Format appointments into readable text
+          const appointmentsList = appointments.map(apt => {
+            const time = new Date(apt.start_time).toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            const clientName = apt.client ? `${apt.client.first_name} ${apt.client.last_name}` : 'No client name';
+            const vehicle = apt.vehicle ? `${apt.vehicle.make} ${apt.vehicle.model}` : 'No vehicle details';
+            
+            return `${time}: ${clientName} - ${vehicle} (${apt.service_type || 'General Service'})`;
+          });
+
+          return `Today's appointments:\n\n${appointmentsList.join('\n')}`;
+        } catch (error) {
+          console.error('Error fetching appointments:', error);
+          return "I apologize, but I encountered an error while fetching the appointments. Please try again or check with your system administrator.";
+        }
+      }
+
+      // For non-booking queries, use OpenAI
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-4",
