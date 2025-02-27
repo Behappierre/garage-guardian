@@ -17,28 +17,33 @@ const chatMemory: Record<string, {
   lastConversationContext?: string;
 }> = {};
 
-// Common vehicle data for general inquiries
+// Update the vehicleData object to include more variations of model names
 const vehicleData = {
-  'fiat 500 1.2': {
+  'fiat 500': {
     oilCapacity: '2.8 liters',
     tirePressure: '2.2 bar (32 psi) front, 2.1 bar (30 psi) rear',
     batteryType: '12V 50Ah (Group 47)',
     serviceInterval: '15,000 miles or 12 months',
   },
-  'ford focus 1.0': {
+  'fiat500': {
+    oilCapacity: '2.8 liters',
+    tirePressure: '2.2 bar (32 psi) front, 2.1 bar (30 psi) rear',
+    batteryType: '12V 50Ah (Group 47)',
+    serviceInterval: '15,000 miles or 12 months',
+  },
+  'ford focus': {
     oilCapacity: '4.1 liters',
     tirePressure: '2.3 bar (33 psi) front, 2.2 bar (32 psi) rear',
     batteryType: '12V 60Ah (Group 48)',
     serviceInterval: '10,000 miles or 12 months',
   },
-  'toyota corolla 1.8': {
+  'toyota corolla': {
     oilCapacity: '4.4 liters',
     tirePressure: '2.4 bar (35 psi) all around',
     batteryType: '12V 45Ah (Group 51R)',
     serviceInterval: '10,000 miles or 12 months',
   },
-  // Add more common vehicles as needed
-}
+};
 
 // Safety protocols and procedures
 const safetyProtocols = {
@@ -48,7 +53,7 @@ const safetyProtocols = {
   'oil change': 'For safe oil changes: 1) Ensure engine is warm but not hot, 2) Place oil catch pan under drain plug, 3) Remove fill cap before drain plug, 4) Dispose of used oil at recycling center, 5) Replace filter with each oil change, 6) Refill with manufacturer-recommended oil grade and quantity.',
   'battery change': 'Safety procedure for changing a car battery: 1) Wear protective gloves and eye protection, 2) Ensure ignition and all electrical components are off, 3) Disconnect the negative (-) terminal first, then the positive (+), 4) Remove any battery hold-down clamps, 5) Carefully lift out old battery using proper lifting technique, 6) Clean terminal connections and battery tray, 7) Install new battery, 8) Connect positive (+) terminal first, then negative (-), 9) Ensure connections are tight but not over-tightened, 10) Dispose of old battery at a recycling center.',
   'changing a battery': 'To safely change a car battery: 1) Wear protective gloves and eye protection, 2) Turn off all electronics and remove key from ignition, 3) Identify battery terminals (red is positive, black is negative), 4) Disconnect negative terminal first to prevent shorts, 5) Disconnect positive terminal, 6) Remove battery hold-down bracket, 7) Carefully remove old battery (they're heavy), 8) Clean battery tray and terminals, 9) Install new battery, 10) Connect positive terminal first, then negative, 11) Ensure connections are secure, 12) Recycle old battery at authorized facility.',
-}
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -474,10 +479,12 @@ serve(async (req) => {
 
     // Function to handle specific car questions
     async function handleCarSpecificQuestion(message: string): Promise<string> {
-      const lowerMessage = message.toLowerCase();
+      const lowerMessage = message.toLowerCase().replace(/\s+/g, ' ').trim();
       
       // Try to identify the car model being asked about
       let carModel = null;
+      
+      // First try exact matches
       for (const model of Object.keys(vehicleData)) {
         if (lowerMessage.includes(model)) {
           carModel = model;
@@ -485,60 +492,48 @@ serve(async (req) => {
         }
       }
       
+      // If no exact match, try partial matches
+      if (!carModel) {
+        for (const model of Object.keys(vehicleData)) {
+          const modelParts = model.split(' ');
+          if (modelParts.every(part => lowerMessage.includes(part))) {
+            carModel = model;
+            break;
+          }
+        }
+      }
+
+      console.log('Car model identified:', carModel); // Add logging
+  
       if (!carModel) {
         return "I'm not sure which vehicle you're asking about. Could you specify the make and model?";
       }
       
       const carInfo = vehicleData[carModel];
       
-      // Oil capacity question
-      if (lowerMessage.includes('oil') && 
-         (lowerMessage.includes('capacity') || lowerMessage.includes('how much') || lowerMessage.includes('how many'))) {
-        return `The oil capacity for a ${carModel} is ${carInfo.oilCapacity}.`;
-      }
-      
-      // Tire pressure question
-      if (lowerMessage.includes('tire') && 
-         (lowerMessage.includes('pressure') || lowerMessage.includes('psi') || lowerMessage.includes('bar'))) {
+      // More specific pattern matching for different types of questions
+      if (lowerMessage.includes('tyre pressure') || lowerMessage.includes('tire pressure')) {
         return `The recommended tire pressure for a ${carModel} is ${carInfo.tirePressure}.`;
       }
       
-      // Battery question
+      if (lowerMessage.includes('oil') || lowerMessage.includes('oil capacity')) {
+        return `The oil capacity for a ${carModel} is ${carInfo.oilCapacity}.`;
+      }
+      
       if (lowerMessage.includes('battery')) {
         return `The battery type for a ${carModel} is ${carInfo.batteryType}.`;
       }
       
-      // Service interval question
-      if (lowerMessage.includes('service') && 
-         (lowerMessage.includes('interval') || lowerMessage.includes('how often'))) {
+      if (lowerMessage.includes('service') || lowerMessage.includes('interval')) {
         return `The recommended service interval for a ${carModel} is ${carInfo.serviceInterval}.`;
       }
       
-      // If we can't answer from our database, try OpenAI
-      try {
-        console.log('Querying OpenAI for specific car information');
-        
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4-turbo",
-          messages: [
-            {
-              role: "system", 
-              content: `You are an automotive expert assistant for a garage workshop. Provide accurate information about the ${carModel}. Focus only on technical specifications and maintenance requirements. Keep responses short and factual. If you don't know specific details, say so rather than guessing.`
-            },
-            {
-              role: "user",
-              content: message
-            }
-          ],
-          max_tokens: 250,
-          temperature: 0.1
-        });
-        
-        return completion.choices[0].message.content || `I have information about the ${carModel}, but I'm not sure what specific detail you're looking for. You can ask about oil capacity, tire pressure, battery type, or service intervals.`;
-      } catch (error) {
-        console.error('OpenAI API error:', error);
-        return `I have information about the ${carModel}, but I'm not sure what specific detail you're looking for. You can ask about oil capacity, tire pressure, battery type, or service intervals.`;
-      }
+      // If we can't determine the specific question but have the car model
+      return `I have information about the ${carModel}. You can ask about:
+- Tire pressure
+- Oil capacity
+- Battery type
+- Service intervals`;
     }
 
     // Function to add a new client to the system
