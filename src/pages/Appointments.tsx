@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
@@ -80,20 +79,6 @@ const Appointments = () => {
             </div>
             
             <div className="flex items-center gap-4">
-              <div className="relative w-[120px]">
-                <select className="appearance-none block w-full bg-white border border-gray-200 rounded px-3 py-2 pr-8 text-sm focus:outline-none">
-                  <option>All Bays</option>
-                  <option>Bay 1</option>
-                  <option>Bay 2</option>
-                  <option>MOT</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                  </svg>
-                </div>
-              </div>
-              
               <Button
                 onClick={() => {
                   setSelectedAppointment(null);
