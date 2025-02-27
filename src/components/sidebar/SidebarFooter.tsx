@@ -40,7 +40,7 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
           <Button
             variant="ghost"
             className={cn(
-              "w-full flex items-center gap-2 px-4 py-2",
+              "w-full flex items-center justify-start gap-2 px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md",
               isCollapsed && "justify-center px-2"
             )}
             onClick={handleSignOut}
