@@ -387,8 +387,10 @@ export const AppointmentCalendar = ({
                   // Also fix any displayed date content
                   const headerContent = cell.querySelector('.fc-col-header-cell-cushion');
                   if (headerContent) {
-                    // Hide the original content
-                    headerContent.style.visibility = 'hidden';
+                    // Cast to HTMLElement to access style property
+                    if (headerContent instanceof HTMLElement) {
+                      headerContent.style.visibility = 'hidden';
+                    }
                     
                     // If a custom display element doesn't exist yet, create one
                     let customDisplay = cell.querySelector('.custom-date-display');
@@ -399,12 +401,14 @@ export const AppointmentCalendar = ({
                     }
                     
                     // Apply our custom DD.MM format
-                    customDisplay.innerHTML = `
-                      <div style="text-align: center;">
-                        <div style="font-size: 0.875rem; font-weight: 500; color: #94a3b8;">${day}</div>
-                        <div style="font-size: 1.25rem; font-weight: 700; color: #000;">${formattedDate}</div>
-                      </div>
-                    `;
+                    if (customDisplay instanceof HTMLElement) {
+                      customDisplay.innerHTML = `
+                        <div style="text-align: center;">
+                          <div style="font-size: 0.875rem; font-weight: 500; color: #94a3b8;">${day}</div>
+                          <div style="font-size: 1.25rem; font-weight: 700; color: #000;">${formattedDate}</div>
+                        </div>
+                      `;
+                    }
                   }
                 }
               });
