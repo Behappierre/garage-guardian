@@ -1,4 +1,3 @@
-
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
 import { format, startOfDay, endOfDay, parseISO } from 'https://esm.sh/date-fns@2.30.0'
 
@@ -7,11 +6,27 @@ export async function handleBookingQuery(
   userId: string, 
   supabase: SupabaseClient
 ): Promise<string> {
+  console.log('Starting handleBookingQuery with message:', message);
+  console.log('User ID:', userId);
+  
   const lowerMessage = message.toLowerCase();
-
+  
   try {
-    // Handle different types of appointment queries
+    // Test database connection immediately
+    const { data: testData, error: testError } = await supabase
+      .from('appointments')
+      .select('id')
+      .limit(1);
+
+    if (testError) {
+      console.error('Initial database connection test failed:', testError);
+      throw new Error(`Database connection error: ${testError.message}`);
+    }
+
+    console.log('Database connection test successful:', testData);
+
     if (lowerMessage.includes('today')) {
+      console.log('Handling today\'s appointments query');
       return await getTodayAppointments(supabase);
     }
     
@@ -34,11 +49,14 @@ export async function handleBookingQuery(
            "- Book a new appointment";
   } catch (error) {
     console.error('Error in handleBookingQuery:', error);
-    return "I apologize, but I encountered an error while fetching the appointments. Please try again.";
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    throw new Error(`Booking query failed: ${errorMessage}`);
   }
 }
 
 async function getTodayAppointments(supabase: SupabaseClient): Promise<string> {
+  console.log('Starting getTodayAppointments function');
+  
   try {
     const today = new Date();
     const startTime = startOfDay(today).toISOString();
@@ -50,18 +68,6 @@ async function getTodayAppointments(supabase: SupabaseClient): Promise<string> {
       currentTime: new Date().toISOString()
     });
 
-    // First, let's check if we can query the table at all
-    const { data: testData, error: testError } = await supabase
-      .from('appointments')
-      .select('id')
-      .limit(1);
-
-    if (testError) {
-      console.error('Test query error:', testError);
-      throw new Error('Failed to access appointments table');
-    }
-
-    // Now perform the actual query
     const { data: appointments, error } = await supabase
       .from('appointments')
       .select(`
@@ -78,6 +84,8 @@ async function getTodayAppointments(supabase: SupabaseClient): Promise<string> {
       .lt('end_time', endTime)
       .order('start_time');
 
+    console.log('Query response:', { data: appointments, error });
+
     if (error) {
       console.error('Appointment query error:', error);
       throw error;
@@ -87,7 +95,10 @@ async function getTodayAppointments(supabase: SupabaseClient): Promise<string> {
       return "There are no appointments scheduled for today.";
     }
 
-    return formatAppointmentsList(appointments, "Today's appointments");
+    const formattedResponse = formatAppointmentsList(appointments, "Today's appointments");
+    console.log('Formatted response:', formattedResponse);
+    return formattedResponse;
+
   } catch (error) {
     console.error('Error in getTodayAppointments:', error);
     throw error;
