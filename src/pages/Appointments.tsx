@@ -57,8 +57,8 @@ const Appointments = () => {
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto">
-      <main>
+    <div className="w-full h-full">
+      <main className="w-full h-full">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
           <p className="text-sm text-gray-600 mt-1">Manage service appointments and schedules</p>
@@ -116,7 +116,7 @@ const Appointments = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm">
+        <div className="bg-white rounded-lg shadow-sm w-full">
           {viewMode === "calendar" ? (
             <AppointmentCalendar
               appointments={appointments || []}

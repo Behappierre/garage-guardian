@@ -191,7 +191,7 @@ export const AppointmentCalendar = ({
   }, [currentView]);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 w-full">
       <div className="fc-toolbar-container flex items-center justify-between mb-4">
         <div className="flex items-center space-x-1">
           <Button
@@ -261,7 +261,7 @@ export const AppointmentCalendar = ({
         </div>
       </div>
       
-      <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100">
+      <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 w-full">
         <style>
           {`
             /* Calendar base styling */
@@ -273,6 +273,7 @@ export const AppointmentCalendar = ({
               min-height: 600px;
               max-height: 800px;
               background-color: white;
+              width: 100% !important;
             }
             
             /* Make all borders lighter */
@@ -431,6 +432,40 @@ export const AppointmentCalendar = ({
               font-weight: 600;
               color: #1f2937;
               letter-spacing: -0.01em;
+            }
+            
+            /* Fix for grid cells */
+            .fc-scrollgrid {
+              width: 100% !important; 
+            }
+            
+            /* Ensure all tables inside the calendar have full width */
+            .fc-scrollgrid table,
+            .fc-scrollgrid-sync-table,
+            .fc-col-header, 
+            .fc-timegrid-body,
+            .fc-timegrid-cols,
+            .fc-daygrid-body,
+            .fc-daygrid-body table {
+              width: 100% !important;
+            }
+            
+            /* Fix the cell widths */
+            .fc-col-header-cell,
+            .fc-timegrid-col,
+            .fc-daygrid-day {
+              width: 14.285% !important; /* For 7 days of the week */
+            }
+            
+            /* Ensure proper width for the time axis column */
+            .fc .fc-timegrid-axis-frame {
+              min-width: 50px !important;
+            }
+            
+            /* Prevent horizontal scrolling on the entire calendar */
+            .fc-view-harness {
+              width: 100% !important;
+              overflow-x: hidden !important;
             }
           `}
         </style>
