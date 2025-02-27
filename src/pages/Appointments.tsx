@@ -95,7 +95,7 @@ const Appointments = () => {
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>
-                {selectedAppointment ? "Edit Appointment" : "Create New Job Ticket"}
+                {selectedAppointment ? "Edit Appointment" : "Create New Appointment"}
               </DialogTitle>
             </DialogHeader>
             <AppointmentForm
