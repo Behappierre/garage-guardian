@@ -57,29 +57,42 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
-      console.log('Sending message to Edge Function:', {
+      console.log('Attempting to invoke Edge Function with:', {
+        functionName: 'chat-with-gemini',
         message: userMessage,
-        user_id: user?.id
+        userId: user?.id
       });
 
-      const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
-        body: { 
-          message: userMessage,
-          user_id: user?.id
-        },
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Response from Edge Function:', { data, error });
-
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw error;
+      // Basic validation
+      if (!user?.id) {
+        throw new Error('User not authenticated');
       }
 
-      if (!data?.response) {
+      // Direct fetch to Edge Function as a fallback
+      const response = await fetch(`${supabase.functions.url}/chat-with-gemini`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.session()?.access_token}`
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          user_id: user.id
+        })
+      });
+
+      console.log('Raw response:', response);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edge Function error response:', errorText);
+        throw new Error(`Edge Function returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Parsed response data:', data);
+
+      if (!data.response) {
         throw new Error('No response received from AI assistant');
       }
 
