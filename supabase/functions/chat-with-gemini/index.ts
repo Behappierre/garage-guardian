@@ -1,14 +1,13 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from '@supabase/supabase-js@2.38.1';
-import { OpenAI } from 'https://deno.land/x/openai@v4.24.0/mod.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
+import { OpenAI } from "https://deno.land/x/openai@v4.24.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-const chatMemory = {};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,11 +17,6 @@ serve(async (req) => {
   try {
     const { message, user_id } = await req.json();
     console.log('Received message:', message, 'from user:', user_id);
-
-    // Initialize chat memory for this user if not existing
-    if (!chatMemory[user_id]) {
-      chatMemory[user_id] = {};
-    }
 
     // Create Supabase and OpenAI clients
     const supabaseClient = createClient(
@@ -36,7 +30,6 @@ serve(async (req) => {
 
     // Process the incoming message
     async function processMessage(message: string) {
-      // For now, let's start with a simple response to test the connection
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-4",
