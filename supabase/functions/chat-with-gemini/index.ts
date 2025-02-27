@@ -50,7 +50,7 @@ serve(async (req) => {
                 phone
               )
             `)
-            .eq('license_plate', licensePlate)
+            .ilike('license_plate', licensePlate) // Changed eq to ilike for case-insensitive comparison
             .maybeSingle();
 
           console.log('Query result:', { vehicle, error });
