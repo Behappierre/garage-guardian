@@ -124,10 +124,10 @@ export const AppointmentCalendar = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex justify-end items-center">
         <Select value={selectedBay} onValueChange={(value: BayType) => setSelectedBay(value)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[140px] h-8 text-sm">
             <SelectValue placeholder="Select bay" />
           </SelectTrigger>
           <SelectContent>
@@ -147,18 +147,20 @@ export const AppointmentCalendar = ({
               --fc-border-color: #edf2f7;
               --fc-today-bg-color: #f7fafc;
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              height: calc(100vh - 12rem) !important;
+              min-height: 600px;
             }
             
             /* Header with month/year display */
             .fc .fc-toolbar.fc-header-toolbar {
-              margin-bottom: 1.5em;
-              padding: 1.25rem 1.5rem;
+              margin-bottom: 0.5em;
+              padding: 0.75rem 1rem;
               border-bottom: 1px solid var(--fc-border-color);
             }
             
             .fc .fc-toolbar-title {
-              font-size: 1.75rem;
-              font-weight: 800;
+              font-size: 1.25rem;
+              font-weight: 700;
               color: #111827;
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             }
@@ -171,7 +173,8 @@ export const AppointmentCalendar = ({
               font-weight: 500;
               text-transform: capitalize;
               box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-              padding: 0.5rem 1rem;
+              padding: 0.25rem 0.75rem;
+              font-size: 0.875rem;
               border-radius: 0.375rem;
             }
             
@@ -194,9 +197,10 @@ export const AppointmentCalendar = ({
             
             /* Modern day header style with date and day */
             .fc .fc-col-header-cell {
-              padding: 1rem 0;
+              padding: 0.5rem 0;
               background-color: #ffffff;
-              border-bottom: 2px solid #edf2f7;
+              border-bottom: 1px solid #edf2f7;
+              height: 60px;
             }
             
             /* Hide the default header content */
@@ -225,60 +229,61 @@ export const AppointmentCalendar = ({
               background-color: #f8fafc !important;
             }
             
-            /* Day numbers - bolder and cleaner */
-            .fc .fc-daygrid-day-number {
-              font-size: 1rem;
-              font-weight: 700;
-              color: #0f172a;
-              padding: 8px;
-            }
-            
             /* Week view specifics */
             .fc .fc-timegrid-slot {
-              height: 3em;
+              height: 2.5em !important;
               border-bottom: 1px solid #f1f5f9;
             }
             
             .fc .fc-timegrid-axis {
-              padding: 0.5rem;
+              padding: 0.25rem;
             }
             
             .fc .fc-timegrid-axis-cushion {
-              font-size: 0.875rem;
+              font-size: 0.75rem;
               font-weight: 500;
               color: #64748b;
             }
             
             /* Events styling */
             .fc-event {
-              border-radius: 6px;
+              border-radius: 4px;
               border: none;
-              padding: 3px 6px;
-              font-size: 0.875rem;
+              padding: 2px 4px;
+              font-size: 0.75rem;
               font-weight: 500;
-              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+              box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             }
             
             .fc-daygrid-event {
-              padding: 4px 8px;
-              margin-bottom: 3px;
+              padding: 3px 6px;
+              margin-bottom: 2px;
             }
             
             /* Time grid adjustments */
             .fc-timegrid-event {
-              border-radius: 6px;
-              padding: 4px 8px;
+              border-radius: 4px;
+              padding: 2px 4px;
+            }
+            
+            .fc-timegrid-event .fc-event-main {
+              padding: 1px 2px;
+            }
+            
+            .fc-timegrid-event .fc-event-title {
+              font-size: 0.75rem;
+              line-height: 1.2;
             }
             
             /* Hover state for events */
             .fc-event:hover {
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
               opacity: 0.95;
             }
             
             /* More link styling */
             .fc .fc-more-link {
-              font-size: 0.875rem;
+              font-size: 0.75rem;
               color: #2dd4bf;
               font-weight: 600;
             }
@@ -315,7 +320,7 @@ export const AppointmentCalendar = ({
             
             /* Custom header cell styling */
             .custom-date-display {
-              padding: 0.5rem 0;
+              padding: 0.25rem 0;
               text-align: center;
             }
             
@@ -326,7 +331,47 @@ export const AppointmentCalendar = ({
             
             .custom-date-display.current-day .date-number {
               color: #3b82f6 !important;
-              font-weight: 800 !important;
+              font-weight: 700 !important;
+            }
+            
+            /* Compact the toolbar */
+            .fc-header-toolbar.fc-toolbar {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 0.5rem;
+              justify-content: space-between;
+              align-items: center;
+            }
+            
+            .fc-header-toolbar.fc-toolbar .fc-toolbar-chunk {
+              display: flex;
+              align-items: center;
+              gap: 0.25rem;
+            }
+
+            /* Make the day slots fit more content */
+            .fc-timegrid-slots table {
+              height: auto !important;
+            }
+            
+            .fc-timegrid-divider {
+              display: none !important;
+            }
+            
+            /* More compact toolbar on mobile */
+            @media (max-width: 640px) {
+              .fc .fc-toolbar-title {
+                font-size: 1rem;
+              }
+              
+              .fc .fc-button-primary {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.75rem;
+              }
+              
+              .fc .fc-timegrid-slot {
+                height: 2em !important;
+              }
             }
           `}
         </style>
@@ -390,8 +435,8 @@ export const AppointmentCalendar = ({
                   
                   customDisplay.innerHTML = `
                     <div>
-                      <div class="day-name" style="font-size: 0.875rem; font-weight: 500; color: ${isCurrentDay ? '#3b82f6' : '#94a3b8'};">${day}</div>
-                      <div class="date-number" style="font-size: 1.25rem; font-weight: 700; color: ${isCurrentDay ? '#3b82f6' : '#000'};">${formattedDate}</div>
+                      <div class="day-name" style="font-size: 0.75rem; font-weight: 500; color: ${isCurrentDay ? '#3b82f6' : '#94a3b8'};">${day}</div>
+                      <div class="date-number" style="font-size: 1rem; font-weight: 600; color: ${isCurrentDay ? '#3b82f6' : '#000'};">${formattedDate}</div>
                     </div>
                   `;
                   

@@ -37,57 +37,57 @@ const Appointments = () => {
   return (
     <div className="w-full max-w-[1400px] mx-auto">
       <main>
-        {/* Redesigned header section */}
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        {/* More compact header section */}
+        <div className="bg-white rounded-lg shadow-sm mb-2 p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-              <p className="text-gray-500 mt-1">Manage service appointments and schedules</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Appointments</h1>
+              <p className="text-sm text-gray-500 mt-0.5">Manage service appointments and schedules</p>
             </div>
             <Button
-              size="lg"
+              size="sm"
               onClick={() => {
                 setSelectedAppointment(null);
                 setSelectedDate(null);
                 setShowAppointmentForm(true);
               }}
-              className="bg-primary hover:bg-primary/90 text-white font-medium gap-2 whitespace-nowrap"
+              className="bg-primary hover:bg-primary/90 text-white font-medium gap-1.5 whitespace-nowrap h-9"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
               New Appointment
             </Button>
           </div>
 
           <Tabs defaultValue="calendar" className="w-full">
-            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-              <TabsList className="bg-secondary/50 p-1 rounded-md">
-                <TabsTrigger value="calendar" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm gap-2">
-                  <CalendarIcon className="h-4 w-4" />
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+              <TabsList className="bg-secondary/50 p-0.5 rounded-md h-8">
+                <TabsTrigger value="calendar" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5 h-7">
+                  <CalendarIcon className="h-3.5 w-3.5" />
                   Calendar
                 </TabsTrigger>
-                <TabsTrigger value="list" className="rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm gap-2">
-                  <List className="h-4 w-4" />
+                <TabsTrigger value="list" className="rounded-md text-xs data-[state=active]:bg-white data-[state=active]:shadow-sm gap-1.5 h-7">
+                  <List className="h-3.5 w-3.5" />
                   List
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex items-center gap-4 text-sm">
-                <div className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-orange-500"></span>
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-orange-500"></span>
                   <span className="text-gray-600">Bay 1</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-blue-500"></span>
+                <div className="flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
                   <span className="text-gray-600">Bay 2</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="h-3 w-3 rounded-full bg-purple-500"></span>
+                <div className="flex items-center gap-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-purple-500"></span>
                   <span className="text-gray-600">MOT</span>
                 </div>
               </div>
             </div>
 
-            <TabsContent value="calendar" className="mt-2 p-0">
+            <TabsContent value="calendar" className="mt-1 p-0">
               <AppointmentCalendar
                 appointments={appointments || []}
                 onDateSelect={handleDateSelect}
@@ -95,7 +95,7 @@ const Appointments = () => {
               />
             </TabsContent>
 
-            <TabsContent value="list" className="mt-2 p-0">
+            <TabsContent value="list" className="mt-1 p-0">
               <AppointmentList 
                 appointments={appointments || []}
                 onSelectAppointment={(appointment) => {
