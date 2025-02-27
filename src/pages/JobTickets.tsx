@@ -27,7 +27,7 @@ const JobTickets = () => {
   const [nameFilter, setNameFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [registrationFilter, setRegistrationFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>(' '); // Changed default to space
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('');
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -76,8 +76,8 @@ const JobTickets = () => {
                     .lt('created_at', nextDay.toISOString());
       }
       
-      // Only apply filter if it's not the "All priorities" option (space character)
-      if (priorityFilter && priorityFilter.trim() !== '') {
+      // Only apply filter if it's not empty
+      if (priorityFilter) {
         query = query.eq('priority', priorityFilter);
       }
 
