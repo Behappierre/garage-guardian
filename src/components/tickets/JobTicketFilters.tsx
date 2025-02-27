@@ -10,13 +10,13 @@ interface JobTicketFiltersProps {
   nameFilter: string;
   dateFilter: string;
   registrationFilter: string;
-  priorityFilter: TicketPriority | '';
+  priorityFilter: TicketPriority | "all";
   sortField: "created_at" | "client_name";
   sortOrder: "asc" | "desc";
   onNameFilterChange: (value: string) => void;
   onDateFilterChange: (value: string) => void;
   onRegistrationFilterChange: (value: string) => void;
-  onPriorityFilterChange: (value: TicketPriority | '') => void;
+  onPriorityFilterChange: (value: TicketPriority | "all") => void;
   onSortChange: (field: "created_at" | "client_name") => void;
 }
 
@@ -58,7 +58,7 @@ export const JobTicketFilters = ({
           <Label htmlFor="priorityFilter">Filter by Priority</Label>
           <Select
             value={priorityFilter}
-            onValueChange={(value) => onPriorityFilterChange(value as TicketPriority | '')}
+            onValueChange={(value) => onPriorityFilterChange(value as TicketPriority | "all")}
           >
             <SelectTrigger id="priorityFilter">
               <SelectValue placeholder="Select priority" />

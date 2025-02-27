@@ -27,7 +27,7 @@ const JobTickets = () => {
   const [nameFilter, setNameFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [registrationFilter, setRegistrationFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | ''>('all');
+  const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
@@ -77,7 +77,7 @@ const JobTickets = () => {
       }
       
       // Only apply filter if it's not "all"
-      if (priorityFilter && priorityFilter !== 'all') {
+      if (priorityFilter !== "all") {
         query = query.eq('priority', priorityFilter);
       }
 
