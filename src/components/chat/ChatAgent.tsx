@@ -34,12 +34,11 @@ export function ChatAgent() {
   }, [messages, isLoading]);
 
   const formatMessage = (content: string) => {
-    // Add bold formatting to specific elements
     return content
-      .replace(/^([A-Za-z ]+):/gm, '**$1:**')  // Section headers
-      .replace(/^- /gm, '• ')  // Bullet points
-      .replace(/\n\n/g, '\n\n---\n\n')  // Section breaks
-      .replace(/Bay \d+/g, '**$&**')  // Bay numbers
+      .replace(/^([A-Za-z ]+):/gm, '**$1:**')
+      .replace(/^- /gm, '• ')
+      .replace(/\n\n/g, '\n\n---\n\n')
+      .replace(/Bay \d+/g, '**$&**')
       .replace(/Status:/g, '**Status:**')
       .replace(/Vehicle:/g, '**Vehicle:**')
       .replace(/Customer:/g, '**Customer:**')
@@ -58,12 +57,26 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
+      // Log request details
+      console.log('Sending message to Edge Function:', {
+        message: userMessage,
+        user_id: user?.id
+      });
+
       const { data, error } = await supabase.functions.invoke('chat-with-gemini', {
         body: { 
           message: userMessage,
           user_id: user?.id
+        },
+        // Add error handling options
+        options: {
+          headers: {
+            'Content-Type': 'application/json',
+          }
         }
       });
+
+      console.log('Response from Edge Function:', { data, error });
 
       if (error) {
         console.error('Supabase function error:', error);
@@ -79,7 +92,6 @@ export function ChatAgent() {
         content: formatMessage(data.response)
       }]);
 
-      // If the response indicates an appointment was created, refresh the appointments data
       if (data.response.toLowerCase().includes('booking is confirmed') || 
           data.response.toLowerCase().includes('appointment created')) {
         refreshAppointments();
