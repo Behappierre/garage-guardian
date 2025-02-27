@@ -1,17 +1,23 @@
 
 import { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { cn } from "@/lib/utils";
 import { WelcomeHeader } from "@/components/dashboard/WelcomeHeader";
 import { DashboardMetrics } from "@/components/dashboard/DashboardMetrics";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { Card, CardContent } from "@/components/ui/card";
+import { CalendarPlus, Wrench, UserPlus } from "lucide-react";
 
 const Dashboard = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isDashboardRoot = location.pathname === "/dashboard";
+
+  const handleQuickAction = (path: string) => {
+    navigate(path);
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -37,17 +43,37 @@ const Dashboard = () => {
                   <CardContent className="p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
                     <div className="space-y-3">
-                      <div className="bg-white p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                        <h3 className="text-sm font-medium text-gray-800">Create New Appointment</h3>
-                        <p className="text-xs text-gray-500 mt-1">Schedule a new client appointment</p>
+                      <div 
+                        className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer flex items-start"
+                        onClick={() => handleQuickAction("/dashboard/appointments")}
+                      >
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-800">Create New Appointment</h3>
+                          <p className="text-xs text-gray-500 mt-1">Schedule a new client appointment</p>
+                        </div>
+                        <CalendarPlus className="text-primary h-5 w-5 mt-1" />
                       </div>
-                      <div className="bg-white p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                        <h3 className="text-sm font-medium text-gray-800">Create Job Ticket</h3>
-                        <p className="text-xs text-gray-500 mt-1">Start a new repair job</p>
+                      
+                      <div 
+                        className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer flex items-start"
+                        onClick={() => handleQuickAction("/dashboard/job-tickets")}
+                      >
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-800">Create Job Ticket</h3>
+                          <p className="text-xs text-gray-500 mt-1">Start a new repair job</p>
+                        </div>
+                        <Wrench className="text-primary h-5 w-5 mt-1" />
                       </div>
-                      <div className="bg-white p-3 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                        <h3 className="text-sm font-medium text-gray-800">Add New Client</h3>
-                        <p className="text-xs text-gray-500 mt-1">Register a new customer</p>
+                      
+                      <div 
+                        className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer flex items-start"
+                        onClick={() => handleQuickAction("/dashboard/clients")}
+                      >
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-800">Add New Client</h3>
+                          <p className="text-xs text-gray-500 mt-1">Register a new customer</p>
+                        </div>
+                        <UserPlus className="text-primary h-5 w-5 mt-1" />
                       </div>
                     </div>
                   </CardContent>
