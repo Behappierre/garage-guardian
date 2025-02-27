@@ -9,6 +9,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const openai = new OpenAI({
+  apiKey: Deno.env.get('OPENAI_API_KEY'),
+});
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -50,7 +54,7 @@ serve(async (req) => {
                 phone
               )
             `)
-            .ilike('license_plate', licensePlate) // Changed eq to ilike for case-insensitive comparison
+            .ilike('license_plate', licensePlate)
             .maybeSingle();
 
           console.log('Query result:', { vehicle, error });
@@ -78,12 +82,13 @@ serve(async (req) => {
 
       // For non-vehicle queries, use OpenAI
       try {
+        console.log('Using OpenAI for non-vehicle query');
         const completion = await openai.chat.completions.create({
-          model: "gpt-4",
+          model: "gpt-4o-mini",  // Changed to use the correct model name
           messages: [
             {
               role: "system",
-              content: "You are a helpful assistant at an auto repair shop. Answer questions about appointments, vehicles, and general automotive topics."
+              content: "You are a helpful assistant at an auto repair shop specializing in European vehicles. Answer questions about vehicles, maintenance, repairs, and automotive specifications."
             },
             {
               role: "user", 
@@ -94,6 +99,7 @@ serve(async (req) => {
           max_tokens: 500
         });
 
+        console.log('OpenAI response:', completion.choices[0]);
         return completion.choices[0].message.content || "I'm sorry, I couldn't process that request.";
       } catch (error) {
         console.error('OpenAI error:', error);
