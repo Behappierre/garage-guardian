@@ -57,7 +57,6 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
-      // Log request details
       console.log('Sending message to Edge Function:', {
         message: userMessage,
         user_id: user?.id
@@ -68,11 +67,8 @@ export function ChatAgent() {
           message: userMessage,
           user_id: user?.id
         },
-        // Add error handling options
-        options: {
-          headers: {
-            'Content-Type': 'application/json',
-          }
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
 
