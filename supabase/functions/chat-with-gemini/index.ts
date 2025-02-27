@@ -18,7 +18,6 @@ serve(async (req) => {
     const { message, user_id } = await req.json();
     console.log('Received message:', message, 'from user:', user_id);
 
-    // Create Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -32,19 +31,22 @@ serve(async (req) => {
     async function processMessage(message: string) {
       const lowerMessage = message.toLowerCase();
       
-      // Check if message is about bookings/appointments
-      if (lowerMessage.includes('booking') || lowerMessage.includes('appointment') || 
-          lowerMessage.includes('schedule') || lowerMessage.includes("today's")) {
-        
+      // Extract client name if present in the query
+      const clientNameMatch = message.match(/([A-Z][a-z]+ [A-Z][a-z]+)'s bookings/);
+      const isBookingQuery = lowerMessage.includes('booking') || 
+                            lowerMessage.includes('appointment') || 
+                            lowerMessage.includes('schedule') || 
+                            lowerMessage.includes("today's");
+
+      if (isBookingQuery) {
         try {
-          // Get today's appointments
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           
           const tomorrow = new Date(today);
           tomorrow.setDate(tomorrow.getDate() + 1);
 
-          const { data: appointments, error } = await supabaseClient
+          let query = supabaseClient
             .from('appointments')
             .select(`
               *,
@@ -55,13 +57,24 @@ serve(async (req) => {
             .lt('start_time', tomorrow.toISOString())
             .order('start_time');
 
+          // If a specific client was mentioned, filter for that client
+          if (clientNameMatch) {
+            const [firstName, lastName] = clientNameMatch[1].split(' ');
+            query = query.eq('client.first_name', firstName)
+                        .eq('client.last_name', lastName);
+          }
+
+          const { data: appointments, error } = await query;
+
           if (error) {
             console.error('Database error:', error);
             throw new Error('Failed to fetch appointments');
           }
 
           if (!appointments || appointments.length === 0) {
-            return "There are no appointments scheduled for today.";
+            return clientNameMatch 
+              ? `No appointments found today for ${clientNameMatch[1]}.`
+              : "There are no appointments scheduled for today.";
           }
 
           // Format appointments into readable text
@@ -77,7 +90,11 @@ serve(async (req) => {
             return `${time}: ${clientName} - ${vehicle} (${apt.service_type || 'General Service'})`;
           });
 
-          return `Today's appointments:\n\n${appointmentsList.join('\n')}`;
+          const headerText = clientNameMatch 
+            ? `Appointments for ${clientNameMatch[1]}:`
+            : "Today's appointments:";
+
+          return `${headerText}\n\n${appointmentsList.join('\n')}`;
         } catch (error) {
           console.error('Error fetching appointments:', error);
           return "I apologize, but I encountered an error while fetching the appointments. Please try again or check with your system administrator.";
