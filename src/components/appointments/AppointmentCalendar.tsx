@@ -209,26 +209,6 @@ export const AppointmentCalendar = ({
               position: relative;
             }
             
-            .fc-theme-standard thead tr th:after {
-              content: attr(data-date);
-              display: block;
-              font-size: 1.25rem;
-              font-weight: 700;
-              color: #000;
-              margin-bottom: 0.25rem;
-              position: relative;
-            }
-            
-            .fc-theme-standard thead tr th:before {
-              content: attr(data-day);
-              display: block;
-              font-size: 0.875rem;
-              font-weight: 500;
-              color: #94a3b8;
-              margin-top: 0.25rem;
-              position: relative;
-            }
-            
             /* Style for the date part */
             .fc-theme-standard td:first-child, 
             .fc-theme-standard th:first-child {
@@ -243,14 +223,6 @@ export const AppointmentCalendar = ({
             /* Current day - highlight with modern style */
             .fc .fc-day-today {
               background-color: #f8fafc !important;
-            }
-            
-            .fc .fc-day-today:after {
-              color: #2563eb !important;
-            }
-            
-            .fc .fc-day-today:before {
-              color: #93c5fd !important;
             }
             
             /* Day numbers - bolder and cleaner */
@@ -340,6 +312,22 @@ export const AppointmentCalendar = ({
             .fc-col-header a {
               visibility: hidden;
             }
+            
+            /* Custom header cell styling */
+            .custom-date-display {
+              padding: 0.5rem 0;
+              text-align: center;
+            }
+            
+            /* Highlight current day */
+            .custom-date-display.current-day .day-name {
+              color: #3b82f6 !important;
+            }
+            
+            .custom-date-display.current-day .date-number {
+              color: #3b82f6 !important;
+              font-weight: 800 !important;
+            }
           `}
         </style>
         <FullCalendar
@@ -362,13 +350,14 @@ export const AppointmentCalendar = ({
           editable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
-          // Override the dayHeaderFormat to use DD.MM format
           dayHeaderFormat={{ day: '2-digit', month: '2-digit', omitCommas: true, separator: '.' }}
           viewDidMount={(view) => {
             // This function fixes header display for any view
             setTimeout(() => {
               // Get all column header cells
               const headerCells = document.querySelectorAll('.fc-col-header-cell');
+              const today = new Date();
+              const currentDayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
               
               headerCells.forEach(cell => {
                 const date = cell.getAttribute('data-date');
@@ -380,58 +369,43 @@ export const AppointmentCalendar = ({
                   const formattedDate = dateObj.getDate().toString().padStart(2, '0') + '.' + 
                                       (dateObj.getMonth() + 1).toString().padStart(2, '0');
                   
-                  // Manually override any existing data attributes
-                  cell.setAttribute('data-date', formattedDate);
-                  cell.setAttribute('data-day', day);
+                  // Check if this is the current day
+                  const isCurrentDay = date === currentDayStr;
                   
-                  // Also fix any displayed date content
+                  // Hide any existing content
                   const headerContent = cell.querySelector('.fc-col-header-cell-cushion');
-                  if (headerContent) {
-                    // Cast to HTMLElement to access style property
-                    if (headerContent instanceof HTMLElement) {
-                      headerContent.style.visibility = 'hidden';
-                    }
-                    
-                    // If a custom display element doesn't exist yet, create one
-                    let customDisplay = cell.querySelector('.custom-date-display');
-                    if (!customDisplay) {
-                      customDisplay = document.createElement('div');
-                      customDisplay.className = 'custom-date-display';
-                      cell.appendChild(customDisplay);
-                    }
-                    
-                    // Apply our custom DD.MM format
-                    if (customDisplay instanceof HTMLElement) {
-                      customDisplay.innerHTML = `
-                        <div style="text-align: center;">
-                          <div style="font-size: 0.875rem; font-weight: 500; color: #94a3b8;">${day}</div>
-                          <div style="font-size: 1.25rem; font-weight: 700; color: #000;">${formattedDate}</div>
-                        </div>
-                      `;
-                    }
+                  if (headerContent instanceof HTMLElement) {
+                    headerContent.style.visibility = 'hidden';
                   }
+                  
+                  // Remove any existing custom display
+                  const existingDisplay = cell.querySelector('.custom-date-display');
+                  if (existingDisplay) {
+                    cell.removeChild(existingDisplay);
+                  }
+                  
+                  // Create custom display
+                  const customDisplay = document.createElement('div');
+                  customDisplay.className = `custom-date-display ${isCurrentDay ? 'current-day' : ''}`;
+                  
+                  customDisplay.innerHTML = `
+                    <div>
+                      <div class="day-name" style="font-size: 0.875rem; font-weight: 500; color: ${isCurrentDay ? '#3b82f6' : '#94a3b8'};">${day}</div>
+                      <div class="date-number" style="font-size: 1.25rem; font-weight: 700; color: ${isCurrentDay ? '#3b82f6' : '#000'};">${formattedDate}</div>
+                    </div>
+                  `;
+                  
+                  cell.appendChild(customDisplay);
                 }
               });
               
-              // For week view, specifically handle the column headers
+              // Fix the duplicate date issue in week view
               if (view.view.type === 'timeGridWeek') {
-                const colHeaders = document.querySelectorAll('.fc-timegrid-col-header');
-                colHeaders.forEach(header => {
-                  const headerContent = header.querySelector('.fc-timegrid-col-header-cushion');
-                  if (headerContent) {
-                    const dateText = headerContent.textContent || '';
-                    // If it contains a date in YYYY-MM-DD format, replace it
-                    if (dateText.match(/\d{4}-\d{2}-\d{2}/)) {
-                      try {
-                        const dateParts = dateText.split('-');
-                        if (dateParts.length === 3) {
-                          const newFormat = `${dateParts[2]}.${dateParts[1]}`;
-                          headerContent.textContent = newFormat;
-                        }
-                      } catch (e) {
-                        console.error('Error formatting date:', e);
-                      }
-                    }
+                const dateHeaders = document.querySelectorAll('.fc-timegrid-col-header-cushion');
+                dateHeaders.forEach(header => {
+                  if (header instanceof HTMLElement) {
+                    // Hide the default headers completely
+                    header.style.display = 'none';
                   }
                 });
               }
