@@ -84,7 +84,7 @@ serve(async (req) => {
       try {
         console.log('Using OpenAI for non-vehicle query');
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",  // Changed to use the correct model name
+          model: "gpt-3.5-turbo",  // Changed to use a valid OpenAI model
           messages: [
             {
               role: "system",
