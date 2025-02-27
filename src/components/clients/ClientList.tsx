@@ -3,6 +3,8 @@ import { Mail, Phone } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Client {
   id: string;
@@ -31,13 +33,38 @@ export const ClientList = ({
   onSearchChange,
   onSelectClient,
 }: ClientListProps) => {
+  // Fetch all vehicles for registration search
+  const { data: vehicles } = useQuery({
+    queryKey: ["all-vehicles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select("id, client_id, license_plate");
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get client IDs that match vehicle registration
+  const clientIdsWithMatchingRegistration = searchTerm 
+    ? vehicles?.filter(v => 
+        v.license_plate?.toLowerCase().includes(searchTerm.toLowerCase())
+      ).map(v => v.client_id)
+    : [];
+
   // Memoize filtered clients to prevent unnecessary re-renders
   const filteredClients = clients?.filter(client => {
     const searchLower = searchTerm.toLowerCase();
+    
+    // Check if this client has a vehicle with matching registration
+    const hasMatchingVehicle = clientIdsWithMatchingRegistration?.includes(client.id);
+    
     return (
       `${client.first_name} ${client.last_name}`.toLowerCase().includes(searchLower) ||
       client.email?.toLowerCase().includes(searchLower) ||
-      client.phone?.includes(searchTerm)
+      client.phone?.includes(searchTerm) ||
+      hasMatchingVehicle
     );
   });
 
