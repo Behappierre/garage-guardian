@@ -51,7 +51,7 @@ export default function Settings() {
 
       toast({
         title: "Success",
-        description: `Theme changed to dark mode`,
+        description: `Theme changed to ${newDarkMode ? "dark" : "light"} mode`,
       });
     } catch (error: any) {
       toast({
@@ -108,35 +108,49 @@ export default function Settings() {
     }
   };
 
+  const isDarkMode = theme === "dark";
+
   return (
-    <div className="flex flex-col w-full h-full bg-black">
+    <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
       <PageHeader
         title="Settings"
-        className="bg-black"
+        className={isDarkMode ? "bg-black" : ""}
       />
       
       <div className="px-8 pb-8 space-y-6">
-        <div className="flex flex-col p-6 border border-gray-800 rounded-lg bg-black">
+        <div className={`flex flex-col p-6 border rounded-lg ${
+          isDarkMode 
+            ? "border-gray-800 bg-black" 
+            : "border-gray-200 bg-card"
+        }`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-white">Dark Mode</h2>
+            <h2 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-foreground"}`}>
+              Dark Mode
+            </h2>
             <div className="flex items-center space-x-2">
-              <Sun className="h-5 w-5 text-gray-400" />
+              <Sun className={`h-5 w-5 ${isDarkMode ? "text-gray-400" : "text-amber-500"}`} />
               <Switch
-                checked={theme === "dark"}
+                checked={isDarkMode}
                 onCheckedChange={handleThemeChange}
                 className="data-[state=checked]:bg-rose-500"
               />
-              <Moon className="h-5 w-5 text-gray-400" />
+              <Moon className={`h-5 w-5 ${isDarkMode ? "text-gray-400" : "text-gray-400"}`} />
             </div>
           </div>
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-muted-foreground"}`}>
             Toggle between light and dark theme
           </p>
         </div>
 
-        <div className="flex flex-col p-6 border border-gray-800 rounded-lg bg-black">
+        <div className={`flex flex-col p-6 border rounded-lg ${
+          isDarkMode 
+            ? "border-gray-800 bg-black" 
+            : "border-gray-200 bg-card"
+        }`}>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-white">Garage Logo</h2>
+            <h2 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-foreground"}`}>
+              Garage Logo
+            </h2>
             <div className="flex items-center space-x-4">
               {settings?.logo_url && (
                 <img
@@ -146,8 +160,12 @@ export default function Settings() {
                 />
               )}
               <Button
-                variant="default"
-                className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 text-black"
+                variant={isDarkMode ? "default" : "outline"}
+                className={`flex items-center gap-2 ${
+                  isDarkMode 
+                    ? "bg-gray-100 hover:bg-gray-200 text-black" 
+                    : ""
+                }`}
                 disabled={uploading}
                 onClick={() => document.getElementById("logo-upload")?.click()}
               >
@@ -163,7 +181,7 @@ export default function Settings() {
               />
             </div>
           </div>
-          <p className="text-sm text-gray-400">
+          <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-muted-foreground"}`}>
             Upload your garage logo (recommended size: 200x50px)
           </p>
         </div>
