@@ -3,6 +3,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.1';
 import { OpenAI } from "https://deno.land/x/openai@v4.24.0/mod.ts";
+import { format, addDays, startOfDay, endOfDay } from "https://esm.sh/date-fns@2.30.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,6 +31,75 @@ serve(async (req) => {
     async function processMessage(message: string) {
       const lowerMessage = message.toLowerCase();
       
+      // Check for appointment queries
+      if (lowerMessage.includes('booking') || lowerMessage.includes('appointment')) {
+        try {
+          console.log('Processing appointment query');
+          let startDate, endDate;
+          
+          // Parse the time frame from the message
+          if (lowerMessage.includes('tomorrow')) {
+            startDate = startOfDay(addDays(new Date(), 1));
+            endDate = endOfDay(addDays(new Date(), 1));
+          } else if (lowerMessage.includes('today')) {
+            startDate = startOfDay(new Date());
+            endDate = endOfDay(new Date());
+          } else {
+            startDate = startOfDay(new Date());
+            endDate = endOfDay(addDays(new Date(), 7)); // Default to next 7 days
+          }
+
+          console.log('Querying appointments between:', startDate, 'and', endDate);
+          
+          const { data: appointments, error } = await supabaseClient
+            .from('appointments')
+            .select(`
+              *,
+              client:clients(
+                first_name,
+                last_name
+              ),
+              vehicle:vehicles(
+                make,
+                model,
+                year,
+                license_plate
+              )
+            `)
+            .gte('start_time', startDate.toISOString())
+            .lte('start_time', endDate.toISOString())
+            .order('start_time', { ascending: true });
+
+          if (error) {
+            console.error('Appointment query error:', error);
+            throw error;
+          }
+
+          if (!appointments || appointments.length === 0) {
+            return `No appointments found for the specified time period.`;
+          }
+
+          // Format the appointments into a readable response
+          const formattedAppointments = appointments.map(apt => {
+            const clientName = apt.client ? `${apt.client.first_name} ${apt.client.last_name}` : 'No client name';
+            const vehicleInfo = apt.vehicle ? 
+              `${apt.vehicle.year} ${apt.vehicle.make} ${apt.vehicle.model}${apt.vehicle.license_plate ? ` (${apt.vehicle.license_plate})` : ''}` : 
+              'No vehicle info';
+            
+            return `• ${format(new Date(apt.start_time), 'h:mm a')} - ${clientName}\n  ${apt.service_type}\n  Vehicle: ${vehicleInfo}`;
+          }).join('\n\n');
+
+          const timeFrame = lowerMessage.includes('tomorrow') ? 'tomorrow' : 
+                          lowerMessage.includes('today') ? 'today' : 
+                          'the next 7 days';
+
+          return `Here are the appointments for ${timeFrame}:\n\n${formattedAppointments}`;
+        } catch (error) {
+          console.error('Error processing appointment query:', error);
+          return `Sorry, I couldn't retrieve the appointment information. Error: ${error.message}`;
+        }
+      }
+
       // License plate query
       const licensePlateMatch = message.match(/(?:whose|who owns|find|car).*\b([A-Z0-9]{3,7})\b/i);
       
@@ -80,11 +150,11 @@ serve(async (req) => {
         }
       }
 
-      // For non-vehicle queries, use OpenAI
+      // For non-specific queries, use OpenAI
       try {
-        console.log('Using OpenAI for non-vehicle query');
+        console.log('Using OpenAI for general query');
         const completion = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",  // Changed to use a valid OpenAI model
+          model: "gpt-3.5-turbo",
           messages: [
             {
               role: "system",
