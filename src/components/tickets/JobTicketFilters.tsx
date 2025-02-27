@@ -64,7 +64,8 @@ export const JobTicketFilters = ({
               <SelectValue placeholder="Select priority" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All priorities</SelectItem>
+              {/* Empty string value is not allowed in SelectItem, using a space character instead */}
+              <SelectItem value=" ">All priorities</SelectItem>
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="normal">Normal</SelectItem>
               <SelectItem value="high">High</SelectItem>
