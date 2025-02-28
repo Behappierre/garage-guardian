@@ -419,6 +419,34 @@ export const AppointmentCalendar = ({
               font-weight: 500;
               color: #1f2937;
             }
+            
+            /* Fix for month view - hide unnecessary day numbers in header */
+            .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+              visibility: visible;
+            }
+            
+            /* Highlight current day in week view with blue */
+            .fc-timeGridWeek-view .fc-day-today {
+              background-color: rgba(14, 165, 233, 0.05) !important;
+            }
+            
+            .fc-timeGridWeek-view .fc-day-today .fc-col-header-cell-cushion {
+              color: #0EA5E9 !important;
+              font-weight: 600;
+            }
+            
+            /* For day view, hide the duplicate date header */
+            .fc-timeGridDay-view .fc-col-header {
+              display: none !important;
+            }
+            
+            /* Full width for day view content */
+            .fc-timeGridDay-view .fc-timegrid-axis,
+            .fc-timeGridDay-view .fc-timegrid-slots,
+            .fc-timeGridDay-view .fc-timegrid-slot,
+            .fc-timeGridDay-view .fc-timegrid-slot-lane {
+              width: 100% !important;
+            }
           `}
         </style>
         <FullCalendar
