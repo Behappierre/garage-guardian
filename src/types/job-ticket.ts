@@ -22,4 +22,5 @@ export interface JobTicketFormProps {
   vehicleId?: string;
   onClose: () => void;
   initialData?: JobTicket;
+  linkedAppointmentId?: string | null;
 }

@@ -10,6 +10,7 @@ interface JobTicketFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onClose: () => void;
   isLoading?: boolean;
+  linkedAppointmentId?: string | null;
 }
 
 export const JobTicketFormDialog = ({
@@ -18,6 +19,7 @@ export const JobTicketFormDialog = ({
   onOpenChange,
   onClose,
   isLoading = false,
+  linkedAppointmentId = null,
 }: JobTicketFormDialogProps) => {
   return (
     <Dialog 
@@ -42,6 +44,7 @@ export const JobTicketFormDialog = ({
             <JobTicketForm
               initialData={selectedTicket}
               onClose={onClose}
+              linkedAppointmentId={linkedAppointmentId}
             />
           )}
         </div>

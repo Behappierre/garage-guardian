@@ -20,6 +20,7 @@ export const useJobTickets = (ticketId: string | null) => {
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isLoadingTicket, setIsLoadingTicket] = useState(false);
+  const [linkedAppointmentId, setLinkedAppointmentId] = useState<string | null>(null);
 
   // Fetch specific ticket if ID is provided
   const { data: ticketData, isLoading: isLoadingTicketQuery } = useQuery({
@@ -46,6 +47,35 @@ export const useJobTickets = (ticketId: string | null) => {
     },
     enabled: !!ticketId,
   });
+
+  // Fetch linked appointment data when ticket ID is available
+  const { data: linkedAppointment } = useQuery({
+    queryKey: ['linked_appointment', ticketId],
+    queryFn: async () => {
+      if (!ticketId) return null;
+      
+      const { data, error } = await supabase
+        .from('appointment_job_tickets')
+        .select('appointment_id')
+        .eq('job_ticket_id', ticketId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error("Error fetching linked appointment:", error);
+        return null;
+      }
+      
+      return data?.appointment_id || null;
+    },
+    enabled: !!ticketId,
+  });
+
+  // Update linked appointment ID when data is loaded
+  useEffect(() => {
+    if (linkedAppointment) {
+      setLinkedAppointmentId(linkedAppointment);
+    }
+  }, [linkedAppointment]);
 
   // Update selected ticket when ticket data is loaded
   useEffect(() => {
@@ -78,6 +108,19 @@ export const useJobTickets = (ticketId: string | null) => {
       if (data) {
         setSelectedTicket(data as JobTicket);
         setShowTicketForm(true);
+        
+        // Fetch linked appointment
+        const { data: appointmentLink, error: appointmentError } = await supabase
+          .from('appointment_job_tickets')
+          .select('appointment_id')
+          .eq('job_ticket_id', id)
+          .maybeSingle();
+        
+        if (appointmentError) {
+          console.error("Error fetching linked appointment:", appointmentError);
+        } else if (appointmentLink?.appointment_id) {
+          setLinkedAppointmentId(appointmentLink.appointment_id);
+        }
       } else {
         toast.error("Ticket not found");
       }
@@ -178,6 +221,8 @@ export const useJobTickets = (ticketId: string | null) => {
     sortOrder,
     toggleSort,
     fetchTicket,
-    isLoadingTicket: isLoadingTicket || isLoadingTicketQuery
+    isLoadingTicket: isLoadingTicket || isLoadingTicketQuery,
+    linkedAppointmentId,
+    setLinkedAppointmentId
   };
 };

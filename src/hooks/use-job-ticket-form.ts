@@ -6,7 +6,7 @@ import { JobTicketFormData, JobTicketFormProps } from "@/types/job-ticket";
 import { useTicketQueries } from "./tickets/use-ticket-queries";
 import { useTicketMutations } from "./tickets/use-ticket-mutations";
 
-export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: JobTicketFormProps) => {
+export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, linkedAppointmentId }: JobTicketFormProps) => {
   const [formData, setFormData] = useState<JobTicketFormData>({
     description: initialData?.description || "",
     status: (initialData?.status || "received"),
@@ -16,11 +16,11 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
     vehicle_id: initialData?.vehicle_id || vehicleId || null,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(linkedAppointmentId || null);
 
   const { data: linkedAppointment } = useQuery({
     queryKey: ["linked-appointment", initialData?.id],
-    enabled: !!initialData?.id,
+    enabled: !!initialData?.id && !linkedAppointmentId, // Only run this query if we don't already have the linked appointment
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointment_job_tickets")
@@ -40,10 +40,12 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData }: 
   });
 
   useEffect(() => {
-    if (linkedAppointment?.id) {
+    if (linkedAppointmentId) {
+      setSelectedAppointmentId(linkedAppointmentId);
+    } else if (linkedAppointment?.id) {
       setSelectedAppointmentId(linkedAppointment.id);
     }
-  }, [linkedAppointment]);
+  }, [linkedAppointment, linkedAppointmentId]);
 
   const {
     clients,

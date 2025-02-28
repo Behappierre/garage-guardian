@@ -36,7 +36,8 @@ const JobTickets = () => {
     sortOrder,
     toggleSort,
     fetchTicket,
-    isLoadingTicket
+    isLoadingTicket,
+    linkedAppointmentId
   } = useJobTickets(ticketId);
 
   useEffect(() => {
@@ -94,6 +95,7 @@ const JobTickets = () => {
         showTicketForm={showTicketForm}
         selectedTicket={selectedTicket}
         isLoading={isLoadingTicket}
+        linkedAppointmentId={linkedAppointmentId}
         onOpenChange={(open) => {
           setShowTicketForm(open);
           if (!open) {
