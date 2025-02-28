@@ -8,7 +8,7 @@ import { JobTicketFilters } from "@/components/tickets/JobTicketFilters";
 import { JobTicketsList } from "@/components/tickets/JobTicketsList";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { useParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import type { TicketPriority } from "@/types/job-ticket";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { useTheme } from "next-themes";
@@ -22,8 +22,11 @@ type SortField = "created_at" | "client_name";
 type SortOrder = "asc" | "desc";
 
 const JobTickets = () => {
-  const { id } = useParams(); // Get the ticket ID from URL if present
-  const [showTicketForm, setShowTicketForm] = useState(false);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const ticketId = searchParams.get('id');
+  
+  const [showTicketForm, setShowTicketForm] = useState(!!ticketId);
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [nameFilter, setNameFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -36,9 +39,9 @@ const JobTickets = () => {
 
   // Fetch specific ticket if ID is provided
   useQuery({
-    queryKey: ['job_ticket', id],
+    queryKey: ['job_ticket', ticketId],
     queryFn: async () => {
-      if (!id) return null;
+      if (!ticketId) return null;
       const { data } = await supabase
         .from('job_tickets')
         .select(`
@@ -46,7 +49,7 @@ const JobTickets = () => {
           client:clients(*),
           vehicle:vehicles(*)
         `)
-        .eq('id', id)
+        .eq('id', ticketId)
         .single();
       
       if (data) {
@@ -55,7 +58,7 @@ const JobTickets = () => {
       }
       return data;
     },
-    enabled: !!id,
+    enabled: !!ticketId,
   });
 
   const { data: tickets, isLoading } = useQuery({

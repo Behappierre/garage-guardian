@@ -1,14 +1,17 @@
 
 import { format } from "date-fns";
 import type { AppointmentWithRelations } from "@/types/appointment";
-import { Calendar, Clock, Car } from "lucide-react";
+import { Calendar, Clock, Car, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface AppointmentItemProps {
   appointment: AppointmentWithRelations;
 }
 
 export const AppointmentItem = ({ appointment }: AppointmentItemProps) => {
+  const navigate = useNavigate();
+  
   // Get the appropriate status color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -38,6 +41,12 @@ export const AppointmentItem = ({ appointment }: AppointmentItemProps) => {
   // Get vehicle details if available
   const vehicle = appointment.vehicle || 
     (appointment.job_tickets && appointment.job_tickets[0]?.vehicle);
+    
+  // Handle ticket click
+  const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/dashboard/job-tickets?id=${ticketId}`);
+  };
 
   return (
     <div className="border rounded-lg overflow-hidden hover:shadow-md transition-all">
@@ -75,6 +84,24 @@ export const AppointmentItem = ({ appointment }: AppointmentItemProps) => {
         {appointment.notes && (
           <div className="text-sm text-gray-600 pt-2 border-t border-gray-100 mt-2">
             {appointment.notes}
+          </div>
+        )}
+        
+        {appointment.job_tickets && appointment.job_tickets.length > 0 && (
+          <div className="mt-3 pt-2 border-t border-gray-100">
+            <h5 className="text-sm font-medium mb-2">Job Tickets:</h5>
+            <div className="flex flex-wrap gap-2">
+              {appointment.job_tickets.map((ticket) => (
+                <button
+                  key={ticket.id}
+                  onClick={(e) => handleTicketClick(ticket.id, e)}
+                  className="inline-flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
+                >
+                  {ticket.ticket_number}
+                  <ExternalLink className="h-3 w-3" />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
