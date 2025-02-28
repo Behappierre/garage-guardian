@@ -31,12 +31,14 @@ export const ClientSelector = ({
           <SelectValue placeholder="Select client" />
         </SelectTrigger>
         <SelectContent>
-          <ScrollArea className="h-[200px]">
-            {clients?.map((client) => (
-              <SelectItem key={client.id} value={client.id}>
-                {client.first_name} {client.last_name}
-              </SelectItem>
-            ))}
+          <ScrollArea className="h-[200px] overflow-y-auto">
+            <div className="p-1">
+              {clients?.map((client) => (
+                <SelectItem key={client.id} value={client.id}>
+                  {client.first_name} {client.last_name}
+                </SelectItem>
+              ))}
+            </div>
           </ScrollArea>
         </SelectContent>
       </Select>
