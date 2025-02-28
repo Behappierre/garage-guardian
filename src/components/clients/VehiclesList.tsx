@@ -1,5 +1,5 @@
 
-import { Car, Plus, Trash2 } from "lucide-react";
+import { Car, Plus, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
@@ -13,9 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/use-toast";
+import { VehicleForm } from "@/components/forms/VehicleForm";
 
 // Updated to match the Vehicle interface in Clients.tsx
 interface Vehicle {
@@ -40,9 +42,21 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
   const queryClient = useQueryClient();
   const [isDeleting, setIsDeleting] = useState(false);
   const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle | null>(null);
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const handleDeleteClick = (vehicle: Vehicle) => {
     setVehicleToDelete(vehicle);
+  };
+
+  const handleEditClick = (vehicle: Vehicle) => {
+    setVehicleToEdit(vehicle);
+    setShowEditDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setVehicleToEdit(null);
+    setShowEditDialog(false);
   };
 
   const handleConfirmDelete = async () => {
@@ -142,14 +156,26 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </h4>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
-                    onClick={() => handleDeleteClick(vehicle)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex space-x-1">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
+                      onClick={() => handleEditClick(vehicle)}
+                      title="Edit vehicle"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                      onClick={() => handleDeleteClick(vehicle)}
+                      title="Delete vehicle"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="p-4 space-y-2">
                   {vehicle.license_plate && (
@@ -209,6 +235,18 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          {vehicleToEdit && (
+            <VehicleForm 
+              clientId={vehicleToEdit.client_id} 
+              onClose={handleCloseEditDialog} 
+              initialData={vehicleToEdit}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
