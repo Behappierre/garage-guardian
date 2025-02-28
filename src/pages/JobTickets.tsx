@@ -181,7 +181,7 @@ const JobTickets = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
