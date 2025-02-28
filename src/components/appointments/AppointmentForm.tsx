@@ -180,6 +180,7 @@ export const AppointmentForm = ({
   onClose,
   preselectedClientId
 }: AppointmentFormProps) => {
+  const [isLoadingTimeSlot, setIsLoadingTimeSlot] = useState(false);
   const defaultStartTime = roundToNearestHour(selectedDate || new Date());
   const [duration, setDuration] = useState("60"); // Default 1 hour duration
 
@@ -195,6 +196,114 @@ export const AppointmentForm = ({
     status: initialData?.status || 'scheduled',
     bay: initialData?.bay || null,
   });
+
+  // Fetch all appointments to find available time slots
+  const { data: existingAppointments } = useQuery({
+    queryKey: ["all-appointments"],
+    queryFn: async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Get appointments for the next 7 days
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + 7);
+      
+      const { data, error } = await supabase
+        .from("appointments")
+        .select("start_time, end_time")
+        .gte("start_time", today.toISOString())
+        .lte("start_time", endDate.toISOString())
+        .neq("status", "cancelled");
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !initialData, // Only fetch if creating a new appointment
+  });
+
+  const findNextAvailableTimeSlot = () => {
+    if (!existingAppointments || existingAppointments.length === 0) {
+      // If no appointments, return the default start time
+      return defaultStartTime;
+    }
+
+    setIsLoadingTimeSlot(true);
+    
+    try {
+      // Start checking from current hour
+      const now = new Date();
+      const startCheckingFrom = new Date(now);
+      startCheckingFrom.setMinutes(0);
+      startCheckingFrom.setSeconds(0);
+      startCheckingFrom.setMilliseconds(0);
+      
+      // Only check during business hours (8 AM to 6 PM)
+      const businessHourStart = 8; // 8 AM
+      const businessHourEnd = 18; // 6 PM
+      
+      // Convert existing appointments to JavaScript Date objects
+      const bookedSlots = existingAppointments.map(appointment => ({
+        start: new Date(appointment.start_time),
+        end: new Date(appointment.end_time)
+      }));
+      
+      // Duration in milliseconds (from the selected duration in minutes)
+      const durationMs = parseInt(duration) * 60 * 1000;
+      
+      // Check for available slots
+      let currentSlot = new Date(startCheckingFrom);
+      let daysToCheck = 14; // Limit search to next 14 days
+      
+      while (daysToCheck > 0) {
+        const currentHour = currentSlot.getHours();
+        
+        // Only check during business hours
+        if (currentHour >= businessHourStart && currentHour < businessHourEnd) {
+          // Calculate end time for this slot
+          const slotEnd = new Date(currentSlot.getTime() + durationMs);
+          
+          // Check if this slot conflicts with any existing appointment
+          const isBooked = bookedSlots.some(bookedSlot => {
+            return (
+              (currentSlot >= bookedSlot.start && currentSlot < bookedSlot.end) ||
+              (slotEnd > bookedSlot.start && slotEnd <= bookedSlot.end) ||
+              (currentSlot <= bookedSlot.start && slotEnd >= bookedSlot.end)
+            );
+          });
+          
+          if (!isBooked) {
+            // Found an available slot!
+            return currentSlot;
+          }
+        }
+        
+        // Move to next 30-minute slot
+        currentSlot.setTime(currentSlot.getTime() + 30 * 60 * 1000);
+        
+        // If we've moved to the next day, decrement our day counter
+        if (currentSlot.getHours() === 0) {
+          daysToCheck--;
+        }
+      }
+      
+      // If no slot found, return default
+      return defaultStartTime;
+    } finally {
+      setIsLoadingTimeSlot(false);
+    }
+  };
+
+  // Find next available slot when component mounts or when new appointments are fetched
+  useEffect(() => {
+    if (!initialData && existingAppointments) {
+      const nextAvailableSlot = findNextAvailableTimeSlot();
+      setFormData(prev => ({
+        ...prev,
+        start_time: formatDateTimeForInput(nextAvailableSlot),
+        end_time: formatDateTimeForInput(new Date(nextAvailableSlot.getTime() + parseInt(duration) * 60 * 1000))
+      }));
+    }
+  }, [existingAppointments, initialData]);
 
   const { data: linkedJobTicket } = useQuery({
     queryKey: ["linked-job-ticket", initialData?.id],
