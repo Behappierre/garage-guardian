@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ClientSelectorProps {
   clientId: string | null;
@@ -30,11 +31,13 @@ export const ClientSelector = ({
           <SelectValue placeholder="Select client" />
         </SelectTrigger>
         <SelectContent>
-          {clients?.map((client) => (
-            <SelectItem key={client.id} value={client.id}>
-              {client.first_name} {client.last_name}
-            </SelectItem>
-          ))}
+          <ScrollArea className="h-[200px]">
+            {clients?.map((client) => (
+              <SelectItem key={client.id} value={client.id}>
+                {client.first_name} {client.last_name}
+              </SelectItem>
+            ))}
+          </ScrollArea>
         </SelectContent>
       </Select>
     </div>
