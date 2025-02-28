@@ -42,24 +42,6 @@ export const JobTicketFilters = ({
     <div className="mb-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
         <div className="space-y-2">
-          <Label htmlFor="nameFilter">Filter by Customer Name</Label>
-          <Input
-            id="nameFilter"
-            placeholder="Enter customer name..."
-            value={nameFilter}
-            onChange={(e) => onNameFilterChange(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="registrationFilter">Filter by Registration</Label>
-          <Input
-            id="registrationFilter"
-            placeholder="Enter vehicle registration..."
-            value={registrationFilter}
-            onChange={(e) => onRegistrationFilterChange(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="statusFilter">Filter by Status</Label>
           <Select
             value={statusFilter}
@@ -70,8 +52,9 @@ export const JobTicketFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="received">Received</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="pending_parts">On Hold</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
@@ -94,6 +77,24 @@ export const JobTicketFilters = ({
               <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nameFilter">Filter by Customer Name</Label>
+          <Input
+            id="nameFilter"
+            placeholder="Enter customer name..."
+            value={nameFilter}
+            onChange={(e) => onNameFilterChange(e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="registrationFilter">Filter by Registration</Label>
+          <Input
+            id="registrationFilter"
+            placeholder="Enter vehicle registration..."
+            value={registrationFilter}
+            onChange={(e) => onRegistrationFilterChange(e.target.value)}
+          />
         </div>
       </div>
 
