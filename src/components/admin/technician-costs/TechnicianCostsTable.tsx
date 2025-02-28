@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { TechnicianCost } from "./types";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface TechnicianCostsTableProps {
   technicianCosts: TechnicianCost[];
@@ -24,6 +25,7 @@ export const TechnicianCostsTable = ({ technicianCosts }: TechnicianCostsTablePr
   const queryClient = useQueryClient();
   const [editingTechnician, setEditingTechnician] = useState<string | null>(null);
   const [hourlyRate, setHourlyRate] = useState<string>("");
+  const { currencySymbol } = useCurrency();
 
   const updateCostMutation = useMutation({
     mutationFn: async (variables: { technicianId: string; rate: number }) => {
@@ -106,7 +108,7 @@ export const TechnicianCostsTable = ({ technicianCosts }: TechnicianCostsTablePr
                     Hourly Rate
                   </Label>
                   <div className="flex items-center">
-                    <span className="mr-2">$</span>
+                    <span className="mr-2">{currencySymbol}</span>
                     <Input
                       id={`rate-${cost.technician_id}`}
                       value={hourlyRate}
@@ -119,7 +121,7 @@ export const TechnicianCostsTable = ({ technicianCosts }: TechnicianCostsTablePr
                   </div>
                 </div>
               ) : (
-                <span>${cost.hourly_rate.toFixed(2)}</span>
+                <span>{currencySymbol}{cost.hourly_rate.toFixed(2)}</span>
               )}
             </TableCell>
             <TableCell>
