@@ -16,6 +16,7 @@ export const useJobTickets = (ticketId: string | null) => {
   const [dateFilter, setDateFilter] = useState("");
   const [registrationFilter, setRegistrationFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isLoadingTicket, setIsLoadingTicket] = useState(false);
@@ -89,7 +90,7 @@ export const useJobTickets = (ticketId: string | null) => {
   }, []);
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, priorityFilter, sortField, sortOrder],
+    queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, priorityFilter, hideCompleted, sortField, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from("job_tickets")
@@ -118,7 +119,7 @@ export const useJobTickets = (ticketId: string | null) => {
 
       if (error) throw error;
 
-      let sortedData = (data as JobTicket[]).filter(ticket => {
+      let filteredData = (data as JobTicket[]).filter(ticket => {
         const matchesName = nameFilter 
           ? `${ticket.client?.first_name} ${ticket.client?.last_name}`.toLowerCase().includes(nameFilter.toLowerCase())
           : true;
@@ -127,10 +128,14 @@ export const useJobTickets = (ticketId: string | null) => {
           ? ticket.vehicle?.license_plate?.toLowerCase().includes(registrationFilter.toLowerCase())
           : true;
 
-        return matchesName && matchesRegistration;
+        const isHidden = hideCompleted
+          ? ticket.status === 'completed' || ticket.status === 'cancelled'
+          : false;
+
+        return matchesName && matchesRegistration && !isHidden;
       });
 
-      sortedData.sort((a, b) => {
+      filteredData.sort((a, b) => {
         if (sortField === "client_name") {
           const aName = `${a.client?.first_name} ${a.client?.last_name}`.toLowerCase();
           const bName = `${b.client?.first_name} ${b.client?.last_name}`.toLowerCase();
@@ -144,7 +149,7 @@ export const useJobTickets = (ticketId: string | null) => {
         }
       });
 
-      return sortedData;
+      return filteredData;
     },
   });
 
@@ -172,6 +177,8 @@ export const useJobTickets = (ticketId: string | null) => {
     setRegistrationFilter,
     priorityFilter,
     setPriorityFilter,
+    hideCompleted,
+    setHideCompleted,
     sortField,
     sortOrder,
     toggleSort,

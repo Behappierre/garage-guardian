@@ -2,8 +2,9 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ToggleLeft, ToggleRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import type { TicketPriority } from "@/types/job-ticket";
 
 interface JobTicketFiltersProps {
@@ -11,12 +12,14 @@ interface JobTicketFiltersProps {
   dateFilter: string;
   registrationFilter: string;
   priorityFilter: TicketPriority | "all";
+  hideCompleted: boolean;
   sortField: "created_at" | "client_name";
   sortOrder: "asc" | "desc";
   onNameFilterChange: (value: string) => void;
   onDateFilterChange: (value: string) => void;
   onRegistrationFilterChange: (value: string) => void;
   onPriorityFilterChange: (value: TicketPriority | "all") => void;
+  onHideCompletedChange: (value: boolean) => void;
   onSortChange: (field: "created_at" | "client_name") => void;
 }
 
@@ -25,12 +28,14 @@ export const JobTicketFilters = ({
   dateFilter,
   registrationFilter,
   priorityFilter,
+  hideCompleted,
   sortField,
   sortOrder,
   onNameFilterChange,
   onDateFilterChange,
   onRegistrationFilterChange,
   onPriorityFilterChange,
+  onHideCompletedChange,
   onSortChange,
 }: JobTicketFiltersProps) => {
   return (
@@ -83,25 +88,43 @@ export const JobTicketFilters = ({
         </div>
       </div>
 
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onSortChange("created_at")}
-          className="gap-2"
-        >
-          Date Created
-          <ArrowUpDown className={`h-4 w-4 ${sortField === "created_at" ? "text-blue-600" : ""}`} />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => onSortChange("client_name")}
-          className="gap-2"
-        >
-          Customer Name
-          <ArrowUpDown className={`h-4 w-4 ${sortField === "client_name" ? "text-blue-600" : ""}`} />
-        </Button>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSortChange("created_at")}
+            className="gap-2"
+          >
+            Date Created
+            <ArrowUpDown className={`h-4 w-4 ${sortField === "created_at" ? "text-blue-600" : ""}`} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSortChange("client_name")}
+            className="gap-2"
+          >
+            Customer Name
+            <ArrowUpDown className={`h-4 w-4 ${sortField === "client_name" ? "text-blue-600" : ""}`} />
+          </Button>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="hideCompleted"
+            checked={hideCompleted}
+            onCheckedChange={onHideCompletedChange}
+          />
+          <Label htmlFor="hideCompleted" className="cursor-pointer">
+            Hide completed & cancelled tickets
+          </Label>
+          {hideCompleted ? (
+            <ToggleRight className="h-5 w-5 text-blue-600" />
+          ) : (
+            <ToggleLeft className="h-5 w-5 text-gray-400" />
+          )}
+        </div>
       </div>
     </div>
   );

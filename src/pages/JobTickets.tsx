@@ -30,6 +30,8 @@ const JobTickets = () => {
     setRegistrationFilter,
     priorityFilter,
     setPriorityFilter,
+    hideCompleted,
+    setHideCompleted,
     sortField,
     sortOrder,
     toggleSort,
@@ -67,12 +69,14 @@ const JobTickets = () => {
           dateFilter={dateFilter}
           registrationFilter={registrationFilter}
           priorityFilter={priorityFilter}
+          hideCompleted={hideCompleted}
           sortField={sortField}
           sortOrder={sortOrder}
           onNameFilterChange={setNameFilter}
           onDateFilterChange={setDateFilter}
           onRegistrationFilterChange={setRegistrationFilter}
           onPriorityFilterChange={setPriorityFilter}
+          onHideCompletedChange={setHideCompleted}
           onSortChange={toggleSort}
         />
 
