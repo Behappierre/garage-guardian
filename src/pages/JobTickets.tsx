@@ -181,21 +181,23 @@ const JobTickets = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
             </DialogTitle>
           </DialogHeader>
-          <JobTicketForm
-            initialData={selectedTicket}
-            onClose={() => {
-              setShowTicketForm(false);
-              setSelectedTicket(null);
-              // Clear the URL parameter when closing the form
-              window.history.pushState({}, '', '/dashboard/job-tickets');
-            }}
-          />
+          <div className="flex-1 overflow-hidden">
+            <JobTicketForm
+              initialData={selectedTicket}
+              onClose={() => {
+                setShowTicketForm(false);
+                setSelectedTicket(null);
+                // Clear the URL parameter when closing the form
+                window.history.pushState({}, '', '/dashboard/job-tickets');
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </div>

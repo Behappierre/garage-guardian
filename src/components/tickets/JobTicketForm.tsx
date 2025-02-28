@@ -23,30 +23,32 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
   } = useJobTicketForm(props);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
-        <div className="space-y-6">
-          <JobTicketFormFields
-            formData={formData}
-            setFormData={setFormData}
-            clients={clients}
-            clientVehicles={clientVehicles}
-            clientAppointments={clientAppointments}
-            selectedAppointmentId={selectedAppointmentId}
-            setSelectedAppointmentId={setSelectedAppointmentId}
-            technicians={technicians}
-          />
+    <form onSubmit={handleSubmit} className="flex flex-col h-full space-y-6">
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-[calc(65vh-120px)]">
+          <div className="space-y-6 pr-4">
+            <JobTicketFormFields
+              formData={formData}
+              setFormData={setFormData}
+              clients={clients}
+              clientVehicles={clientVehicles}
+              clientAppointments={clientAppointments}
+              selectedAppointmentId={selectedAppointmentId}
+              setSelectedAppointmentId={setSelectedAppointmentId}
+              technicians={technicians}
+            />
 
-          {props.initialData && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-4">Time Entries</h3>
-              <TimeEntriesList jobTicketId={props.initialData.id} />
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            {props.initialData && (
+              <div className="mt-6">
+                <h3 className="text-lg font-medium mb-4">Time Entries</h3>
+                <TimeEntriesList jobTicketId={props.initialData.id} />
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
 
-      <div className="flex justify-end gap-2 pt-4 border-t">
+      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
         {onEnhanceDescription && (
           <Button type="button" variant="outline" size="sm" onClick={onEnhanceDescription}>
             <Wand2 className="h-4 w-4 mr-1" />
