@@ -221,6 +221,28 @@ export const AppointmentForm = ({
     enabled: !initialData, // Only fetch if creating a new appointment
   });
 
+  // Fetch linked job tickets through appointment_job_tickets junction table
+  const { data: linkedJobTickets } = useQuery({
+    queryKey: ["linked-job-tickets", initialData?.id],
+    enabled: !!initialData?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("appointment_job_tickets")
+        .select(`
+          job_ticket:job_tickets(
+            id, 
+            ticket_number, 
+            description, 
+            status
+          )
+        `)
+        .eq("appointment_id", initialData?.id);
+      
+      if (error) throw error;
+      return data?.map(item => item.job_ticket) || [];
+    },
+  });
+
   const findNextAvailableTimeSlot = () => {
     if (!existingAppointments || existingAppointments.length === 0) {
       // If no appointments, return the default start time
@@ -304,21 +326,6 @@ export const AppointmentForm = ({
       }));
     }
   }, [existingAppointments, initialData]);
-
-  const { data: linkedJobTicket } = useQuery({
-    queryKey: ["linked-job-ticket", initialData?.id],
-    enabled: !!initialData?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("job_tickets")
-        .select("id, ticket_number, description, status")
-        .eq("id", initialData?.job_ticket_id)
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-  });
 
   useEffect(() => {
     const startDate = new Date(formData.start_time);
@@ -438,6 +445,10 @@ export const AppointmentForm = ({
     }
   };
 
+  const navigateToTicket = (ticketId: string) => {
+    window.location.href = `/dashboard/job-tickets?id=${ticketId}`;
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <ClientSelector
@@ -453,21 +464,28 @@ export const AppointmentForm = ({
         />
       )}
 
-      {linkedJobTicket && (
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
-          <div className="flex items-center gap-3">
-            <div>
-              <Label className="text-sm font-medium">Job Ticket</Label>
-              <p className="text-sm">{linkedJobTicket.ticket_number}</p>
-            </div>
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-              ${linkedJobTicket.status === 'completed' ? 'bg-green-100 text-green-800' :
-                linkedJobTicket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                linkedJobTicket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                'bg-gray-100 text-gray-800'}`}
-            >
-              {linkedJobTicket.status.charAt(0).toUpperCase() + linkedJobTicket.status.slice(1)}
-            </span>
+      {linkedJobTickets && linkedJobTickets.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Linked Job Tickets</Label>
+          <div className="flex flex-wrap gap-2">
+            {linkedJobTickets.map((ticket: any) => (
+              <div 
+                key={ticket.id}
+                onClick={() => navigateToTicket(ticket.id)}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200 cursor-pointer"
+              >
+                <span className="text-sm">{ticket.ticket_number}</span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                  ${ticket.status === 'completed' ? 'bg-green-100 text-green-800' :
+                    ticket.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'}`}
+                >
+                  {ticket.status.replace('_', ' ')}
+                </span>
+                <ExternalLink className="h-3 w-3 text-gray-500" />
+              </div>
+            ))}
           </div>
         </div>
       )}
