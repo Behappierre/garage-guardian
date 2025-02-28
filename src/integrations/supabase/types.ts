@@ -434,6 +434,38 @@ export type Database = {
         }
         Relationships: []
       }
+      technician_costs: {
+        Row: {
+          created_at: string
+          hourly_rate: number
+          id: string
+          technician_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          technician_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number
+          id?: string
+          technician_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technician_costs_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       time_entries: {
         Row: {
           created_at: string
