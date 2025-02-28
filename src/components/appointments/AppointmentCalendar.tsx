@@ -180,6 +180,12 @@ export const AppointmentCalendar = ({
     if (calendarApi) {
       calendarApi.changeView(view);
       setCalendarTitle(calendarApi.view.title);
+      
+      // When changing to a specific view, update the URL to reflect the change
+      // This helps preserve the view when navigating between pages
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', view);
+      window.history.replaceState({}, '', url.toString());
     }
   };
 
@@ -470,6 +476,7 @@ export const AppointmentCalendar = ({
           dayHeaderFormat={{ weekday: 'short' }}
           datesSet={(dateInfo) => {
             setCalendarTitle(dateInfo.view.title);
+            setCurrentView(dateInfo.view.type as CalendarViewType);
           }}
           viewDidMount={(view) => {
             // This function creates our custom header display

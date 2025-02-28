@@ -5,7 +5,7 @@ import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAppointments } from "@/hooks/use-appointments";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
@@ -14,6 +14,7 @@ import { useTheme } from "next-themes";
 const Appointments = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<AppointmentWithRelations | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -26,9 +27,8 @@ const Appointments = () => {
 
   // Parse URL parameters on component mount and when URL changes
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const dateParam = params.get('date');
-    const viewParam = params.get('view') as "dayGridMonth" | "timeGridWeek" | "timeGridDay" | null;
+    const dateParam = searchParams.get('date');
+    const viewParam = searchParams.get('view') as "dayGridMonth" | "timeGridWeek" | "timeGridDay" | null;
     
     if (dateParam) {
       setSelectedDate(new Date(dateParam));
@@ -42,7 +42,7 @@ const Appointments = () => {
     if (dateParam) {
       setViewMode("calendar");
     }
-  }, [location.search]);
+  }, [searchParams]);
 
   const handleDateSelect = (arg: { start: Date; end: Date }) => {
     setSelectedDate(arg.start);
