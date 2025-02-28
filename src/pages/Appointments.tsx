@@ -78,7 +78,7 @@ const Appointments = () => {
         </PageActionButton>
       </PageHeader>
 
-      <div className="px-8 pb-8">
+      <div className="px-8 pb-8 w-full">
         <div className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center">
