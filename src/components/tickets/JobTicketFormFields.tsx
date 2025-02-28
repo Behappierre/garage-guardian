@@ -1,15 +1,13 @@
 
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { JobTicketFormData } from "@/types/job-ticket";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  ClientSelector,
+  VehicleSelector,
+  AppointmentSelector,
+  TechnicianSelector,
+  StatusPrioritySelectors,
+  DescriptionField,
+} from "./form-fields";
 
 interface JobTicketFormFieldsProps {
   formData: JobTicketFormData;
@@ -36,167 +34,78 @@ export const JobTicketFormFields = ({
 }: JobTicketFormFieldsProps) => {
   return (
     <div className="grid gap-4">
-      <div>
-        <Label>Client</Label>
-        <Select
-          value={formData.client_id || ""}
-          onValueChange={(value) => {
-            setFormData({
-              ...formData,
-              client_id: value,
-              vehicle_id: null,
-            });
-            setSelectedAppointmentId(null);
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select client" />
-          </SelectTrigger>
-          <SelectContent>
-            {clients?.map((client) => (
-              <SelectItem key={client.id} value={client.id}>
-                {client.first_name} {client.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <ClientSelector
+        clientId={formData.client_id}
+        clients={clients}
+        onClientChange={(clientId) => {
+          setFormData({
+            ...formData,
+            client_id: clientId,
+            vehicle_id: null,
+          });
+          setSelectedAppointmentId(null);
+        }}
+      />
 
       {formData.client_id && (
         <>
-          <div>
-            <Label>Vehicle</Label>
-            <Select
-              value={formData.vehicle_id || ""}
-              onValueChange={(value) =>
-                setFormData({
-                  ...formData,
-                  vehicle_id: value,
-                })
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent>
-                {clientVehicles?.map((vehicle) => (
-                  <SelectItem key={vehicle.id} value={vehicle.id}>
-                    {vehicle.make} {vehicle.model}
-                    {vehicle.license_plate ? ` (${vehicle.license_plate})` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <VehicleSelector
+            vehicleId={formData.vehicle_id}
+            vehicles={clientVehicles}
+            onVehicleChange={(vehicleId) =>
+              setFormData({
+                ...formData,
+                vehicle_id: vehicleId,
+              })
+            }
+          />
 
-          <div>
-            <Label>Link to Appointment</Label>
-            <Select
-              value={selectedAppointmentId || ""}
-              onValueChange={setSelectedAppointmentId}
-              disabled={isLoadingAppointments}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder={isLoadingAppointments ? "Loading appointments..." : "Select appointment"} />
-              </SelectTrigger>
-              <SelectContent>
-                {clientAppointments?.map((appointment) => (
-                  <SelectItem key={appointment.id} value={appointment.id}>
-                    {new Date(appointment.start_time).toLocaleString()} - {appointment.service_type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <AppointmentSelector
+            appointmentId={selectedAppointmentId}
+            appointments={clientAppointments}
+            onAppointmentChange={setSelectedAppointmentId}
+            isLoading={isLoadingAppointments}
+          />
         </>
       )}
 
-      <div>
-        <Label>Assigned Technician</Label>
-        <Select
-          value={formData.assigned_technician_id || ""}
-          onValueChange={(value) =>
-            setFormData({
-              ...formData,
-              assigned_technician_id: value,
-            })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select technician" />
-          </SelectTrigger>
-          <SelectContent>
-            {technicians?.map((technician) => (
-              <SelectItem key={technician.id} value={technician.id}>
-                {technician.first_name} {technician.last_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <TechnicianSelector
+        technicianId={formData.assigned_technician_id}
+        technicians={technicians}
+        onTechnicianChange={(technicianId) =>
+          setFormData({
+            ...formData,
+            assigned_technician_id: technicianId,
+          })
+        }
+      />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Status</Label>
-          <Select
-            value={formData.status}
-            onValueChange={(value: any) =>
-              setFormData({
-                ...formData,
-                status: value,
-              })
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="min-w-[150px]">
-              <SelectItem value="received">Received</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="pending_parts">On Hold</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <StatusPrioritySelectors
+        status={formData.status}
+        priority={formData.priority}
+        onStatusChange={(status) =>
+          setFormData({
+            ...formData,
+            status: status,
+          })
+        }
+        onPriorityChange={(priority) =>
+          setFormData({
+            ...formData,
+            priority: priority,
+          })
+        }
+      />
 
-        <div>
-          <Label>Priority</Label>
-          <Select
-            value={formData.priority}
-            onValueChange={(value: any) =>
-              setFormData({
-                ...formData,
-                priority: value,
-              })
-            }
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="min-w-[150px]">
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div>
-        <Label>Description</Label>
-        <Textarea
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              description: e.target.value,
-            })
-          }
-          rows={4}
-        />
-      </div>
+      <DescriptionField
+        description={formData.description}
+        onDescriptionChange={(description) =>
+          setFormData({
+            ...formData,
+            description: description,
+          })
+        }
+      />
     </div>
   );
 };
