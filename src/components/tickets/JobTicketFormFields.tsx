@@ -49,7 +49,7 @@ export const JobTicketFormFields = ({
             setSelectedAppointmentId(null);
           }}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select client" />
           </SelectTrigger>
           <SelectContent>
@@ -75,7 +75,7 @@ export const JobTicketFormFields = ({
                 })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select vehicle" />
               </SelectTrigger>
               <SelectContent>
@@ -96,7 +96,7 @@ export const JobTicketFormFields = ({
               onValueChange={setSelectedAppointmentId}
               disabled={isLoadingAppointments}
             >
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={isLoadingAppointments ? "Loading appointments..." : "Select appointment"} />
               </SelectTrigger>
               <SelectContent>
@@ -122,7 +122,7 @@ export const JobTicketFormFields = ({
             })
           }
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select technician" />
           </SelectTrigger>
           <SelectContent>
@@ -147,10 +147,10 @@ export const JobTicketFormFields = ({
               })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[150px]">
               <SelectItem value="received">Received</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="pending_parts">On Hold</SelectItem>
@@ -171,10 +171,10 @@ export const JobTicketFormFields = ({
               })
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-[150px]">
               <SelectItem value="low">Low</SelectItem>
               <SelectItem value="normal">Normal</SelectItem>
               <SelectItem value="high">High</SelectItem>
