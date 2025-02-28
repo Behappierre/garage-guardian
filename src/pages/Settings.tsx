@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Upload } from "lucide-react";
+import { Moon, Sun, Upload, DollarSign, Euro } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -52,6 +54,30 @@ export default function Settings() {
       toast({
         title: "Success",
         description: `Theme changed to ${newDarkMode ? "dark" : "light"} mode`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const handleCurrencyChange = async (currency: string) => {
+    try {
+      const { error } = await supabase
+        .from("settings")
+        .update({ currency })
+        .eq("id", settings.id);
+
+      if (error) throw error;
+
+      await queryClient.invalidateQueries({ queryKey: ["settings"] });
+
+      toast({
+        title: "Success",
+        description: `Currency changed to ${currency === 'USD' ? 'US Dollar' : 'Euro'}`,
       });
     } catch (error: any) {
       toast({
@@ -109,6 +135,7 @@ export default function Settings() {
   };
 
   const isDarkMode = theme === "dark";
+  const currentCurrency = settings?.currency || 'USD';
 
   return (
     <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
@@ -139,6 +166,41 @@ export default function Settings() {
           </div>
           <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-muted-foreground"}`}>
             Toggle between light and dark theme
+          </p>
+        </div>
+
+        <div className={`flex flex-col p-6 border rounded-lg ${
+          isDarkMode 
+            ? "border-gray-800 bg-black" 
+            : "border-gray-200 bg-card"
+        }`}>
+          <div className="mb-4">
+            <h2 className={`text-lg font-medium mb-4 ${isDarkMode ? "text-white" : "text-foreground"}`}>
+              Currency
+            </h2>
+            <RadioGroup 
+              value={currentCurrency} 
+              onValueChange={handleCurrencyChange}
+              className="flex flex-col space-y-3"
+            >
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="USD" id="usd" />
+                <Label htmlFor="usd" className="flex items-center">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  <span>US Dollar (USD)</span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="EUR" id="eur" />
+                <Label htmlFor="eur" className="flex items-center">
+                  <Euro className="h-4 w-4 mr-2" />
+                  <span>Euro (EUR)</span>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+          <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-muted-foreground"}`}>
+            Set the currency used throughout the application
           </p>
         </div>
 
