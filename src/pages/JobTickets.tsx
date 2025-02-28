@@ -7,6 +7,7 @@ import { JobTicketFormDialog } from "@/components/tickets/JobTicketFormDialog";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { useTheme } from "next-themes";
 import { useJobTickets } from "@/hooks/use-job-tickets";
+import { useEffect } from "react";
 
 const JobTickets = () => {
   const [searchParams] = useSearchParams();
@@ -32,7 +33,14 @@ const JobTickets = () => {
     sortField,
     sortOrder,
     toggleSort,
+    fetchTicket
   } = useJobTickets(ticketId);
+
+  useEffect(() => {
+    if (ticketId) {
+      fetchTicket(ticketId);
+    }
+  }, [ticketId, fetchTicket]);
 
   return (
     <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>

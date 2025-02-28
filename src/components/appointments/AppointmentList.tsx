@@ -17,9 +17,16 @@ export const AppointmentList = ({
   onTicketClick,
   isLoading
 }: AppointmentListProps) => {
+  const navigate = useNavigate();
+
   if (isLoading) {
     return <div>Loading appointments...</div>;
   }
+
+  const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/dashboard/job-tickets?id=${ticketId}`);
+  };
 
   return (
     <div className="space-y-4">
@@ -64,7 +71,7 @@ export const AppointmentList = ({
                     {appointment.job_tickets.map((ticket) => (
                       <button
                         key={ticket.id}
-                        onClick={(e) => onTicketClick(ticket.id, e)}
+                        onClick={(e) => handleTicketClick(ticket.id, e)}
                         className="inline-flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
                       >
                         {ticket.ticket_number}

@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { JobTicket, TicketPriority } from "@/types/job-ticket";
 
@@ -8,6 +8,7 @@ type SortField = "created_at" | "client_name";
 type SortOrder = "asc" | "desc";
 
 export const useJobTickets = (ticketId: string | null) => {
+  const queryClient = useQueryClient();
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [showTicketForm, setShowTicketForm] = useState(!!ticketId);
   const [nameFilter, setNameFilter] = useState("");
@@ -18,7 +19,7 @@ export const useJobTickets = (ticketId: string | null) => {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
   // Fetch specific ticket if ID is provided
-  const { data: ticketData } = useQuery({
+  const { data: ticketData, isLoading: isLoadingTicket } = useQuery({
     queryKey: ['job_ticket', ticketId],
     queryFn: async () => {
       if (!ticketId) return null;
@@ -30,16 +31,41 @@ export const useJobTickets = (ticketId: string | null) => {
           vehicle:vehicles(*)
         `)
         .eq('id', ticketId)
-        .single();
+        .maybeSingle();
+      
+      return data as JobTicket | null;
+    },
+    enabled: !!ticketId,
+  });
+
+  // Update selected ticket when ticket data is loaded
+  useEffect(() => {
+    if (ticketData) {
+      setSelectedTicket(ticketData);
+      setShowTicketForm(true);
+    }
+  }, [ticketData]);
+
+  const fetchTicket = useCallback(async (id: string) => {
+    try {
+      const { data } = await supabase
+        .from('job_tickets')
+        .select(`
+          *,
+          client:clients(*),
+          vehicle:vehicles(*)
+        `)
+        .eq('id', id)
+        .maybeSingle();
       
       if (data) {
         setSelectedTicket(data as JobTicket);
         setShowTicketForm(true);
       }
-      return data as JobTicket | null;
-    },
-    enabled: !!ticketId,
-  });
+    } catch (error) {
+      console.error("Error fetching ticket:", error);
+    }
+  }, []);
 
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, priorityFilter, sortField, sortOrder],
@@ -112,7 +138,7 @@ export const useJobTickets = (ticketId: string | null) => {
 
   return {
     tickets,
-    isLoading,
+    isLoading: isLoading || isLoadingTicket,
     selectedTicket,
     setSelectedTicket,
     showTicketForm,
@@ -128,5 +154,9 @@ export const useJobTickets = (ticketId: string | null) => {
     sortField,
     sortOrder,
     toggleSort,
+    fetchTicket
   };
 };
+
+// Add missing import
+import { useEffect } from "react";
