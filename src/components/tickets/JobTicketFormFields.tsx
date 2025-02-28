@@ -135,53 +135,51 @@ export const JobTicketFormFields = ({
         </Select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label>Status</Label>
-          <Select
-            value={formData.status}
-            onValueChange={(value: any) =>
-              setFormData({
-                ...formData,
-                status: value,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="received">Received</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="pending_parts">On Hold</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <Label>Status</Label>
+        <Select
+          value={formData.status}
+          onValueChange={(value: any) =>
+            setFormData({
+              ...formData,
+              status: value,
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="received">Received</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="pending_parts">On Hold</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div>
-          <Label>Priority</Label>
-          <Select
-            value={formData.priority}
-            onValueChange={(value: any) =>
-              setFormData({
-                ...formData,
-                priority: value,
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="normal">Normal</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="urgent">Urgent</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <Label>Priority</Label>
+        <Select
+          value={formData.priority}
+          onValueChange={(value: any) =>
+            setFormData({
+              ...formData,
+              priority: value,
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="normal">Normal</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="urgent">Urgent</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div>
