@@ -2,6 +2,7 @@
 import { format } from "date-fns";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface AppointmentListProps {
   appointments: AppointmentWithRelations[];
