@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
 
 type BayType = 'all' | 'bay1' | 'bay2' | 'mot';
 type CalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
@@ -287,17 +288,12 @@ export const AppointmentCalendar = ({
             }
             
             .fc .fc-col-header-cell {
-              padding: 0;
+              padding: 8px 0;
               height: auto;
               text-align: center; 
-              vertical-align: top;
+              vertical-align: middle;
               border-width: 0 0 1px 0 !important;
               border-color: #edf2f7 !important;
-            }
-            
-            /* Hide the default header content */
-            .fc .fc-col-header-cell-cushion {
-              display: none;
             }
             
             /* Time slots - REDUCE HEIGHT */
@@ -357,35 +353,38 @@ export const AppointmentCalendar = ({
               display: none;
             }
             
-            /* Custom styling for day headers */
-            .fc-day-header {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              padding: 8px 0;
-              border-bottom: 1px solid #edf2f7;
+            /* Day header styling for week view */
+            .fc-col-header-cell {
+              position: relative;
             }
             
-            .fc-day-header .day-name {
-              font-size: 0.75rem;
+            .fc-col-header-cell-cushion {
+              display: none !important;
+            }
+            
+            /* Week view day headers */
+            .day-name {
+              font-size: 0.875rem;
               font-weight: 500;
               color: #64748b;
               text-transform: capitalize;
-              margin-bottom: 2px;
+              margin-bottom: 4px;
+              display: block;
             }
             
-            .fc-day-header .day-number {
+            .day-number {
               font-size: 1.125rem;
               font-weight: 600;
               color: #1f2937;
+              display: block;
             }
             
             /* Current day highlight */
-            .fc-day-header.current-day .day-name {
+            .day-header.current-day .day-name {
               color: #3b82f6;
             }
             
-            .fc-day-header.current-day .day-number {
+            .day-header.current-day .day-number {
               color: #3b82f6;
             }
             
@@ -406,25 +405,6 @@ export const AppointmentCalendar = ({
               background-color: #ffffff;
             }
             
-            /* Custom day headers */
-            .custom-day-header {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              padding: 8px 0;
-              border-bottom: 1px solid #edf2f7;
-            }
-            
-            /* Hide any headers in week view */
-            .fc-timegrid-col-header-cushion {
-              display: none;
-            }
-            
-            /* Format column headers to show only DD.MM */
-            .fc-col-header a {
-              visibility: hidden;
-            }
-
             /* Calendar title styling to match day/date headers */
             .fc-toolbar-title {
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -505,56 +485,46 @@ export const AppointmentCalendar = ({
                   const dateObj = new Date(date);
                   const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
                   
-                  // Format as DD.MM 
-                  const formattedDate = dateObj.getDate().toString().padStart(2, '0') + '.' + 
-                                      (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                  // Format day.month (e.g., 23.02)
+                  const day = dateObj.getDate().toString().padStart(2, '0');
+                  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                  const formattedDate = `${day}.${month}`;
                   
                   // Check if this is the current day
                   const isCurrentDay = date === currentDayStr;
                   
-                  // Hide any existing content
-                  const headerContent = cell.querySelector('.fc-col-header-cell-cushion');
-                  if (headerContent instanceof HTMLElement) {
-                    headerContent.style.display = 'none';
-                  }
-                  
+                  // Create custom display
                   // Remove any existing custom display
-                  const existingDisplay = cell.querySelector('.custom-day-header');
+                  const existingDisplay = cell.querySelector('.day-header');
                   if (existingDisplay) {
                     cell.removeChild(existingDisplay);
                   }
                   
-                  // Create custom display
+                  // Create new custom display
                   const customDisplay = document.createElement('div');
-                  customDisplay.className = `custom-day-header ${isCurrentDay ? 'current-day' : ''}`;
+                  customDisplay.className = `day-header ${isCurrentDay ? 'current-day' : ''}`;
+                  customDisplay.style.textAlign = 'center';
                   
-                  customDisplay.innerHTML = `
-                    <div class="day-name" style="color: ${isCurrentDay ? '#3b82f6' : '#6B7280'}; text-align: center;">${dayName}</div>
-                    <div class="day-number" style="color: ${isCurrentDay ? '#3b82f6' : '#111827'}; text-align: center;">${formattedDate}</div>
-                  `;
+                  // Add the day name (e.g., "Mon")
+                  const dayNameElement = document.createElement('span');
+                  dayNameElement.className = 'day-name';
+                  dayNameElement.textContent = dayName;
+                  dayNameElement.style.color = isCurrentDay ? '#3b82f6' : '#64748b';
+                  customDisplay.appendChild(dayNameElement);
                   
+                  // Add the date (e.g., "23.02")
+                  const dayNumberElement = document.createElement('span');
+                  dayNumberElement.className = 'day-number';
+                  dayNumberElement.textContent = formattedDate;
+                  dayNumberElement.style.color = isCurrentDay ? '#3b82f6' : '#1f2937';
+                  customDisplay.appendChild(dayNumberElement);
+                  
+                  // Clear any existing content
+                  cell.innerHTML = '';
+                  // Add our custom display
                   cell.appendChild(customDisplay);
                 }
               });
-              
-              // Fix any duplicate elements in the time grid
-              const timeGridHeaders = document.querySelectorAll('.fc-timegrid-col-header');
-              timeGridHeaders.forEach(header => {
-                // Add specific styling to these headers
-                header.classList.add('bg-white', 'border-b', 'border-gray-100');
-                
-                // Hide any default content
-                const cushion = header.querySelector('.fc-timegrid-col-header-cushion');
-                if (cushion instanceof HTMLElement) {
-                  cushion.style.display = 'none';
-                }
-              });
-              
-              // Ensure the scrolling area shows all time slots from 8am-5pm
-              const scrollContainer = document.querySelector('.fc-scroller-liquid-absolute');
-              if (scrollContainer instanceof HTMLElement) {
-                scrollContainer.scrollTop = 0;
-              }
             }, 100);
           }}
         />
