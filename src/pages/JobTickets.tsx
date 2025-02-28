@@ -24,8 +24,8 @@ const JobTickets = () => {
     setShowTicketForm,
     nameFilter,
     setNameFilter,
-    dateFilter,
-    setDateFilter,
+    statusFilter,
+    setStatusFilter,
     registrationFilter,
     setRegistrationFilter,
     priorityFilter,
@@ -66,14 +66,14 @@ const JobTickets = () => {
       <div className="px-8 pb-8">
         <JobTicketFilters
           nameFilter={nameFilter}
-          dateFilter={dateFilter}
+          statusFilter={statusFilter}
           registrationFilter={registrationFilter}
           priorityFilter={priorityFilter}
           hideCompleted={hideCompleted}
           sortField={sortField}
           sortOrder={sortOrder}
           onNameFilterChange={setNameFilter}
-          onDateFilterChange={setDateFilter}
+          onStatusFilterChange={setStatusFilter}
           onRegistrationFilterChange={setRegistrationFilter}
           onPriorityFilterChange={setPriorityFilter}
           onHideCompletedChange={setHideCompleted}

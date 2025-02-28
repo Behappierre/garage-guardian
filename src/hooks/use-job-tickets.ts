@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { JobTicket, TicketPriority } from "@/types/job-ticket";
+import type { JobTicket, TicketPriority, TicketStatus } from "@/types/job-ticket";
 import { toast } from "sonner";
 
 type SortField = "created_at" | "client_name";
@@ -13,7 +13,7 @@ export const useJobTickets = (ticketId: string | null) => {
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [showTicketForm, setShowTicketForm] = useState(!!ticketId);
   const [nameFilter, setNameFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [registrationFilter, setRegistrationFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [hideCompleted, setHideCompleted] = useState(false);
@@ -90,7 +90,7 @@ export const useJobTickets = (ticketId: string | null) => {
   }, []);
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, dateFilter, registrationFilter, priorityFilter, hideCompleted, sortField, sortOrder],
+    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, hideCompleted, sortField, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from("job_tickets")
@@ -99,15 +99,10 @@ export const useJobTickets = (ticketId: string | null) => {
           client:clients(*),
           vehicle:vehicles(*)
         `);
-
-      if (dateFilter) {
-        const filterDate = new Date(dateFilter);
-        filterDate.setHours(0, 0, 0, 0);
-        const nextDay = new Date(filterDate);
-        nextDay.setDate(nextDay.getDate() + 1);
-        
-        query = query.gte('created_at', filterDate.toISOString())
-                    .lt('created_at', nextDay.toISOString());
+      
+      // Only apply filter if it's not "all"
+      if (statusFilter !== "all") {
+        query = query.eq('status', statusFilter);
       }
       
       // Only apply filter if it's not "all"
@@ -171,8 +166,8 @@ export const useJobTickets = (ticketId: string | null) => {
     setShowTicketForm,
     nameFilter,
     setNameFilter,
-    dateFilter,
-    setDateFilter,
+    statusFilter,
+    setStatusFilter,
     registrationFilter,
     setRegistrationFilter,
     priorityFilter,

@@ -5,18 +5,18 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpDown, ToggleLeft, ToggleRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { TicketPriority } from "@/types/job-ticket";
+import type { TicketPriority, TicketStatus } from "@/types/job-ticket";
 
 interface JobTicketFiltersProps {
   nameFilter: string;
-  dateFilter: string;
+  statusFilter: TicketStatus | "all";
   registrationFilter: string;
   priorityFilter: TicketPriority | "all";
   hideCompleted: boolean;
   sortField: "created_at" | "client_name";
   sortOrder: "asc" | "desc";
   onNameFilterChange: (value: string) => void;
-  onDateFilterChange: (value: string) => void;
+  onStatusFilterChange: (value: TicketStatus | "all") => void;
   onRegistrationFilterChange: (value: string) => void;
   onPriorityFilterChange: (value: TicketPriority | "all") => void;
   onHideCompletedChange: (value: boolean) => void;
@@ -25,14 +25,14 @@ interface JobTicketFiltersProps {
 
 export const JobTicketFilters = ({
   nameFilter,
-  dateFilter,
+  statusFilter,
   registrationFilter,
   priorityFilter,
   hideCompleted,
   sortField,
   sortOrder,
   onNameFilterChange,
-  onDateFilterChange,
+  onStatusFilterChange,
   onRegistrationFilterChange,
   onPriorityFilterChange,
   onHideCompletedChange,
@@ -60,6 +60,24 @@ export const JobTicketFilters = ({
           />
         </div>
         <div className="space-y-2">
+          <Label htmlFor="statusFilter">Filter by Status</Label>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => onStatusFilterChange(value as TicketStatus | "all")}
+          >
+            <SelectTrigger id="statusFilter">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="new">New</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="priorityFilter">Filter by Priority</Label>
           <Select
             value={priorityFilter}
@@ -76,15 +94,6 @@ export const JobTicketFilters = ({
               <SelectItem value="urgent">Urgent</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="dateFilter">Filter by Date Created</Label>
-          <Input
-            id="dateFilter"
-            type="date"
-            value={dateFilter}
-            onChange={(e) => onDateFilterChange(e.target.value)}
-          />
         </div>
       </div>
 
