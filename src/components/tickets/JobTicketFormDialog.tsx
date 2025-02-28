@@ -2,12 +2,14 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { JobTicketForm } from "@/components/tickets/JobTicketForm";
 import type { JobTicket } from "@/types/job-ticket";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface JobTicketFormDialogProps {
   showTicketForm: boolean;
   selectedTicket: JobTicket | null;
   onOpenChange: (open: boolean) => void;
   onClose: () => void;
+  isLoading?: boolean;
 }
 
 export const JobTicketFormDialog = ({
@@ -15,6 +17,7 @@ export const JobTicketFormDialog = ({
   selectedTicket,
   onOpenChange,
   onClose,
+  isLoading = false,
 }: JobTicketFormDialogProps) => {
   return (
     <Dialog 
@@ -24,14 +27,23 @@ export const JobTicketFormDialog = ({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            {selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
+            {isLoading ? "Loading Job Ticket..." : selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-hidden">
-          <JobTicketForm
-            initialData={selectedTicket}
-            onClose={onClose}
-          />
+          {isLoading ? (
+            <div className="space-y-4 p-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          ) : (
+            <JobTicketForm
+              initialData={selectedTicket}
+              onClose={onClose}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>

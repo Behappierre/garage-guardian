@@ -33,7 +33,8 @@ const JobTickets = () => {
     sortField,
     sortOrder,
     toggleSort,
-    fetchTicket
+    fetchTicket,
+    isLoadingTicket
   } = useJobTickets(ticketId);
 
   useEffect(() => {
@@ -88,6 +89,7 @@ const JobTickets = () => {
       <JobTicketFormDialog
         showTicketForm={showTicketForm}
         selectedTicket={selectedTicket}
+        isLoading={isLoadingTicket}
         onOpenChange={(open) => {
           setShowTicketForm(open);
           if (!open) {

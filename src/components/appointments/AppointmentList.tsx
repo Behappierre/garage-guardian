@@ -25,6 +25,7 @@ export const AppointmentList = ({
 
   const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    // Navigate to the job tickets page with the ticket ID
     navigate(`/dashboard/job-tickets?id=${ticketId}`);
   };
 
