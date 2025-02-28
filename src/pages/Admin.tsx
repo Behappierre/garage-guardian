@@ -15,9 +15,11 @@ import {
 import { UserRoleDialog } from "@/components/admin/UserRoleDialog";
 import { PasswordResetDialog } from "@/components/admin/PasswordResetDialog";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { TechnicianCosts } from "@/components/admin/TechnicianCosts";
 import { User } from '@supabase/supabase-js';
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface UserData {
   id: string;
@@ -122,40 +124,14 @@ const Admin = () => {
     return <div>Loading...</div>;
   }
 
-  if (!users || users.length === 0) {
-    return (
-      <div className="container mx-auto py-6">
-        <PageHeader 
-          title="User Management"
-        >
-          <PageActionButton 
-            icon={<UserPlus className="h-4 w-4" />}
-            onClick={() => setIsCreateUserDialogOpen(true)}
-          >
-            Create User
-          </PageActionButton>
-        </PageHeader>
+  const renderUserManagement = () => {
+    if (!users || users.length === 0) {
+      return (
         <div className="text-center py-8">No users found</div>
-        <CreateUserDialog
-          open={isCreateUserDialogOpen}
-          onOpenChange={setIsCreateUserDialogOpen}
-        />
-      </div>
-    );
-  }
+      );
+    }
 
-  return (
-    <div className="container mx-auto py-6">
-      <PageHeader 
-        title="User Management"
-      >
-        <PageActionButton 
-          icon={<UserPlus className="h-4 w-4" />}
-          onClick={() => setIsCreateUserDialogOpen(true)}
-        >
-          Create User
-        </PageActionButton>
-      </PageHeader>
+    return (
       <Table>
         <TableHeader>
           <TableRow>
@@ -207,6 +183,36 @@ const Admin = () => {
           ))}
         </TableBody>
       </Table>
+    );
+  };
+
+  return (
+    <div className="container mx-auto py-6">
+      <PageHeader 
+        title="Admin Dashboard"
+      >
+        <PageActionButton 
+          icon={<UserPlus className="h-4 w-4" />}
+          onClick={() => setIsCreateUserDialogOpen(true)}
+        >
+          Create User
+        </PageActionButton>
+      </PageHeader>
+
+      <Tabs defaultValue="users" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="costs">Technician Costs</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="users" className="pt-4">
+          {renderUserManagement()}
+        </TabsContent>
+        
+        <TabsContent value="costs" className="pt-4">
+          <TechnicianCosts />
+        </TabsContent>
+      </Tabs>
 
       {selectedUser && (
         <>
