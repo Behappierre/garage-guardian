@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import { Moon, Sun, Upload, DollarSign, Euro } from "lucide-react";
+import { Moon, Sun, Upload, DollarSign, Euro, PoundSterling, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
@@ -75,9 +75,16 @@ export default function Settings() {
 
       await queryClient.invalidateQueries({ queryKey: ["settings"] });
 
+      const currencyNames = {
+        USD: 'US Dollar',
+        EUR: 'Euro',
+        GBP: 'British Pound',
+        CAD: 'Canadian Dollar'
+      };
+
       toast({
         title: "Success",
-        description: `Currency changed to ${currency === 'USD' ? 'US Dollar' : 'Euro'}`,
+        description: `Currency changed to ${currencyNames[currency as keyof typeof currencyNames]}`,
       });
     } catch (error: any) {
       toast({
@@ -195,6 +202,20 @@ export default function Settings() {
                 <Label htmlFor="eur" className="flex items-center">
                   <Euro className="h-4 w-4 mr-2" />
                   <span>Euro (EUR)</span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="GBP" id="gbp" />
+                <Label htmlFor="gbp" className="flex items-center">
+                  <PoundSterling className="h-4 w-4 mr-2" />
+                  <span>British Pound (GBP)</span>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="CAD" id="cad" />
+                <Label htmlFor="cad" className="flex items-center">
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  <span>Canadian Dollar (CAD)</span>
                 </Label>
               </div>
             </RadioGroup>

@@ -413,6 +413,7 @@ export type Database = {
       settings: {
         Row: {
           created_at: string
+          currency: string | null
           dark_mode: boolean | null
           id: string
           logo_url: string | null
@@ -420,6 +421,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          currency?: string | null
           dark_mode?: boolean | null
           id?: string
           logo_url?: string | null
@@ -427,6 +429,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          currency?: string | null
           dark_mode?: boolean | null
           id?: string
           logo_url?: string | null
