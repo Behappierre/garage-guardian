@@ -311,7 +311,7 @@ export const AppointmentCalendar = ({
             /* Time axis labels */
             .fc .fc-timegrid-axis {
               padding: 0.1rem 0.5rem;
-              width: 30px !important;
+              width: 40px !important;
             }
             
             .fc .fc-timegrid-axis-cushion {
@@ -359,65 +359,9 @@ export const AppointmentCalendar = ({
               display: none;
             }
             
-            /* Day header styling for week view */
-            .fc-col-header-cell {
-              position: relative;
-            }
-            
-            .fc-col-header-cell-cushion {
-              display: none !important;
-            }
-            
-            /* Week view day headers */
-            .day-name {
-              font-size: 0.875rem;
-              font-weight: 500;
-              color: #64748b;
-              text-transform: capitalize;
-              margin-bottom: 4px;
-              display: block;
-            }
-            
-            .day-number {
-              font-size: 1.125rem;
-              font-weight: 600;
-              color: #1f2937;
-              display: block;
-            }
-            
-            /* Current day highlight */
-            .day-header.current-day .day-name {
-              color: #3b82f6;
-            }
-            
-            .day-header.current-day .day-number {
-              color: #3b82f6;
-            }
-            
-            /* Remove divider */
-            .fc-timegrid-divider {
-              display: none !important;
-            }
-            
-            /* Adjust timegrid slots for better visibility */
-            .fc-timegrid-slot-label-cushion {
-              font-weight: 500;
-              font-size: 0.75rem;
-              color: #64748b;
-            }
-            
-            /* Timegrid cols */
-            .fc-timegrid-col-frame {
-              background-color: #ffffff;
-            }
-            
-            /* Calendar title styling to match day/date headers */
-            .fc-toolbar-title {
-              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-              font-size: 1.125rem;
-              font-weight: 600;
-              color: #1f2937;
-              letter-spacing: -0.01em;
+            /* Day header styling */
+            .fc-timegrid-day-frame, .fc-daygrid-day-frame {
+              min-width: 100% !important;
             }
             
             /* Fix for grid cells */
@@ -426,6 +370,7 @@ export const AppointmentCalendar = ({
             }
             
             /* Ensure all tables inside the calendar have full width */
+            .fc-scrollgrid-section,
             .fc-scrollgrid table,
             .fc-scrollgrid-sync-table,
             .fc-col-header, 
@@ -453,6 +398,27 @@ export const AppointmentCalendar = ({
               width: 100% !important;
               overflow-x: hidden !important;
             }
+            
+            /* Day view specific styling */
+            .fc-timeGridDay-view .fc-timegrid-col {
+              width: 100% !important;
+            }
+            
+            /* Fix for day view */
+            .fc-timeGridDay-view .fc-timegrid-cols,
+            .fc-timeGridDay-view .fc-timegrid-col,
+            .fc-timeGridDay-view .fc-scrollgrid-sync-table {
+              width: 100% !important;
+              min-width: 100% !important;
+            }
+            
+            /* Day header text */
+            .fc-col-header-cell-cushion {
+              display: inline-block !important;
+              padding: 8px;
+              font-weight: 500;
+              color: #1f2937;
+            }
           `}
         </style>
         <FullCalendar
@@ -473,66 +439,10 @@ export const AppointmentCalendar = ({
           editable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
-          dayHeaderFormat={{ weekday: 'short' }}
+          dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
           datesSet={(dateInfo) => {
             setCalendarTitle(dateInfo.view.title);
             setCurrentView(dateInfo.view.type as CalendarViewType);
-          }}
-          viewDidMount={(view) => {
-            // This function creates our custom header display
-            setTimeout(() => {
-              // Get all column header cells
-              const headerCells = document.querySelectorAll('.fc-col-header-cell');
-              const today = new Date();
-              const currentDayStr = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-              
-              headerCells.forEach(cell => {
-                const date = cell.getAttribute('data-date');
-                if (date) {
-                  const dateObj = new Date(date);
-                  const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
-                  
-                  // Format day.month (e.g., 23.02)
-                  const day = dateObj.getDate().toString().padStart(2, '0');
-                  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-                  const formattedDate = `${day}.${month}`;
-                  
-                  // Check if this is the current day
-                  const isCurrentDay = date === currentDayStr;
-                  
-                  // Create custom display
-                  // Remove any existing custom display
-                  const existingDisplay = cell.querySelector('.day-header');
-                  if (existingDisplay) {
-                    cell.removeChild(existingDisplay);
-                  }
-                  
-                  // Create new custom display
-                  const customDisplay = document.createElement('div');
-                  customDisplay.className = `day-header ${isCurrentDay ? 'current-day' : ''}`;
-                  customDisplay.style.textAlign = 'center';
-                  
-                  // Add the day name (e.g., "Mon")
-                  const dayNameElement = document.createElement('span');
-                  dayNameElement.className = 'day-name';
-                  dayNameElement.textContent = dayName;
-                  dayNameElement.style.color = isCurrentDay ? '#3b82f6' : '#64748b';
-                  customDisplay.appendChild(dayNameElement);
-                  
-                  // Add the date (e.g., "23.02")
-                  const dayNumberElement = document.createElement('span');
-                  dayNumberElement.className = 'day-number';
-                  dayNumberElement.textContent = formattedDate;
-                  dayNumberElement.style.color = isCurrentDay ? '#3b82f6' : '#1f2937';
-                  customDisplay.appendChild(dayNumberElement);
-                  
-                  // Clear any existing content
-                  cell.innerHTML = '';
-                  // Add our custom display
-                  cell.appendChild(customDisplay);
-                }
-              });
-            }, 100);
           }}
         />
       </div>
