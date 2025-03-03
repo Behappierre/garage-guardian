@@ -9,13 +9,15 @@ type AuthPageUIProps = {
   garageName: string | null;
   userGarages?: any[];
   isOwnerView?: boolean;
+  initialMode?: string | null;
 };
 
 export const AuthPageUI = ({ 
   effectiveGarageSlug, 
   garageName,
   userGarages,
-  isOwnerView = false
+  isOwnerView = false,
+  initialMode = null
 }: AuthPageUIProps) => {
   const navigate = useNavigate();
 
@@ -78,7 +80,11 @@ export const AuthPageUI = ({
           </>
         )}
         
-        <AuthForm garageSlug={effectiveGarageSlug} isOwnerView={isOwnerView} />
+        <AuthForm 
+          garageSlug={effectiveGarageSlug} 
+          isOwnerView={isOwnerView} 
+          initialMode={initialMode}
+        />
         
         <div className="mt-6 text-center">
           {!isOwnerView ? (

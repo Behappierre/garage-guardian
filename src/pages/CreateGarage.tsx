@@ -232,7 +232,8 @@ export default function CreateGarage() {
 
   const handleSignInClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    // Direct users to the auth page with signin mode explicitly set
+    // Direct users to the auth page with the owner view and signin mode explicitly set
+    // Using isOwnerView=true to ensure garage owner login is shown and mode=signin to force sign in form
     navigate("/auth?isOwnerView=true&mode=signin");
   };
 

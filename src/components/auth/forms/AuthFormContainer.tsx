@@ -9,14 +9,19 @@ type AuthMode = "signin" | "signup";
 interface AuthFormContainerProps {
   garageSlug?: string | null;
   isOwnerView?: boolean;
+  initialMode?: string | null;
 }
 
-export const AuthFormContainer = ({ garageSlug, isOwnerView = false }: AuthFormContainerProps) => {
+export const AuthFormContainer = ({ 
+  garageSlug, 
+  isOwnerView = false, 
+  initialMode = null 
+}: AuthFormContainerProps) => {
   const [searchParams] = useSearchParams();
-  const modeParam = searchParams.get('mode');
+  const modeParam = searchParams.get('mode') || initialMode;
   const [mode, setMode] = useState<AuthMode>(modeParam === 'signup' ? 'signup' : 'signin');
 
-  // Update mode when URL parameters change
+  // Update mode when URL parameters or initialMode change
   useEffect(() => {
     setMode(modeParam === 'signup' ? 'signup' : 'signin');
   }, [modeParam]);

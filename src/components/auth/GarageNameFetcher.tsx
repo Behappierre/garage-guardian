@@ -22,11 +22,26 @@ export const GarageNameFetcher = ({
         
         console.log(`Fetching name for garage slug: ${effectiveGarageSlug}`);
         
-        const { data, error } = await supabase
+        // First try to get the garage by slug
+        let { data, error } = await supabase
           .from('garages')
           .select('name')
           .eq('slug', effectiveGarageSlug)
           .maybeSingle();
+        
+        // If not found by slug, try by ID (in case the slug is actually a UUID)
+        if (!data && !error) {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(effectiveGarageSlug);
+          
+          if (isUuid) {
+            console.log("Slug appears to be a UUID, trying to fetch by ID");
+            ({ data, error } = await supabase
+              .from('garages')
+              .select('name')
+              .eq('id', effectiveGarageSlug)
+              .maybeSingle());
+          }
+        }
         
         if (error) {
           console.error("Error fetching garage name:", error);

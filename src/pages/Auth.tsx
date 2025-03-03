@@ -20,6 +20,7 @@ const Auth = () => {
   // Get garage slug and isOwnerView from URL params
   const garageSlug = searchParams.get('garage');
   const isOwnerViewParam = searchParams.get('isOwnerView');
+  const mode = searchParams.get('mode'); // Get the mode from URL params
   
   // Determine which garage slug to use - from URL param or subdomain
   const effectiveGarageSlug = getEffectiveGarageSlug(garageSlug);
@@ -32,6 +33,7 @@ const Auth = () => {
   console.log(`Auth page loaded. Effective garage slug: ${effectiveGarageSlug}`);
   console.log(`Is subdomain: ${isSubdomain}`);
   console.log(`Is owner view: ${isOwnerView}`);
+  console.log(`Auth mode: ${mode}`);
   
   // If on the main domain and user is already authenticated, check if they should be redirected
   useEffect(() => {
@@ -79,6 +81,7 @@ const Auth = () => {
           garageName={garageName}
           userGarages={userGarages}
           isOwnerView={isOwnerView}
+          initialMode={mode} // Pass the mode from URL params to AuthPageUI
         />
       )}
     </>

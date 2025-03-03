@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useGarage } from "@/contexts/GarageContext";
 import { useEffect, useState } from "react";
 import { getSubdomainInfo } from "@/utils/subdomain";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,7 +28,18 @@ const Index = () => {
     if (subdomain) {
       const fetchGarageName = async () => {
         try {
-          const { data } = await fetch(`/api/garage-name?slug=${subdomain}`).then(res => res.json());
+          // Use supabase directly instead of a fetch request to the API
+          const { data, error } = await supabase
+            .from('garages')
+            .select('name')
+            .eq('slug', subdomain)
+            .maybeSingle();
+            
+          if (error) {
+            console.error("Error fetching garage name:", error);
+            return;
+          }
+          
           if (data && data.name) {
             setGarageName(data.name);
           }
@@ -100,7 +112,7 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <Button 
-                  onClick={() => navigate("/auth")} 
+                  onClick={() => navigate("/auth?isOwnerView=true")} 
                   className="w-full bg-primary hover:bg-primary-dark"
                 >
                   Owner Sign In
@@ -145,26 +157,14 @@ const Index = () => {
               variant="link" 
               className="text-primary p-0"
               onClick={() => {
-                // Redirect to create garage on main site if not authenticated
-                if (!user) {
-                  // Generate main domain URL from current URL
-                  const { hostname, isLocalhost } = getSubdomainInfo();
-                  const hostParts = hostname.split('.');
-                  const mainDomain = isLocalhost 
-                    ? 'localhost:8080' // For local development
-                    : hostParts.slice(1).join('.');
-                  
-                  window.location.href = `${window.location.protocol}//${mainDomain}/create-garage`;
-                } else {
-                  // Generate main domain URL from current URL
-                  const { hostname, isLocalhost } = getSubdomainInfo();
-                  const hostParts = hostname.split('.');
-                  const mainDomain = isLocalhost 
-                    ? 'localhost:8080' // For local development
-                    : hostParts.slice(1).join('.');
-                  
-                  window.location.href = `${window.location.protocol}//${mainDomain}`;
-                }
+                // Generate main domain URL from current URL
+                const { hostname, isLocalhost } = getSubdomainInfo();
+                const hostParts = hostname.split('.');
+                const mainDomain = isLocalhost 
+                  ? 'localhost:8080' // For local development
+                  : hostParts.slice(1).join('.');
+                
+                window.location.href = `${window.location.protocol}//${mainDomain}`;
               }}
             >
               Go to GarageWizz Main Site
