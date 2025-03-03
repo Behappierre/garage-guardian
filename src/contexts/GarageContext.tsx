@@ -74,18 +74,32 @@ export const GarageProvider = ({ children }: GarageProviderProps) => {
           throw garagesError;
         }
         
-        setUserGarages(garages || []);
+        // Cast the Supabase response to match our Garage type
+        const typedGarages: Garage[] = (garages || []).map(g => ({
+          id: g.id,
+          name: g.name,
+          slug: g.slug,
+          address: g.address,
+          phone: g.phone,
+          email: g.email,
+          logo_url: g.logo_url,
+          settings: g.settings as Record<string, any> | null,
+          created_at: g.created_at || '',
+          updated_at: g.updated_at || ''
+        }));
+        
+        setUserGarages(typedGarages);
         
         // Set current garage from localStorage if available
         const storedGarageId = localStorage.getItem("currentGarageId");
         
-        if (storedGarageId && garages?.some(g => g.id === storedGarageId)) {
-          const current = garages.find(g => g.id === storedGarageId) || null;
+        if (storedGarageId && typedGarages.some(g => g.id === storedGarageId)) {
+          const current = typedGarages.find(g => g.id === storedGarageId) || null;
           setCurrentGarageState(current);
-        } else if (garages && garages.length > 0) {
+        } else if (typedGarages.length > 0) {
           // Default to first garage
-          setCurrentGarageState(garages[0]);
-          localStorage.setItem("currentGarageId", garages[0].id);
+          setCurrentGarageState(typedGarages[0]);
+          localStorage.setItem("currentGarageId", typedGarages[0].id);
         }
       } catch (err: any) {
         console.error("Error fetching garages:", err);

@@ -36,15 +36,20 @@ export const useTicketMutations = (onClose: () => void) => {
         if (error) throw error;
         return ticketId;
       } else {
-        // Create new ticket
-        const { data, error } = await supabase
-          .from("job_tickets")
-          .insert(dataWithGarage)
-          .select()
-          .single();
+        // For new ticket, we should use a function call that automatically generates the ticket_number
+        // We can use the create_job_ticket function that's already defined in Supabase
+        const { data, error } = await supabase.rpc('create_job_ticket', {
+          p_description: dataWithGarage.description,
+          p_status: dataWithGarage.status,
+          p_priority: dataWithGarage.priority,
+          p_assigned_technician_id: dataWithGarage.assigned_technician_id || null,
+          p_client_id: dataWithGarage.client_id || null,
+          p_vehicle_id: dataWithGarage.vehicle_id || null,
+          p_garage_id: dataWithGarage.garage_id || null
+        });
 
         if (error) throw error;
-        return data.id;
+        return data;
       }
     },
     onSuccess: async (jobTicketId, { appointmentId }) => {
