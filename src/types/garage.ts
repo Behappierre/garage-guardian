@@ -1,5 +1,6 @@
 
 import type { Database } from "@/integrations/supabase/types";
+import type { Json } from "@/integrations/supabase/types";
 
 export type GarageRole = "owner" | "admin" | "manager" | "technician" | "front_desk";
 
@@ -11,7 +12,7 @@ export type Garage = {
   phone?: string | null;
   email?: string | null;
   logo_url?: string | null;
-  settings?: Record<string, any> | null;
+  settings?: Json | null;
   created_at: string;
   updated_at: string;
 };
@@ -26,7 +27,7 @@ export type GarageMember = {
     id: string;
     first_name: string | null;
     last_name: string | null;
-  };
+  } | null;
 };
 
 export type GarageFormData = {

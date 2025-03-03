@@ -46,7 +46,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
     if (memberError) throw memberError;
 
     return { 
-      garage: garageData as Garage, 
+      garage: garageData as unknown as Garage, 
       error: null 
     };
   } catch (error) {
@@ -65,7 +65,7 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
     
     if (error) throw error;
     
-    return { garage: data as Garage, error: null };
+    return { garage: data as unknown as Garage, error: null };
   } catch (error) {
     console.error("Error fetching garage by slug:", error);
     return { garage: null, error };
@@ -84,7 +84,10 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
     
     if (error) throw error;
     
-    return { members: data as GarageMember[], error: null };
+    return { 
+      members: data as unknown as GarageMember[], 
+      error: null 
+    };
   } catch (error) {
     console.error("Error fetching garage members:", error);
     return { members: [], error };
