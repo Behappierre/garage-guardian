@@ -147,16 +147,19 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
   }
 };
 
+// Fix type instantiation issue by using a more explicit approach with typed arrays
 export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
   try {
-    // Fix the query to avoid the join that's causing issues
+    // Get all members for the garage
     const membersResponse = await supabase
       .from("garage_members")
       .select("*")
       .eq("garage_id", garageId);
     
     if (membersResponse.error) throw membersResponse.error;
-    if (!membersResponse.data) {
+    
+    // Return empty array if no data
+    if (!membersResponse.data || membersResponse.data.length === 0) {
       return { members: [], error: null };
     }
     
@@ -172,18 +175,21 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
     if (profilesResponse.error) throw profilesResponse.error;
     
     // Create a map of user_id to profile for easy lookup
-    const profileMap = new Map();
+    const profileMap = new Map<string, any>();
     if (profilesResponse.data) {
       profilesResponse.data.forEach(profile => {
         profileMap.set(profile.id, profile);
       });
     }
     
-    // Map the members with their profiles
-    const members: GarageMember[] = membersResponse.data.map(member => {
+    // Explicitly type the members array to avoid deep instantiation
+    const members: GarageMember[] = [];
+    
+    // Populate the members array with properly typed objects
+    for (const member of membersResponse.data) {
       const profile = profileMap.get(member.user_id);
       
-      return {
+      const garageMember: GarageMember = {
         id: member.id,
         garage_id: member.garage_id,
         user_id: member.user_id,
@@ -195,7 +201,9 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
           last_name: profile.last_name
         } : null
       };
-    });
+      
+      members.push(garageMember);
+    }
     
     return { members, error: null };
   } catch (error) {
