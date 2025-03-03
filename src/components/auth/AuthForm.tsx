@@ -65,39 +65,8 @@ export const AuthForm = () => {
         });
         if (error) throw error;
 
-        // After successful sign in, fetch user role and redirect
-        if (signInData.user) {
-          const { data: roleData, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', signInData.user.id)
-            .single();
-
-          if (roleError) {
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: "Error fetching user role",
-            });
-            navigate("/dashboard");
-            return;
-          }
-
-          // Redirect based on role
-          switch (roleData?.role) {
-            case 'administrator':
-              navigate("/dashboard");
-              break;
-            case 'technician':
-              navigate("/dashboard/job-tickets");
-              break;
-            case 'front_desk':
-              navigate("/dashboard/appointments");
-              break;
-            default:
-              navigate("/dashboard");
-          }
-        }
+        // After successful sign in, we'll let Auth component handle redirects
+        // based on garages and roles
       }
     } catch (error: any) {
       toast({
@@ -115,7 +84,7 @@ export const AuthForm = () => {
       <div className="text-center">
         <h2 className="text-2xl font-bold">{mode === "signin" ? "Sign In" : "Create Account"}</h2>
         <p className="mt-2 text-sm text-gray-600">
-          {mode === "signin" ? "Welcome back!" : "Join GarageGuardian today"}
+          {mode === "signin" ? "Welcome back!" : "Join GarageWizz today"}
         </p>
       </div>
 
