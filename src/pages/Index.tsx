@@ -145,13 +145,26 @@ const Index = () => {
               variant="link" 
               className="text-primary p-0"
               onClick={() => {
-                // Generate main domain URL from current URL
-                const { hostname, isLocalhost } = getSubdomainInfo();
-                const hostParts = hostname.split('.');
-                const mainDomain = isLocalhost 
-                  ? 'localhost:8080' // For local development
-                  : hostParts.slice(1).join('.');
-                window.location.href = `${window.location.protocol}//${mainDomain}`;
+                // Redirect to create garage on main site if not authenticated
+                if (!user) {
+                  // Generate main domain URL from current URL
+                  const { hostname, isLocalhost } = getSubdomainInfo();
+                  const hostParts = hostname.split('.');
+                  const mainDomain = isLocalhost 
+                    ? 'localhost:8080' // For local development
+                    : hostParts.slice(1).join('.');
+                  
+                  window.location.href = `${window.location.protocol}//${mainDomain}/create-garage`;
+                } else {
+                  // Generate main domain URL from current URL
+                  const { hostname, isLocalhost } = getSubdomainInfo();
+                  const hostParts = hostname.split('.');
+                  const mainDomain = isLocalhost 
+                    ? 'localhost:8080' // For local development
+                    : hostParts.slice(1).join('.');
+                  
+                  window.location.href = `${window.location.protocol}//${mainDomain}`;
+                }
               }}
             >
               Go to GarageWizz Main Site

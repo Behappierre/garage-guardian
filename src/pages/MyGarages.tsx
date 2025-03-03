@@ -14,6 +14,7 @@ const MyGarages = () => {
   const { user } = useAuth();
   const { userGarages } = useGarage();
   const [isSubdomain, setIsSubdomain] = useState(false);
+  const [loading, setLoading] = useState(true);
   
   // Detect if we're on a subdomain
   useEffect(() => {
@@ -32,12 +33,16 @@ const MyGarages = () => {
     // Redirect to auth if not logged in
     if (!user) {
       navigate("/auth");
+      return;
     }
     
     // If on subdomain, redirect to that subdomain's auth
     if (subdomain) {
       navigate("/auth");
+      return;
     }
+    
+    setLoading(false);
   }, [user, navigate]);
 
   const handleSignOut = async () => {
@@ -77,8 +82,15 @@ const MyGarages = () => {
   };
 
   // Prevent rendering if on subdomain (the useEffect will redirect)
-  if (isSubdomain) {
-    return null;
+  if (isSubdomain || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
