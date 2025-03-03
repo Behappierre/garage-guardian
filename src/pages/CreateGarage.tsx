@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -352,9 +353,9 @@ export default function CreateGarage() {
           <CardFooter className="flex justify-center border-t pt-4">
             <p className="text-sm text-gray-600">
               Already have a garage? {" "}
-              <Link to="/auth" className="text-primary font-medium hover:underline">
+              <a href="/auth" className="text-primary font-medium hover:underline">
                 Sign in here
-              </Link>
+              </a>
             </p>
           </CardFooter>
         </Card>
