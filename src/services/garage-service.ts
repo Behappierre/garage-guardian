@@ -20,8 +20,7 @@ export const garageService = {
           email: garageData.email,
           logo_url: garageData.logo_url,
         })
-        .select()
-        .single();
+        .select("*") as { data: Garage[] | null, error: Error | null };
       
       if (garageError) throw garageError;
       
@@ -29,14 +28,14 @@ export const garageService = {
       const { error: adminError } = await supabase
         .from("garage_members")
         .insert({
-          garage_id: garage.id,
+          garage_id: garage?.[0]?.id,
           user_id: userId,
           role: "owner"
         });
       
       if (adminError) throw adminError;
       
-      return { garage, error: null };
+      return { garage: garage?.[0] || null, error: null };
     } catch (error: any) {
       console.error("Error creating garage:", error);
       return { garage: null, error };
@@ -54,12 +53,11 @@ export const garageService = {
       
       const { data: garageMembers, error: membersError } = await supabase
         .from("garage_members")
-        .select("garage_id")
-        .eq("user_id", user.id);
+        .select("garage_id") as { data: {garage_id: string}[] | null, error: Error | null };
       
       if (membersError) throw membersError;
       
-      if (!garageMembers.length) {
+      if (!garageMembers?.length) {
         return { garages: [], error: null };
       }
       
@@ -68,7 +66,7 @@ export const garageService = {
       const { data: garages, error: garagesError } = await supabase
         .from("garages")
         .select("*")
-        .in("id", garageIds);
+        .in("id", garageIds) as { data: Garage[] | null, error: Error | null };
       
       if (garagesError) throw garagesError;
       
@@ -86,7 +84,7 @@ export const garageService = {
         .from("garages")
         .select("*")
         .eq("slug", slug)
-        .single();
+        .single() as { data: Garage | null, error: Error | null };
       
       if (error) throw error;
       
@@ -127,7 +125,7 @@ export const garageService = {
             last_name
           )
         `)
-        .eq("garage_id", garageId);
+        .eq("garage_id", garageId) as { data: GarageMember[] | null, error: Error | null };
       
       if (error) throw error;
       
