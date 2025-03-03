@@ -4,17 +4,27 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building } from "lucide-react";
+import { Building, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useGarage } from "@/contexts/GarageContext"; 
 
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { userGarages } = useGarage();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [garageName, setGarageName] = useState<string | null>(null);
   
   // Get garage slug from URL params
   const garageSlug = searchParams.get('garage');
+  
+  // Check if we're on a subdomain
+  const isSubdomain = window.location.hostname.split('.').length > 2;
+  const subdomain = isSubdomain ? window.location.hostname.split('.')[0] : null;
+  
+  // Determine which garage slug to use - from URL param or subdomain
+  const effectiveGarageSlug = garageSlug || subdomain;
   
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
@@ -53,17 +63,17 @@ const Auth = () => {
             // Check if there's a stored current garage or if we should use one from the URL
             let garageToUse;
             
-            // If there's a garage slug in the URL and it matches one of the user's garages, use that
-            if (garageSlug) {
+            // If there's a garage slug in the URL or subdomain and it matches one of the user's garages
+            if (effectiveGarageSlug) {
               const { data: garageData } = await supabase
                 .from('garages')
                 .select('id')
-                .eq('slug', garageSlug)
+                .eq('slug', effectiveGarageSlug)
                 .single();
               
               if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
                 garageToUse = garageData.id;
-                console.log(`Using garage from URL: ${garageToUse}`);
+                console.log(`Using garage from URL/subdomain: ${garageToUse}`);
               }
             }
             
@@ -142,14 +152,14 @@ const Auth = () => {
     };
 
     // If a garage slug is provided, fetch the garage name
-    if (garageSlug) {
+    if (effectiveGarageSlug) {
       const fetchGarageName = async () => {
         try {
-          console.log(`Fetching name for garage slug: ${garageSlug}`);
+          console.log(`Fetching name for garage slug: ${effectiveGarageSlug}`);
           const { data, error } = await supabase
             .from('garages')
             .select('name')
-            .eq('slug', garageSlug)
+            .eq('slug', effectiveGarageSlug)
             .single();
           
           if (error) {
@@ -170,7 +180,7 @@ const Auth = () => {
     }
 
     checkAuthAndRedirect();
-  }, [navigate, garageSlug]);
+  }, [navigate, effectiveGarageSlug]);
 
   if (isCheckingAuth) {
     return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
@@ -179,14 +189,27 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center mb-6">
           <Building className="h-8 w-8 text-primary mr-2" />
           <h1 className="text-center text-3xl font-bold text-gray-900">
             GarageWizz
           </h1>
         </div>
         
-        {garageSlug && garageName && (
+        {/* Show back to home button */}
+        <div className="text-center mb-4">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-gray-500"
+            onClick={() => navigate("/")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back to Home
+          </Button>
+        </div>
+        
+        {effectiveGarageSlug && garageName && (
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">{garageName}</h2>
             <p className="text-sm text-gray-500">
@@ -195,13 +218,22 @@ const Auth = () => {
           </div>
         )}
         
-        {!garageSlug && (
-          <div className="text-center text-sm text-gray-500 mb-4">
-            Garage Owner Login
-          </div>
+        {!effectiveGarageSlug && (
+          <>
+            <div className="text-center text-sm text-gray-500 mb-4">
+              Garage Owner Login
+            </div>
+            {userGarages && userGarages.length > 0 && (
+              <div className="text-center mb-4">
+                <p className="text-sm text-primary">
+                  You have {userGarages.length} garage{userGarages.length > 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+          </>
         )}
         
-        <AuthForm garageSlug={garageSlug} />
+        <AuthForm garageSlug={effectiveGarageSlug} />
         
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
