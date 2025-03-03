@@ -6,19 +6,21 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
   try {
     let userId: string | undefined;
     
-    // 1. Check if user already exists
-    const { data: existingUser, error: checkError } = await supabase
+    // 1. Check if user already exists - use a different approach to avoid type recursion
+    const { data: existingUsers, error: checkError } = await supabase
       .from("profiles")
       .select("id")
-      .eq("email", formData.owner_email)
-      .single();
+      .eq("email", formData.owner_email);
     
-    if (checkError && checkError.code !== "PGRST116") {
+    if (checkError) {
       throw checkError;
     }
     
-    // If user doesn't exist, create a new one
-    if (!existingUser) {
+    // If user exists, take the first one
+    if (existingUsers && existingUsers.length > 0) {
+      userId = existingUsers[0].id;
+    } else {
+      // If user doesn't exist, create a new one
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.owner_email,
         password: formData.owner_password,
@@ -47,8 +49,6 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
       } else {
         userId = authData.user?.id;
       }
-    } else {
-      userId = existingUser.id;
     }
     
     if (!userId) {
