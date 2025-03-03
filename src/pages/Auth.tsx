@@ -81,7 +81,7 @@ const Auth = () => {
           garageName={garageName}
           userGarages={userGarages}
           isOwnerView={isOwnerView}
-          initialMode={mode} // Pass the mode from URL params to AuthPageUI
+          initialMode={mode}
         />
       )}
     </>

@@ -231,7 +231,8 @@ export default function CreateGarage() {
 
   const handleSignInClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/auth?isOwnerView=true&mode=signin");
+    console.log("Redirecting to owner sign in page");
+    window.location.href = "/auth?isOwnerView=true&mode=signin";
   };
 
   return (

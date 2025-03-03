@@ -21,12 +21,18 @@ export const AuthFormContainer = ({
   const modeParam = searchParams.get('mode') || initialMode;
   const [mode, setMode] = useState<AuthMode>(modeParam === 'signup' ? 'signup' : 'signin');
 
+  console.log("AuthFormContainer initialized with mode:", mode);
+  console.log("Mode parameter:", modeParam);
+  console.log("Initial mode:", initialMode);
+  console.log("Is owner view:", isOwnerView);
+  console.log("Garage slug:", garageSlug);
+
   // Update mode when URL parameters or initialMode change
   useEffect(() => {
     if (modeParam) {
-      const currentMode = modeParam === 'signup' ? 'signup' : 'signin';
-      console.log(`Setting auth mode to: ${currentMode} based on param: ${modeParam}`);
-      setMode(currentMode);
+      const newMode = modeParam === 'signup' ? 'signup' : 'signin';
+      console.log(`Setting auth mode to: ${newMode} based on param: ${modeParam}`);
+      setMode(newMode);
     }
   }, [modeParam]);
 

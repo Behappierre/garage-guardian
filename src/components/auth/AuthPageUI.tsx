@@ -24,6 +24,14 @@ export const AuthPageUI = ({
   
   // Get the mode from URL params or use the initialMode prop
   const mode = searchParams.get('mode') || initialMode;
+  
+  console.log("AuthPageUI rendered with:");
+  console.log("- effectiveGarageSlug:", effectiveGarageSlug);
+  console.log("- garageName:", garageName);
+  console.log("- isOwnerView:", isOwnerView);
+  console.log("- initialMode:", initialMode);
+  console.log("- mode from URL:", searchParams.get('mode'));
+  console.log("- effective mode:", mode);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -89,30 +97,6 @@ export const AuthPageUI = ({
           isOwnerView={isOwnerView} 
           initialMode={mode}
         />
-        
-        <div className="mt-6 text-center">
-          {!isOwnerView ? (
-            <p className="text-sm text-gray-600">
-              Don't have an account? {" "}
-              <button 
-                onClick={() => navigate(`/auth?mode=signup${effectiveGarageSlug ? `&garage=${effectiveGarageSlug}` : ''}`)}
-                className="text-primary font-medium hover:underline"
-              >
-                Sign up
-              </button>
-            </p>
-          ) : (
-            <p className="text-sm text-gray-600">
-              Don't have a garage yet? {" "}
-              <button 
-                onClick={() => navigate("/create-garage")}
-                className="text-primary font-medium hover:underline"
-              >
-                Create one here
-              </button>
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );
