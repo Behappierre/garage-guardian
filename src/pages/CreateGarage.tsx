@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
-import { createGarage } from "@/services/garage-service";
+import { createGarage } from "@/services/garage";
 import { CreateGarageFormData } from "@/types/garage";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { toast } from "sonner";

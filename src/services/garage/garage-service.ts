@@ -1,64 +1,12 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { CreateGarageFormData, Garage, GarageMember, GarageRole } from "@/types/garage";
+import { CreateGarageFormData, Garage } from "@/types/garage";
+import { GarageResponse } from "./types";
+import { handleSignUp, handleSignIn } from "../auth/auth-service";
 
-// Define simplified response types to avoid deep nesting
-interface GarageResponse {
-  garage: Garage | null;
-  error: any;
-}
-
-interface GarageMembersResponse {
-  members: GarageMember[];
-  error: any;
-}
-
-// Even more simplified auth response type to completely avoid type recursion
-interface AuthUserResponse {
-  data: {
-    user: {
-      id: string;
-    } | null;
-  } | null;
-  error: any;
-}
-
-// Helper function to handle authentication responses without triggering deep type instantiation
-async function handleSignUp(email: string, password: string, firstName: string, lastName: string): Promise<string | null> {
-  try {
-    // Use any to break the type dependency chain completely
-    const response = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-        }
-      }
-    }) as any;
-    
-    if (response.error) throw response.error;
-    return response.data?.user?.id || null;
-  } catch (error) {
-    throw error;
-  }
-}
-
-async function handleSignIn(email: string, password: string): Promise<string | null> {
-  try {
-    // Use any to break the type dependency chain completely
-    const response = await supabase.auth.signInWithPassword({
-      email,
-      password
-    }) as any;
-    
-    if (response.error) throw response.error;
-    return response.data?.user?.id || null;
-  } catch (error) {
-    throw error;
-  }
-}
-
+/**
+ * Creates a new garage and associates an owner with it
+ */
 export const createGarage = async (formData: CreateGarageFormData): Promise<GarageResponse> => {
   try {
     let userId: string | undefined;
@@ -133,7 +81,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
       .insert({
         garage_id: newGarage.id,
         user_id: userId,
-        role: "owner" as GarageRole,
+        role: "owner",
       });
     
     if (memberResponse.error) throw memberResponse.error;
@@ -159,6 +107,9 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
   }
 };
 
+/**
+ * Retrieves a garage by its slug
+ */
 export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => {
   try {
     // Use maybeSingle instead of single to handle not found case without error
@@ -196,83 +147,5 @@ export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => 
   } catch (error) {
     console.error("Error fetching garage by slug:", error);
     return { garage: null, error };
-  }
-};
-
-export const getGarageMembers = async (garageId: string): Promise<GarageMembersResponse> => {
-  try {
-    // Step 1: Fetch garage members
-    const { data: membersData, error: membersError } = await supabase
-      .from("garage_members")
-      .select("*")
-      .eq("garage_id", garageId);
-    
-    if (membersError) throw membersError;
-    
-    if (!membersData || membersData.length === 0) {
-      return { members: [], error: null };
-    }
-    
-    // Step 2: Extract user IDs using traditional loop
-    const userIds: string[] = [];
-    for (let i = 0; i < membersData.length; i++) {
-      userIds.push(membersData[i].user_id);
-    }
-    
-    // Step 3: Fetch profiles
-    const { data: profilesData, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, first_name, last_name")
-      .in("id", userIds);
-    
-    if (profilesError) throw profilesError;
-    
-    // Step 4: Create a profile lookup object
-    type ProfileLookup = {
-      [key: string]: {
-        id: string;
-        first_name: string | null;
-        last_name: string | null;
-      }
-    };
-    
-    const profileMap: ProfileLookup = {};
-    
-    if (profilesData) {
-      for (let i = 0; i < profilesData.length; i++) {
-        const profile = profilesData[i];
-        profileMap[profile.id] = {
-          id: profile.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name
-        };
-      }
-    }
-    
-    // Step 5: Build members array with explicit typing
-    const members: GarageMember[] = [];
-    
-    for (let i = 0; i < membersData.length; i++) {
-      const member = membersData[i];
-      const profile = profileMap[member.user_id];
-      
-      members.push({
-        id: member.id,
-        garage_id: member.garage_id,
-        user_id: member.user_id,
-        role: member.role as GarageRole,
-        created_at: member.created_at,
-        profile: profile ? {
-          id: profile.id,
-          first_name: profile.first_name || null,
-          last_name: profile.last_name || null
-        } : null
-      });
-    }
-    
-    return { members, error: null };
-  } catch (error) {
-    console.error("Error fetching garage members:", error);
-    return { members: [], error };
   }
 };
