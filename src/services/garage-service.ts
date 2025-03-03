@@ -6,22 +6,22 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
   try {
     let userId: string | undefined;
     
-    // 1. Check if user already exists using raw query to avoid type recursion
-    const profilesQuery = await supabase
+    // 1. Check if user already exists using raw SQL query
+    const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("id")
-      .eq("email", formData.owner_email);
+      .eq("email", formData.owner_email) as { data: any[] | null, error: any };
     
-    if (profilesQuery.error) {
-      throw profilesQuery.error;
+    if (profilesError) {
+      throw profilesError;
     }
     
     // If user exists, take the first one
-    if (profilesQuery.data && profilesQuery.data.length > 0) {
-      userId = profilesQuery.data[0].id;
+    if (profiles && profiles.length > 0) {
+      userId = profiles[0].id;
     } else {
       // If user doesn't exist, create a new one
-      const authResponse = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.owner_email,
         password: formData.owner_password,
         options: {
@@ -32,22 +32,22 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
         }
       });
       
-      if (authResponse.error) {
+      if (authError) {
         // If the error is "User already registered", try to get the user's ID
-        if (authResponse.error.message === "User already registered") {
+        if (authError.message === "User already registered") {
           // Try to sign in to get the user ID
-          const signInResponse = await supabase.auth.signInWithPassword({
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email: formData.owner_email,
             password: formData.owner_password
           });
           
-          if (signInResponse.error) throw signInResponse.error;
-          userId = signInResponse.data.user?.id;
+          if (signInError) throw signInError;
+          userId = signInData.user?.id;
         } else {
-          throw authResponse.error;
+          throw authError;
         }
       } else {
-        userId = authResponse.data.user?.id;
+        userId = authData.user?.id;
       }
     }
     
@@ -56,7 +56,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
     }
 
     // 2. Create the garage
-    const garageInsert = await supabase
+    const { data: garageData, error: garageError } = await supabase
       .from("garages")
       .insert({
         name: formData.name,
@@ -66,35 +66,38 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
         email: formData.email,
         logo_url: formData.logo_url,
       })
-      .select();
+      .select() as { data: any[] | null, error: any };
     
-    if (garageInsert.error) throw garageInsert.error;
+    if (garageError) throw garageError;
+    if (!garageData || garageData.length === 0) {
+      throw new Error("Failed to create garage");
+    }
     
-    const garageData = garageInsert.data[0];
+    const newGarage = garageData[0];
 
     // 3. Create the garage member (owner)
-    const memberInsert = await supabase
+    const { error: memberError } = await supabase
       .from("garage_members")
       .insert({
-        garage_id: garageData.id,
+        garage_id: newGarage.id,
         user_id: userId,
         role: "owner",
       });
     
-    if (memberInsert.error) throw memberInsert.error;
+    if (memberError) throw memberError;
 
-    // Explicitly cast to Garage type to avoid deep type instantiation
+    // Explicitly create a Garage object with the correct type
     const garage: Garage = {
-      id: garageData.id,
-      name: garageData.name,
-      slug: garageData.slug,
-      address: garageData.address,
-      phone: garageData.phone,
-      email: garageData.email,
-      logo_url: garageData.logo_url,
-      settings: garageData.settings,
-      created_at: garageData.created_at,
-      updated_at: garageData.updated_at
+      id: newGarage.id,
+      name: newGarage.name,
+      slug: newGarage.slug,
+      address: newGarage.address,
+      phone: newGarage.phone,
+      email: newGarage.email,
+      logo_url: newGarage.logo_url,
+      settings: newGarage.settings,
+      created_at: newGarage.created_at,
+      updated_at: newGarage.updated_at
     };
 
     return { garage, error: null };
@@ -106,20 +109,20 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
 
 export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | null; error: any }> => {
   try {
-    const response = await supabase
+    const { data, error } = await supabase
       .from("garages")
       .select("*")
-      .eq("slug", slug);
+      .eq("slug", slug) as { data: any[] | null, error: any };
     
-    if (response.error) throw response.error;
+    if (error) throw error;
     
-    if (!response.data || response.data.length === 0) {
+    if (!data || data.length === 0) {
       return { garage: null, error: null };
     }
     
-    const garageData = response.data[0];
+    const garageData = data[0];
     
-    // Explicitly cast to Garage type to avoid deep type instantiation
+    // Explicitly create a Garage object with the correct type
     const garage: Garage = {
       id: garageData.id,
       name: garageData.name,
@@ -142,18 +145,21 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
 
 export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
   try {
-    const response = await supabase
+    const { data, error } = await supabase
       .from("garage_members")
       .select(`
         *,
         profile:profiles(id, first_name, last_name)
       `)
-      .eq("garage_id", garageId);
+      .eq("garage_id", garageId) as { data: any[] | null, error: any };
     
-    if (response.error) throw response.error;
+    if (error) throw error;
+    if (!data) {
+      return { members: [], error: null };
+    }
     
-    // Explicitly map to avoid deep type instantiation
-    const members: GarageMember[] = response.data.map((member: any) => ({
+    // Explicitly map the data to the GarageMember type
+    const members: GarageMember[] = data.map((member) => ({
       id: member.id,
       garage_id: member.garage_id,
       user_id: member.user_id,
