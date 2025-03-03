@@ -23,9 +23,11 @@ export const AuthFormContainer = ({
 
   // Update mode when URL parameters or initialMode change
   useEffect(() => {
-    const currentMode = modeParam === 'signup' ? 'signup' : 'signin';
-    console.log(`Setting auth mode to: ${currentMode} based on param: ${modeParam}`);
-    setMode(currentMode);
+    if (modeParam) {
+      const currentMode = modeParam === 'signup' ? 'signup' : 'signin';
+      console.log(`Setting auth mode to: ${currentMode} based on param: ${modeParam}`);
+      setMode(currentMode);
+    }
   }, [modeParam]);
 
   // Determine the form title based on mode and whether there's a garage

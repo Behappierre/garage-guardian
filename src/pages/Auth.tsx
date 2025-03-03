@@ -17,10 +17,10 @@ const Auth = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [garageName, setGarageName] = useState<string | null>(null);
   
-  // Get garage slug and isOwnerView from URL params
+  // Get garage slug, isOwnerView and mode from URL params
   const garageSlug = searchParams.get('garage');
   const isOwnerViewParam = searchParams.get('isOwnerView');
-  const mode = searchParams.get('mode'); // Get the mode from URL params
+  const mode = searchParams.get('mode');
   
   // Determine which garage slug to use - from URL param or subdomain
   const effectiveGarageSlug = getEffectiveGarageSlug(garageSlug);

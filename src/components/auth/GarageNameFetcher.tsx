@@ -54,7 +54,7 @@ export const GarageNameFetcher = ({
           onGarageNameChange(data.name);
         } else {
           console.log("No garage found with that slug");
-          onGarageNameChange(effectiveGarageSlug); // Fallback to showing the slug itself
+          onGarageNameChange(null); // Set to null instead of using slug as fallback
         }
       } catch (error) {
         console.error("Error in garage name fetcher:", error);

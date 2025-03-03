@@ -21,7 +21,9 @@ export const AuthPageUI = ({
 }: AuthPageUIProps) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const currentMode = searchParams.get('mode') || initialMode;
+  
+  // Get the mode from URL params or use the initialMode prop
+  const mode = searchParams.get('mode') || initialMode;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -85,7 +87,7 @@ export const AuthPageUI = ({
         <AuthForm 
           garageSlug={effectiveGarageSlug} 
           isOwnerView={isOwnerView} 
-          initialMode={currentMode}
+          initialMode={mode}
         />
         
         <div className="mt-6 text-center">
