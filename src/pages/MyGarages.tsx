@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building, LogOut, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -13,21 +13,23 @@ const MyGarages = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { userGarages } = useGarage();
+  const [isSubdomain, setIsSubdomain] = useState(false);
   
   // Redirect to auth if not logged in
   useEffect(() => {
     if (!user) {
       navigate("/auth");
     }
+    
+    // Check if we're on a subdomain already
+    const subdomain = window.location.hostname.split('.').length > 2;
+    setIsSubdomain(subdomain);
+    
+    if (subdomain) {
+      // If on subdomain, redirect to that subdomain's auth
+      navigate("/auth");
+    }
   }, [user, navigate]);
-
-  // Check if we're on a subdomain already
-  const isSubdomain = window.location.hostname.split('.').length > 2;
-  if (isSubdomain) {
-    // If on subdomain, redirect to that subdomain's auth
-    navigate("/auth");
-    return null;
-  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -52,6 +54,11 @@ const MyGarages = () => {
     // Open in the same window
     window.location.href = subdomainUrl;
   };
+
+  // Prevent rendering if on subdomain (the useEffect will redirect)
+  if (isSubdomain) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
