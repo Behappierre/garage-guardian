@@ -13,7 +13,7 @@ import { getSubdomainInfo } from "@/utils/subdomain";
 const MyGarages = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { userGarages, loading: garageLoading } = useGarage();
+  const { userGarages, loading: garageLoading, fetchUserGarages } = useGarage();
   const [isSubdomain, setIsSubdomain] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   
@@ -27,6 +27,7 @@ const MyGarages = () => {
         
         // Wait for auth to be checked
         if (authLoading) {
+          console.log("Auth still loading, waiting for it to complete");
           return; // Still loading auth, wait for it
         }
         
@@ -46,9 +47,16 @@ const MyGarages = () => {
           return;
         }
         
-        // Wait for garage data to load if needed
+        // Make sure garage data is loaded
         if (garageLoading) {
+          console.log("Garage data still loading");
           return; // Still loading garage data, wait for it
+        }
+        
+        if (!garageLoading && userGarages.length === 0) {
+          // Try to refresh garage data if empty
+          console.log("No garages found, attempting to refresh garage data");
+          await fetchUserGarages();
         }
         
         console.log("Garage loading completed, garages:", userGarages.length);
@@ -62,7 +70,7 @@ const MyGarages = () => {
     };
     
     checkAuthAndHandleRedirect();
-  }, [user, authLoading, garageLoading, userGarages, navigate]);
+  }, [user, authLoading, garageLoading, userGarages, navigate, fetchUserGarages]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -119,6 +127,22 @@ const MyGarages = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If we've reached this point but still don't have a user, something went wrong
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-md">
+          <Building className="h-12 w-12 text-primary mx-auto mb-4" />
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Authentication Required</h3>
+          <p className="text-gray-600 mb-6">Please sign in to access your garages.</p>
+          <Button onClick={() => navigate("/auth")}>
+            Sign In
+          </Button>
         </div>
       </div>
     );

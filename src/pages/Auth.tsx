@@ -1,7 +1,8 @@
 
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useGarage } from "@/contexts/GarageContext";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { AuthPageUI } from "@/components/auth/AuthPageUI";
 import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
 import { GarageNameFetcher } from "@/components/auth/GarageNameFetcher";
@@ -10,6 +11,8 @@ import { getEffectiveGarageSlug, getSubdomainInfo } from "@/utils/subdomain";
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const { userGarages } = useGarage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [garageName, setGarageName] = useState<string | null>(null);
   
@@ -23,6 +26,29 @@ const Auth = () => {
   // Log for debugging
   console.log(`Auth page loaded. Effective garage slug: ${effectiveGarageSlug}`);
   console.log(`Is subdomain: ${isSubdomain}`);
+  
+  // If on the main domain and user is already authenticated, check if they should be redirected
+  useEffect(() => {
+    const checkMainDomainRedirect = async () => {
+      if (!isSubdomain && !garageSlug && user && !isCheckingAuth) {
+        console.log("User is authenticated on main domain, checking if they should be redirected");
+        
+        // Check if user is an administrator
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (roleData?.role === 'administrator') {
+          console.log("User is administrator, redirecting to my-garages");
+          navigate("/my-garages");
+        }
+      }
+    };
+    
+    checkMainDomainRedirect();
+  }, [user, isCheckingAuth, isSubdomain, garageSlug, navigate]);
   
   return (
     <>

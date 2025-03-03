@@ -50,31 +50,28 @@ export const AuthRedirectHandler = ({
           
           console.log("User garages:", garageMembers);
           
+          // Fetch user role to determine if they're an owner or administrator
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .single();
+
+          if (roleError && roleError.code !== 'PGRST116') { // Not found is ok
+            console.error("Error fetching user role:", roleError);
+            onCheckingChange(false);
+            toast.error("Error loading user role information");
+            return;
+          }
+
+          const isAdministrator = roleData?.role === 'administrator';
+          console.log(`User is administrator: ${isAdministrator}`);
+          
           // If user has garages, determine where to redirect
           if (garageMembers && garageMembers.length > 0) {
-            // Fetch user role to determine if they're an owner
-            const { data: roleData, error: roleError } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', session.user.id)
-              .single();
-
-            if (roleError && roleError.code !== 'PGRST116') { // Not found is ok
-              console.error("Error fetching user role:", roleError);
-              onCheckingChange(false); // Make sure to stop checking even if there's an error
-              toast.error("Error loading user role information");
-              return;
-            }
-
-            const isAdministrator = roleData?.role === 'administrator';
-            console.log(`User is administrator: ${isAdministrator}`);
-            
-            // Check if we're on a subdomain
+            // Check if we're on a subdomain or specific garage URL
             if (effectiveGarageSlug) {
-              // If on a specific garage subdomain, proceed to dashboard
-              let garageToUse;
-              
-              // Check if the garage slug matches one of the user's garages
+              // If on a specific garage subdomain, proceed to dashboard if it's one of the user's garages
               const { data: garageData, error: garageError } = await supabase
                 .from('garages')
                 .select('id, name')
@@ -86,8 +83,11 @@ export const AuthRedirectHandler = ({
                 onCheckingChange(false);
                 toast.error("Error loading garage information");
                 return;
-              } else if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
-                garageToUse = garageData.id;
+              }
+              
+              if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
+                // User belongs to this garage, proceed to dashboard
+                const garageToUse = garageData.id;
                 console.log(`Using garage from URL/subdomain: ${garageToUse} (${garageData.name})`);
                 
                 // Store the current garage ID
@@ -97,7 +97,7 @@ export const AuthRedirectHandler = ({
                 const userGarageRole = garageMembers.find(m => m.garage_id === garageToUse)?.role;
                 
                 if (userGarageRole === 'owner' || userGarageRole === 'admin' || isAdministrator) {
-                  console.log("Redirecting to dashboard");
+                  console.log("Redirecting to dashboard as admin/owner");
                   toast.success(`Logged in to ${garageData.name}`);
                   navigate("/dashboard");
                 } else {
@@ -115,21 +115,26 @@ export const AuthRedirectHandler = ({
                   }
                 }
               } else {
-                // Garage slug doesn't match user's garages
-                console.log("No garage found with that slug");
-                onCheckingChange(false);
-                // Don't auto-navigate to my-garages here, let the user choose what to do
-                // This prevents getting stuck in redirect loops
-                return;
+                // User does not belong to this garage
+                console.log("No garage found with that slug or user doesn't have access");
+                
+                if (isAdministrator) {
+                  // If administrator, give option to go to My Garages or stay on this login page
+                  onCheckingChange(false);
+                  return;
+                } else {
+                  // Non-admin with no access to this garage
+                  onCheckingChange(false);
+                  return;
+                }
               }
             } else {
-              // If on main domain and user is an administrator, go to My Garages
+              // If on main domain and authenticated, go to My Garages for administrators
               if (isAdministrator) {
-                console.log("User is administrator, redirecting to my garages");
+                console.log("User is administrator on main domain, redirecting to my garages");
                 navigate("/my-garages");
               } else {
-                // Non-admin staff should be redirected to appropriate dashboard
-                // Use first garage for now
+                // Non-admin staff should be redirected to appropriate dashboard of their first garage
                 const garageToUse = garageMembers[0].garage_id;
                 console.log(`Using first garage: ${garageToUse}`);
                 localStorage.setItem("currentGarageId", garageToUse);

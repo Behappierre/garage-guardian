@@ -1,155 +1,165 @@
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Garage, GarageMember } from "@/types/garage";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { toast } from "sonner";
 
-type GarageContextType = {
-  currentGarage: Garage | null;
-  userGarages: Garage[];
-  userGarageRoles: Record<string, string>;
-  setCurrentGarage: (garage: Garage) => void;
-  loading: boolean;
-  error: string | null;
-};
+// Define the Garage type
+interface Garage {
+  id: string;
+  name: string;
+  slug: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  logo_url: string | null;
+  settings: any;
+  created_at: string;
+  updated_at: string;
+}
 
+// Define the GarageRole type
+type GarageRole = "owner" | "admin" | "staff" | "technician" | "front_desk";
+
+// Define the GarageContextType
+interface GarageContextType {
+  userGarages: Garage[];
+  currentGarage: Garage | null;
+  loading: boolean;
+  userGarageRoles: Record<string, GarageRole>;
+  setCurrentGarage: (garage: Garage) => void;
+  fetchUserGarages: () => Promise<void>;
+}
+
+// Create the context
 const GarageContext = createContext<GarageContextType>({
-  currentGarage: null,
   userGarages: [],
+  currentGarage: null,
+  loading: true,
   userGarageRoles: {},
   setCurrentGarage: () => {},
-  loading: true,
-  error: null,
+  fetchUserGarages: async () => {},
 });
 
-export const useGarage = () => useContext(GarageContext);
-
-type GarageProviderProps = {
-  children: ReactNode;
-};
-
-export const GarageProvider = ({ children }: GarageProviderProps) => {
-  const [currentGarage, setCurrentGarageState] = useState<Garage | null>(null);
+// Define the GarageProvider component
+export const GarageProvider = ({ children }: { children: React.ReactNode }) => {
   const [userGarages, setUserGarages] = useState<Garage[]>([]);
-  const [userGarageRoles, setUserGarageRoles] = useState<Record<string, string>>({});
+  const [currentGarage, setCurrentGarage] = useState<Garage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [userGarageRoles, setUserGarageRoles] = useState<Record<string, GarageRole>>({});
+  const { user, loading: authLoading } = useAuth();
 
-  // Fetch user's garages and set the current garage
-  useEffect(() => {
-    const fetchGarages = async () => {
-      try {
-        setLoading(true);
-        
-        // Get current user
-        const { data: userData } = await supabase.auth.getUser();
-        const user = userData?.user;
-        
-        if (!user) {
-          setLoading(false);
-          return;
-        }
-        
-        // Get user's garages with their roles
-        const { data: garageMembers, error: membersError } = await supabase
-          .from("garage_members")
-          .select("garage_id, role")
-          .eq("user_id", user.id);
-        
-        if (membersError) {
-          throw membersError;
-        }
-        
-        if (!garageMembers || garageMembers.length === 0) {
-          setUserGarages([]);
-          setLoading(false);
-          return;
-        }
-        
-        const garageIds = garageMembers.map(member => member.garage_id);
-        
-        // Store user's role for each garage
-        const rolesMap: Record<string, string> = {};
-        garageMembers.forEach(member => {
-          rolesMap[member.garage_id] = member.role;
-        });
-        setUserGarageRoles(rolesMap);
-        
-        const { data: garages, error: garagesError } = await supabase
-          .from("garages")
-          .select("*")
-          .in("id", garageIds);
-        
-        if (garagesError) {
-          throw garagesError;
-        }
-        
-        // Cast the Supabase response to match our Garage type
-        const typedGarages: Garage[] = (garages || []).map(g => ({
-          id: g.id,
-          name: g.name,
-          slug: g.slug,
-          address: g.address,
-          phone: g.phone,
-          email: g.email,
-          logo_url: g.logo_url,
-          settings: g.settings as Record<string, any> | null,
-          created_at: g.created_at || '',
-          updated_at: g.updated_at || ''
-        }));
-        
-        setUserGarages(typedGarages);
-        
-        // Set current garage from localStorage if available
-        const storedGarageId = localStorage.getItem("currentGarageId");
-        
-        if (storedGarageId && typedGarages.some(g => g.id === storedGarageId)) {
-          const current = typedGarages.find(g => g.id === storedGarageId) || null;
-          setCurrentGarageState(current);
-        } else if (typedGarages.length > 0) {
-          // Default to first garage
-          setCurrentGarageState(typedGarages[0]);
-          localStorage.setItem("currentGarageId", typedGarages[0].id);
-        }
-      } catch (err: any) {
-        console.error("Error fetching garages:", err);
-        setError(err.message || "Failed to load garages");
-        toast.error("Failed to load garage information");
-      } finally {
-        setLoading(false);
+  // Function to fetch user garages
+  const fetchUserGarages = async () => {
+    try {
+      if (!user) {
+        setUserGarages([]);
+        setCurrentGarage(null);
+        return;
       }
-    };
-    
-    fetchGarages();
-    
-    // Subscribe to auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
-      fetchGarages();
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
 
-  const setCurrentGarage = (garage: Garage) => {
-    setCurrentGarageState(garage);
-    localStorage.setItem("currentGarageId", garage.id);
-    toast.success(`Switched to ${garage.name}`);
+      console.log("Fetching garages for user:", user.id);
+      
+      // Fetch garage memberships for the user
+      const { data: memberships, error: membershipError } = await supabase
+        .from('garage_members')
+        .select('garage_id, role')
+        .eq('user_id', user.id);
+
+      if (membershipError) {
+        console.error("Error fetching garage memberships:", membershipError);
+        toast.error("Failed to load your garages");
+        return;
+      }
+
+      if (!memberships || memberships.length === 0) {
+        console.log("User has no garage memberships");
+        setUserGarages([]);
+        setCurrentGarage(null);
+        setLoading(false);
+        return;
+      }
+
+      // Convert memberships to roles map
+      const rolesMap: Record<string, GarageRole> = {};
+      memberships.forEach(m => {
+        rolesMap[m.garage_id] = m.role as GarageRole;
+      });
+      setUserGarageRoles(rolesMap);
+
+      // Fetch all garages that user is a member of
+      const garageIds = memberships.map(m => m.garage_id);
+      const { data: garages, error: garagesError } = await supabase
+        .from('garages')
+        .select('*')
+        .in('id', garageIds);
+
+      if (garagesError) {
+        console.error("Error fetching garages:", garagesError);
+        toast.error("Failed to load your garages");
+        return;
+      }
+
+      if (garages) {
+        console.log("Fetched garages:", garages.length);
+        setUserGarages(garages);
+
+        // Check if we need to set the current garage
+        const currentGarageId = localStorage.getItem('currentGarageId');
+        if (currentGarageId) {
+          const garage = garages.find(g => g.id === currentGarageId);
+          if (garage) {
+            console.log("Setting current garage from localStorage:", garage.name);
+            setCurrentGarage(garage);
+          } else if (garages.length > 0) {
+            // If saved garage not found, use the first one
+            console.log("Saved garage not found, using first garage:", garages[0].name);
+            setCurrentGarage(garages[0]);
+            localStorage.setItem('currentGarageId', garages[0].id);
+          }
+        } else if (garages.length > 0) {
+          // No current garage set, use the first one
+          console.log("No current garage set, using first garage:", garages[0].name);
+          setCurrentGarage(garages[0]);
+          localStorage.setItem('currentGarageId', garages[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Error in fetchUserGarages:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Effect to load garages when user changes
+  useEffect(() => {
+    if (!authLoading) {
+      fetchUserGarages();
+    }
+  }, [user, authLoading]);
+
+  // Provide context values
   return (
     <GarageContext.Provider
       value={{
-        currentGarage,
         userGarages,
+        currentGarage,
+        loading,
         userGarageRoles,
         setCurrentGarage,
-        loading,
-        error,
+        fetchUserGarages,
       }}
     >
       {children}
     </GarageContext.Provider>
   );
+};
+
+// Hook to use the garage context
+export const useGarage = () => {
+  const context = useContext(GarageContext);
+  if (context === undefined) {
+    throw new Error("useGarage must be used within a GarageProvider");
+  }
+  return context;
 };
