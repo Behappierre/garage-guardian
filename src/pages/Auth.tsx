@@ -43,7 +43,7 @@ const Auth = () => {
         
         console.log("User is authenticated, checking garages...");
         
-        // User is authenticated, proceed with normal redirect logic
+        // User is authenticated, proceed with redirect logic
         try {
           // First check if the user has any garages
           const { data: garageMembers, error: garageMembersError } = await supabase
@@ -58,13 +58,28 @@ const Auth = () => {
           
           console.log("User garages:", garageMembers);
           
-          // If user has garages, redirect to dashboard
+          // If user has garages, determine where to redirect
           if (garageMembers && garageMembers.length > 0) {
-            // Check if there's a stored current garage or if we should use one from the URL
-            let garageToUse;
+            // Fetch user role to determine if they're an owner
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', session.user.id)
+              .single();
+
+            if (roleError) {
+              console.error("Error fetching user role:", roleError);
+              throw roleError;
+            }
+
+            const isAdministrator = roleData?.role === 'administrator';
             
-            // If there's a garage slug in the URL or subdomain and it matches one of the user's garages
-            if (effectiveGarageSlug) {
+            // Check if we're on a subdomain
+            if (isSubdomain || effectiveGarageSlug) {
+              // If on a specific garage subdomain, proceed to dashboard
+              let garageToUse;
+              
+              // Check if the garage slug matches one of the user's garages
               const { data: garageData } = await supabase
                 .from('garages')
                 .select('id')
@@ -74,64 +89,54 @@ const Auth = () => {
               if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
                 garageToUse = garageData.id;
                 console.log(`Using garage from URL/subdomain: ${garageToUse}`);
-              }
-            }
-            
-            // If no garage was selected from URL, try stored garage
-            if (!garageToUse) {
-              const storedGarageId = localStorage.getItem("currentGarageId");
-              if (storedGarageId && garageMembers.some(m => m.garage_id === storedGarageId)) {
-                garageToUse = storedGarageId;
-                console.log(`Using stored garage: ${garageToUse}`);
+                
+                // Store the current garage ID
+                localStorage.setItem("currentGarageId", garageToUse);
+                
+                // Redirect to dashboard or appropriate page based on role
+                const userGarageRole = garageMembers.find(m => m.garage_id === garageToUse)?.role;
+                
+                if (userGarageRole === 'owner' || userGarageRole === 'admin' || isAdministrator) {
+                  navigate("/dashboard");
+                } else {
+                  // Redirect based on role
+                  switch (roleData?.role) {
+                    case 'technician':
+                      navigate("/dashboard/job-tickets");
+                      break;
+                    case 'front_desk':
+                      navigate("/dashboard/appointments");
+                      break;
+                    default:
+                      navigate("/dashboard");
+                  }
+                }
               } else {
-                // Default to first garage
-                garageToUse = garageMembers[0].garage_id;
-                console.log(`Using default garage: ${garageToUse}`);
+                // Garage slug doesn't match user's garages
+                toast.error("You don't have access to this garage");
+                navigate("/my-garages");
               }
-            }
-            
-            // Store the current garage ID
-            localStorage.setItem("currentGarageId", garageToUse);
-            
-            // Redirect based on role
-            // Check if user is an administrator/owner of the garage
-            const isOwnerOrAdmin = garageMembers.some(m => 
-              m.garage_id === garageToUse && 
-              (m.role === 'owner' || m.role === 'admin')
-            );
-            
-            if (isOwnerOrAdmin) {
-              console.log("User is owner/admin, redirecting to dashboard");
-              navigate("/dashboard");
             } else {
-              // Fetch app-wide role
-              const { data: roleData, error: roleError } = await supabase
-                .from('user_roles')
-                .select('role')
-                .eq('user_id', session.user.id)
-                .single();
-
-              if (roleError) {
-                console.error("Error fetching user role:", roleError);
-                throw roleError;
-              }
-
-              console.log(`User role: ${roleData?.role}, redirecting accordingly`);
-              
-              // Redirect based on role
-              switch (roleData?.role) {
-                case 'administrator':
-                  navigate("/dashboard");
-                  break;
-                case 'technician':
-                  navigate("/dashboard/job-tickets");
-                  break;
-                case 'front_desk':
-                  navigate("/dashboard/appointments");
-                  break;
-                default:
-                  // If no role is found, redirect to dashboard
-                  navigate("/dashboard");
+              // If on main domain and user is an owner/admin, go to My Garages
+              if (isAdministrator) {
+                console.log("User is administrator, redirecting to my garages");
+                navigate("/my-garages");
+              } else {
+                // Non-admin staff should be redirected to appropriate dashboard
+                // Use first garage for now
+                const garageToUse = garageMembers[0].garage_id;
+                localStorage.setItem("currentGarageId", garageToUse);
+                
+                switch (roleData?.role) {
+                  case 'technician':
+                    navigate("/dashboard/job-tickets");
+                    break;
+                  case 'front_desk':
+                    navigate("/dashboard/appointments");
+                    break;
+                  default:
+                    navigate("/dashboard");
+                }
               }
             }
           } else {
@@ -142,8 +147,7 @@ const Auth = () => {
         } catch (error: any) {
           console.error("Error in redirect logic:", error);
           toast.error("Error fetching user information: " + error.message);
-          // Default to dashboard if role fetch fails
-          navigate("/dashboard");
+          setIsCheckingAuth(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);

@@ -116,7 +116,7 @@ const Index = () => {
         <p className="text-sm text-gray-500 mb-4">
           {isSubdomain 
             ? `Access this garage directly at ${window.location.hostname}`
-            : "Garages are accessed via their own subdomains for complete data isolation"}
+            : "Garage owners manage multiple garages from a single account"}
         </p>
         
         {isSubdomain && (
@@ -136,7 +136,7 @@ const Index = () => {
             <Button 
               variant="link" 
               className="text-primary p-0"
-              onClick={() => navigate("/auth")}
+              onClick={() => navigate("/my-garages")}
             >
               Access Your Garages
             </Button>

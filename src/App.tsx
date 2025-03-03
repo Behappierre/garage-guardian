@@ -19,6 +19,7 @@ import MyWork from "@/pages/MyWork";
 import Help from "@/pages/Help";
 import NotFound from "@/pages/NotFound";
 import CreateGarage from "@/pages/CreateGarage";
+import MyGarages from "@/pages/MyGarages";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,9 @@ function App() {
                 
                 {/* Public routes that don't require authentication */}
                 <Route path="/auth" element={<Auth />} />
+                
+                {/* My Garages page - requires auth but no garage selection */}
+                <Route path="/my-garages" element={<MyGarages />} />
                 
                 {/* Semi-protected route - requires auth but accessible even with no garages */}
                 <Route path="/create-garage" element={<CreateGarage />} />
