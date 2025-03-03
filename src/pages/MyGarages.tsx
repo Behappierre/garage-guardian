@@ -15,18 +15,27 @@ const MyGarages = () => {
   const { userGarages } = useGarage();
   const [isSubdomain, setIsSubdomain] = useState(false);
   
-  // Redirect to auth if not logged in
+  // Detect if we're on a subdomain
   useEffect(() => {
+    const hostname = window.location.hostname;
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+    const hostParts = hostname.split('.');
+    
+    // For localhost testing, check if there's a subdomain in a simulated format
+    // In production, we'd simply check if hostParts.length > 2
+    const subdomain = isLocalhost 
+      ? hostname.includes('.') 
+      : hostParts.length > 2;
+      
+    setIsSubdomain(subdomain);
+    
+    // Redirect to auth if not logged in
     if (!user) {
       navigate("/auth");
     }
     
-    // Check if we're on a subdomain already
-    const subdomain = window.location.hostname.split('.').length > 2;
-    setIsSubdomain(subdomain);
-    
+    // If on subdomain, redirect to that subdomain's auth
     if (subdomain) {
-      // If on subdomain, redirect to that subdomain's auth
       navigate("/auth");
     }
   }, [user, navigate]);
@@ -38,21 +47,33 @@ const MyGarages = () => {
   };
 
   const navigateToGarageSubdomain = (garageSlug: string) => {
-    // Construct the subdomain URL
-    const currentHostParts = window.location.hostname.split('.');
-    // Take only the domain and TLD (last two parts)
-    const domainAndTld = currentHostParts.length > 1 
-      ? currentHostParts.slice(-2).join('.')
-      : window.location.hostname;
+    // Get current hostname and protocol
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
     
-    const subdomainUrl = `${window.location.protocol}//${garageSlug}.${domainAndTld}`;
+    let targetUrl;
     
-    // For development purposes, log and show what's happening
-    console.log(`Redirecting to: ${subdomainUrl}`);
+    // Handle local development vs production
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      // For local development, simulate subdomains via URL parameter
+      targetUrl = `${protocol}//${hostname}:8080/?garage=${garageSlug}`;
+    } else {
+      // For production, use actual subdomains
+      // Extract the base domain (remove any existing subdomain)
+      const hostParts = hostname.split('.');
+      const baseDomain = hostParts.length > 2 
+        ? hostParts.slice(1).join('.')
+        : hostname;
+      
+      targetUrl = `${protocol}//${garageSlug}.${baseDomain}`;
+    }
+    
+    // Log and show what's happening
+    console.log(`Redirecting to: ${targetUrl}`);
     toast.info(`Redirecting to ${garageSlug} garage...`);
     
     // Open in the same window
-    window.location.href = subdomainUrl;
+    window.location.href = targetUrl;
   };
 
   // Prevent rendering if on subdomain (the useEffect will redirect)

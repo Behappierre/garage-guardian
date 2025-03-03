@@ -5,23 +5,51 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Building, Wrench, Users, KeyRound } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useGarage } from "@/contexts/GarageContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { userGarages, currentGarage } = useGarage();
+  const [garageName, setGarageName] = useState<string | null>(null);
+
+  // Check if we're on a subdomain
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const hostParts = hostname.split('.');
+  
+  // For localhost testing, check if there's a subdomain in a simulated format
+  // In production, we'd simply check if hostParts.length > 2
+  const isSubdomain = isLocalhost 
+    ? hostname.includes('.')
+    : hostParts.length > 2;
+    
+  const subdomain = isSubdomain 
+    ? hostParts[0] 
+    : null;
 
   // Auto-redirect to dashboard if already logged in with a garage
   useEffect(() => {
     if (user && currentGarage) {
       navigate("/dashboard");
     }
-  }, [user, currentGarage, navigate]);
-
-  // Check if we're on a subdomain
-  const isSubdomain = window.location.hostname.split('.').length > 2;
-  const subdomain = isSubdomain ? window.location.hostname.split('.')[0] : null;
+    
+    // If on a subdomain, fetch the garage name for better UX
+    if (subdomain) {
+      const fetchGarageName = async () => {
+        try {
+          const { data } = await fetch(`/api/garage-name?slug=${subdomain}`).then(res => res.json());
+          if (data && data.name) {
+            setGarageName(data.name);
+          }
+        } catch (error) {
+          console.error("Error fetching garage name:", error);
+        }
+      };
+      
+      fetchGarageName();
+    }
+  }, [user, currentGarage, navigate, subdomain]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col items-center justify-center p-4">
@@ -37,7 +65,10 @@ const Index = () => {
         {subdomain && (
           <div className="mt-4">
             <p className="text-xl font-semibold text-primary">
-              {subdomain.charAt(0).toUpperCase() + subdomain.slice(1)} Garage
+              {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))} Garage
+            </p>
+            <p className="text-sm text-gray-500">
+              Staff login portal
             </p>
           </div>
         )}
@@ -53,7 +84,7 @@ const Index = () => {
                 Staff Login
               </CardTitle>
               <CardDescription>
-                Sign in to access the {subdomain.charAt(0).toUpperCase() + subdomain.slice(1)} garage dashboard
+                Sign in to access the {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))} garage dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -61,7 +92,7 @@ const Index = () => {
                 onClick={() => navigate(`/auth?garage=${subdomain}`)} 
                 className="w-full bg-primary hover:bg-primary-dark"
               >
-                Sign In to {subdomain.charAt(0).toUpperCase() + subdomain.slice(1)}
+                Sign In to {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))}
               </Button>
             </CardContent>
           </Card>
@@ -115,7 +146,7 @@ const Index = () => {
       <div className="mt-10 max-w-lg text-center">
         <p className="text-sm text-gray-500 mb-4">
           {isSubdomain 
-            ? `Access this garage directly at ${window.location.hostname}`
+            ? `Access this garage directly at ${hostname}`
             : "Garage owners manage multiple garages from a single account"}
         </p>
         
@@ -124,7 +155,13 @@ const Index = () => {
             <Button 
               variant="link" 
               className="text-primary p-0"
-              onClick={() => window.location.href = `https://garagewizz.com`}
+              onClick={() => {
+                // Generate main domain URL from current URL
+                const mainDomain = isLocalhost 
+                  ? 'localhost:8080' // For local development
+                  : hostParts.slice(1).join('.');
+                window.location.href = `${window.location.protocol}//${mainDomain}`;
+              }}
             >
               Go to GarageWizz Main Site
             </Button>
