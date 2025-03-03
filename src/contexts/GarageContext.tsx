@@ -52,13 +52,31 @@ export const GarageProvider = ({ children }: { children: React.ReactNode }) => {
   // Function to fetch user garages
   const fetchUserGarages = async () => {
     try {
+      setLoading(true);
+      
       if (!user) {
+        console.log("No user, clearing garage data");
         setUserGarages([]);
         setCurrentGarage(null);
+        setLoading(false);
         return;
       }
 
       console.log("Fetching garages for user:", user.id);
+      
+      // Check if user is an administrator
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (roleError && roleError.code !== 'PGRST116') { // Not found is ok
+        console.error("Error fetching user role:", roleError);
+      }
+      
+      const isAdmin = roleData?.role === 'administrator';
+      console.log("User is administrator:", isAdmin);
       
       // Fetch garage memberships for the user
       const { data: memberships, error: membershipError } = await supabase
@@ -69,6 +87,7 @@ export const GarageProvider = ({ children }: { children: React.ReactNode }) => {
       if (membershipError) {
         console.error("Error fetching garage memberships:", membershipError);
         toast.error("Failed to load your garages");
+        setLoading(false);
         return;
       }
 
@@ -97,10 +116,11 @@ export const GarageProvider = ({ children }: { children: React.ReactNode }) => {
       if (garagesError) {
         console.error("Error fetching garages:", garagesError);
         toast.error("Failed to load your garages");
+        setLoading(false);
         return;
       }
 
-      if (garages) {
+      if (garages && garages.length > 0) {
         console.log("Fetched garages:", garages.length);
         setUserGarages(garages);
 
@@ -123,6 +143,10 @@ export const GarageProvider = ({ children }: { children: React.ReactNode }) => {
           setCurrentGarage(garages[0]);
           localStorage.setItem('currentGarageId', garages[0].id);
         }
+      } else {
+        console.log("No garages found for user");
+        setUserGarages([]);
+        setCurrentGarage(null);
       }
     } catch (error) {
       console.error("Error in fetchUserGarages:", error);
