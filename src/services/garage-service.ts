@@ -21,6 +21,41 @@ interface AuthResponse {
   error: any | null;
 }
 
+// Helper function to handle authentication responses without triggering deep type instantiation
+async function handleSignUp(email: string, password: string, firstName: string, lastName: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+        }
+      }
+    });
+    
+    if (error) throw error;
+    return data?.user?.id || null;
+  } catch (error) {
+    throw error;
+  }
+}
+
+async function handleSignIn(email: string, password: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) throw error;
+    return data?.user?.id || null;
+  } catch (error) {
+    throw error;
+  }
+}
+
 export const createGarage = async (formData: CreateGarageFormData): Promise<GarageResponse> => {
   try {
     let userId: string | undefined;
@@ -40,34 +75,24 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
       userId = profilesResponse.data[0].id;
     } else {
       // If user doesn't exist, create a new one
-      // Use custom interface to simplify type handling
-      const authResponse: AuthResponse = await supabase.auth.signUp({
-        email: formData.owner_email,
-        password: formData.owner_password,
-        options: {
-          data: {
-            first_name: formData.owner_first_name,
-            last_name: formData.owner_last_name,
-          }
-        }
-      }) as any; // Use any temporarily to break circular references
-      
-      if (authResponse.error) {
+      try {
+        userId = await handleSignUp(
+          formData.owner_email, 
+          formData.owner_password,
+          formData.owner_first_name,
+          formData.owner_last_name
+        ) as string;
+      } catch (error: any) {
         // If the error is "User already registered", try to get the user's ID
-        if (authResponse.error.message === "User already registered") {
+        if (error.message === "User already registered") {
           // Try to sign in to get the user ID
-          const signInResponse: AuthResponse = await supabase.auth.signInWithPassword({
-            email: formData.owner_email,
-            password: formData.owner_password
-          }) as any; // Use any temporarily to break circular references
-          
-          if (signInResponse.error) throw signInResponse.error;
-          userId = signInResponse.data?.user?.id;
+          userId = await handleSignIn(formData.owner_email, formData.owner_password) as string;
+          if (!userId) {
+            throw new Error("Could not retrieve user ID after sign in");
+          }
         } else {
-          throw authResponse.error;
+          throw error;
         }
-      } else {
-        userId = authResponse.data?.user?.id;
       }
     }
     
