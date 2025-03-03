@@ -24,10 +24,6 @@ const Auth = () => {
   console.log(`Auth page loaded. Effective garage slug: ${effectiveGarageSlug}`);
   console.log(`Is subdomain: ${isSubdomain}`);
   
-  if (isCheckingAuth) {
-    return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
-  }
-  
   return (
     <>
       <AuthRedirectHandler
@@ -38,12 +34,21 @@ const Auth = () => {
         effectiveGarageSlug={effectiveGarageSlug}
         onGarageNameChange={setGarageName}
       />
-      <AuthPageUI
-        effectiveGarageSlug={effectiveGarageSlug}
-        garageName={garageName}
-        userGarages={userGarages}
-        isOwnerView={!isSubdomain && !garageSlug}
-      />
+      {isCheckingAuth ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        </div>
+      ) : (
+        <AuthPageUI
+          effectiveGarageSlug={effectiveGarageSlug}
+          garageName={garageName}
+          userGarages={userGarages}
+          isOwnerView={!isSubdomain && !garageSlug}
+        />
+      )}
     </>
   );
 };

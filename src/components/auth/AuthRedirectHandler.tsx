@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -56,7 +56,7 @@ export const AuthRedirectHandler = ({
               .eq('user_id', session.user.id)
               .single();
 
-            if (roleError) {
+            if (roleError && roleError.code !== 'PGRST116') { // Not found is ok
               console.error("Error fetching user role:", roleError);
               throw roleError;
             }
@@ -74,10 +74,13 @@ export const AuthRedirectHandler = ({
                 .from('garages')
                 .select('id, name')
                 .eq('slug', effectiveGarageSlug)
-                .single();
+                .maybeSingle();
               
               if (garageError) {
                 console.error("Error fetching garage data:", garageError);
+                onCheckingChange(false);
+                toast.error("Error loading garage information");
+                return;
               } else if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
                 garageToUse = garageData.id;
                 console.log(`Using garage from URL/subdomain: ${garageToUse} (${garageData.name})`);
@@ -108,6 +111,7 @@ export const AuthRedirectHandler = ({
                 }
               } else {
                 // Garage slug doesn't match user's garages
+                onCheckingChange(false);
                 toast.error("You don't have access to this garage");
                 navigate("/my-garages");
               }

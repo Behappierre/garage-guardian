@@ -22,16 +22,21 @@ export const GarageNameFetcher = ({
             .from('garages')
             .select('name')
             .eq('slug', effectiveGarageSlug)
-            .single();
+            .maybeSingle();
           
           if (error) {
             console.error("Error fetching garage info:", error);
+            onGarageNameChange(null);
           } else if (data) {
             console.log(`Found garage name: ${data.name}`);
             onGarageNameChange(data.name);
+          } else {
+            console.log("No garage found with that slug");
+            onGarageNameChange(null);
           }
         } catch (error) {
           console.error("Error fetching garage info:", error);
+          onGarageNameChange(null);
         }
       };
       
