@@ -9,7 +9,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
+  
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
       try {
@@ -103,13 +103,22 @@ const Auth = () => {
     return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
   }
 
+  // Get garage information from URL params if available
+  const params = new URLSearchParams(location.search);
+  const garageSlug = params.get('garage');
+  
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h1 className="text-center text-3xl font-bold text-gray-900 mb-8">
           GarageWizz
         </h1>
-        <AuthForm />
+        {garageSlug && (
+          <div className="text-center text-sm text-gray-500 mb-4">
+            Logging in to garage: <span className="font-medium">{garageSlug}</span>
+          </div>
+        )}
+        <AuthForm garageSlug={garageSlug} />
       </div>
     </div>
   );

@@ -10,7 +10,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
 
-export const AuthForm = () => {
+interface AuthFormProps {
+  garageSlug?: string | null;
+}
+
+export const AuthForm = ({ garageSlug }: AuthFormProps) => {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -50,6 +54,33 @@ export const AuthForm = () => {
               }
             ]);
           if (roleError) throw roleError;
+          
+          // If a garage slug was provided, try to associate the user with this garage
+          if (garageSlug) {
+            // Get the garage ID for the provided slug
+            const { data: garageData, error: garageError } = await supabase
+              .from('garages')
+              .select('id')
+              .eq('slug', garageSlug)
+              .single();
+              
+            if (garageError) {
+              console.error("Error fetching garage:", garageError);
+            } else if (garageData) {
+              // Associate the user with this garage as a regular user
+              const { error: memberError } = await supabase
+                .from('garage_members')
+                .insert([{
+                  user_id: signUpData.user.id,
+                  garage_id: garageData.id,
+                  role: 'front_desk' // Default role for new users
+                }]);
+                
+              if (memberError) {
+                console.error("Error associating user with garage:", memberError);
+              }
+            }
+          }
         }
 
         toast({
@@ -62,6 +93,20 @@ export const AuthForm = () => {
           password,
         });
         if (error) throw error;
+        
+        // If a garage slug was provided, store it for the Auth component to use
+        if (garageSlug) {
+          // Get the garage ID for the provided slug
+          const { data: garageData, error: garageError } = await supabase
+            .from('garages')
+            .select('id')
+            .eq('slug', garageSlug)
+            .single();
+            
+          if (!garageError && garageData) {
+            localStorage.setItem("currentGarageId", garageData.id);
+          }
+        }
 
         // After successful sign in, we'll let Auth component handle redirects
         // based on garages and roles

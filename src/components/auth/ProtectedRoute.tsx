@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading: authLoading } = useAuth();
-  const { userGarages, loading: garageLoading } = useGarage();
+  const { userGarages, loading: garageLoading, currentGarage } = useGarage();
   const [isReady, setIsReady] = useState(false);
   const location = useLocation();
 
@@ -31,6 +31,14 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       !location.pathname.includes('/create-garage') && 
       !location.pathname.includes('/auth')) {
     return <Navigate to="/create-garage" replace />;
+  }
+  
+  // If the user is authenticated but no current garage is selected,
+  // redirect to auth page to select a garage
+  if (userGarages.length > 0 && !currentGarage && 
+      !location.pathname.includes('/create-garage') && 
+      !location.pathname.includes('/auth')) {
+    return <Navigate to="/auth" replace />;
   }
 
   return <>{children}</>;
