@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateGarageFormData, Garage } from "@/types/garage";
 import { GarageResponse } from "./types";
 import { handleSignUp, handleSignIn } from "../auth/auth-service";
+import { PostgrestSingleResponse } from "@supabase/supabase-js";
 
 /**
  * Creates a new garage and associates an owner with it
@@ -55,7 +56,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
       throw new Error("Could not determine user ID");
     }
 
-    // 2. Create the garage
+    // 2. Create the garage - use minimal select to avoid deep type instantiation
     const garageResponse = await supabase
       .from("garages")
       .insert({
@@ -66,7 +67,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
         email: formData.email,
         logo_url: formData.logo_url,
       })
-      .select();
+      .select("id, name, slug, address, phone, email, logo_url, settings, created_at, updated_at");
     
     if (garageResponse.error) throw garageResponse.error;
     if (!garageResponse.data || garageResponse.data.length === 0) {
@@ -112,8 +113,8 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
  */
 export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => {
   try {
-    // Use maybeSingle instead of single to handle not found case without error
-    const response = await supabase
+    // Explicitly type the response to prevent excessive type instantiation
+    const response: PostgrestSingleResponse<any> = await supabase
       .from("garages")
       .select("*")
       .eq("slug", slug)
