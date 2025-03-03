@@ -4,6 +4,7 @@ import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Building } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -178,9 +179,13 @@ const Auth = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h1 className="text-center text-3xl font-bold text-gray-900 mb-8">
-          GarageWizz
-        </h1>
+        <div className="flex items-center justify-center mb-8">
+          <Building className="h-8 w-8 text-primary mr-2" />
+          <h1 className="text-center text-3xl font-bold text-gray-900">
+            GarageWizz
+          </h1>
+        </div>
+        
         {garageSlug && garageName && (
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">{garageName}</h2>
@@ -189,12 +194,26 @@ const Auth = () => {
             </p>
           </div>
         )}
+        
         {!garageSlug && (
           <div className="text-center text-sm text-gray-500 mb-4">
             Garage Owner Login
           </div>
         )}
+        
         <AuthForm garageSlug={garageSlug} />
+        
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have a garage yet? {" "}
+            <button 
+              onClick={() => navigate("/create-garage")}
+              className="text-primary font-medium hover:underline"
+            >
+              Create one here
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

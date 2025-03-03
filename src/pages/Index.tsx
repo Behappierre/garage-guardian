@@ -33,7 +33,7 @@ const Index = () => {
           <CardContent>
             <Button 
               onClick={() => navigate("/auth")} 
-              className="w-full"
+              className="w-full bg-primary hover:bg-primary-dark"
             >
               Sign In
             </Button>

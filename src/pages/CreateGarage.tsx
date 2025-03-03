@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -230,8 +231,7 @@ export default function CreateGarage() {
 
   const handleSignInClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    
-    window.location.href = "/auth";
+    navigate("/auth");
   };
 
   return (
