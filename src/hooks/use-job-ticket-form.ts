@@ -5,8 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { JobTicketFormData, JobTicketFormProps } from "@/types/job-ticket";
 import { useTicketQueries } from "./tickets/use-ticket-queries";
 import { useTicketMutations } from "./tickets/use-ticket-mutations";
+import { useGarage } from "@/contexts/GarageContext";
 
 export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, linkedAppointmentId }: JobTicketFormProps) => {
+  const { currentGarage } = useGarage();
+  
   const [formData, setFormData] = useState<JobTicketFormData>({
     description: initialData?.description || "",
     status: (initialData?.status || "received"),
@@ -14,7 +17,9 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, li
     assigned_technician_id: initialData?.assigned_technician_id || null,
     client_id: initialData?.client_id || clientId || null,
     vehicle_id: initialData?.vehicle_id || vehicleId || null,
+    garage_id: initialData?.garage_id || currentGarage?.id || null,
   });
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(linkedAppointmentId || null);
 
@@ -47,6 +52,16 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, li
     }
   }, [linkedAppointment, linkedAppointmentId]);
 
+  // If current garage changes, update the form data
+  useEffect(() => {
+    if (currentGarage?.id) {
+      setFormData(prev => ({
+        ...prev,
+        garage_id: currentGarage.id,
+      }));
+    }
+  }, [currentGarage]);
+
   const {
     clients,
     technicians,
@@ -62,7 +77,13 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, li
     setIsSubmitting(true);
 
     try {
-      await submitTicket(formData, initialData?.id, selectedAppointmentId);
+      // Ensure garage_id is set before submission
+      const submissionData = {
+        ...formData,
+        garage_id: formData.garage_id || currentGarage?.id || null,
+      };
+      
+      await submitTicket(submissionData, initialData?.id, selectedAppointmentId);
     } catch (error: any) {
       console.error("Error submitting ticket:", error);
     } finally {

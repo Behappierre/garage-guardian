@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { JobTicketForm } from "@/components/tickets/JobTicketForm";
 import type { JobTicket } from "@/types/job-ticket";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGarage } from "@/contexts/GarageContext";
 
 interface JobTicketFormDialogProps {
   showTicketForm: boolean;
@@ -21,6 +22,8 @@ export const JobTicketFormDialog = ({
   isLoading = false,
   linkedAppointmentId = null,
 }: JobTicketFormDialogProps) => {
+  const { currentGarage } = useGarage();
+  
   return (
     <Dialog 
       open={showTicketForm} 
@@ -30,6 +33,7 @@ export const JobTicketFormDialog = ({
         <DialogHeader>
           <DialogTitle>
             {isLoading ? "Loading Job Ticket..." : selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
+            {currentGarage && <span className="text-xs text-muted-foreground ml-2">({currentGarage.name})</span>}
           </DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-hidden">

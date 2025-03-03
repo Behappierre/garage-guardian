@@ -4,6 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 export type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
   vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
+  garage_id?: string | null;
 };
 export type TicketStatus = "received" | "in_progress" | "pending_parts" | "completed" | "cancelled";
 export type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
@@ -15,6 +16,7 @@ export type JobTicketFormData = {
   assigned_technician_id: string | null;
   client_id: string | null;
   vehicle_id: string | null;
+  garage_id?: string | null;
 };
 
 export interface JobTicketFormProps {

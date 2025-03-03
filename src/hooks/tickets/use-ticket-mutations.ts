@@ -1,125 +1,143 @@
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
-import { JobTicketFormData } from "@/types/job-ticket";
-import { sendEmailNotification } from "@/services/notification-service";
+import type { JobTicketFormData } from "@/types/job-ticket";
+import { useGarage } from "@/contexts/GarageContext";
 
 export const useTicketMutations = (onClose: () => void) => {
   const queryClient = useQueryClient();
+  const { currentGarage } = useGarage();
 
-  const submitTicket = async (
-    formData: JobTicketFormData,
-    initialTicketId: string | undefined,
-    selectedAppointmentId: string | null
-  ) => {
-    try {
-      let ticketId;
+  // Create or update job ticket
+  const submitTicketMutation = useMutation({
+    mutationFn: async ({
+      formData,
+      ticketId,
+      appointmentId
+    }: {
+      formData: JobTicketFormData;
+      ticketId?: string;
+      appointmentId?: string | null;
+    }) => {
+      // Always ensure garage_id is set
+      const dataWithGarage = {
+        ...formData,
+        garage_id: formData.garage_id || currentGarage?.id || null
+      };
       
-      if (initialTicketId) {
+      if (ticketId) {
+        // Update existing ticket
         const { error } = await supabase
           .from("job_tickets")
-          .update({
-            description: formData.description,
-            status: formData.status,
-            priority: formData.priority,
-            assigned_technician_id: formData.assigned_technician_id,
-            client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id
-          })
-          .eq("id", initialTicketId);
+          .update(dataWithGarage)
+          .eq("id", ticketId);
 
         if (error) throw error;
-        ticketId = initialTicketId;
+        return ticketId;
       } else {
-        const { data: ticket, error: ticketError } = await supabase
+        // Create new ticket
+        const { data, error } = await supabase
           .from("job_tickets")
-          .insert({
-            description: formData.description,
-            status: formData.status,
-            priority: formData.priority,
-            assigned_technician_id: formData.assigned_technician_id,
-            client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id,
-            ticket_number: 'TEMP'
-          })
+          .insert(dataWithGarage)
           .select()
           .single();
 
-        if (ticketError) throw ticketError;
-        ticketId = ticket.id;
+        if (error) throw error;
+        return data.id;
       }
-
-      if (selectedAppointmentId) {
-        if (initialTicketId) {
-          await supabase
+    },
+    onSuccess: async (jobTicketId, { appointmentId }) => {
+      // If there's an appointment to link
+      if (appointmentId) {
+        try {
+          // Check if link already exists
+          const { data: existingLink } = await supabase
             .from("appointment_job_tickets")
-            .delete()
-            .eq("job_ticket_id", ticketId);
-        }
+            .select("id")
+            .eq("appointment_id", appointmentId)
+            .eq("job_ticket_id", jobTicketId)
+            .maybeSingle();
 
-        const { error: relationError } = await supabase
-          .from("appointment_job_tickets")
-          .insert({
-            appointment_id: selectedAppointmentId,
-            job_ticket_id: ticketId
-          });
-
-        if (relationError) throw relationError;
-      }
-
-      if (formData.client_id && (formData.status === 'completed' || (initialTicketId && formData.status !== formData.status))) {
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('first_name, last_name, email')
-          .eq('id', formData.client_id)
-          .single();
-
-        if (clientData?.email) {
-          const notificationType = formData.status === 'completed' ? 'completion' : 'status_update';
-          await sendEmailNotification(
-            ticketId,
-            notificationType,
-            clientData.email,
-            `${clientData.first_name} ${clientData.last_name}`,
-            'New Ticket',
-            formData.status
-          );
+          if (!existingLink) {
+            // Create link between appointment and job ticket
+            await supabase
+              .from("appointment_job_tickets")
+              .insert({
+                appointment_id: appointmentId,
+                job_ticket_id: jobTicketId
+              });
+          }
+        } catch (error) {
+          console.error("Error linking appointment:", error);
         }
       }
 
-      await queryClient.invalidateQueries({ queryKey: ["job_tickets"] });
-      await queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      toast.success(initialTicketId ? "Job ticket updated successfully" : "Job ticket created successfully");
-      onClose();
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["job_tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
       
-      return ticketId;
-    } catch (error: any) {
-      toast.error(error.message);
-      throw error;
-    }
-  };
+      toast.success("Job ticket saved successfully");
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error("Error saving job ticket:", error);
+      toast.error(`Error: ${error.message}`);
+    },
+  });
 
-  const enhanceDescription = async (description: string, vehicle: any) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('enhance-job-description', {
-        body: { description, vehicle }
+  // Enhance ticket description using AI
+  const enhanceDescriptionMutation = useMutation({
+    mutationFn: async ({
+      description,
+      vehicleInfo
+    }: {
+      description: string;
+      vehicleInfo?: any;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("enhance-job-description", {
+        body: {
+          description,
+          vehicleInfo: vehicleInfo ? {
+            make: vehicleInfo.make,
+            model: vehicleInfo.model,
+            year: vehicleInfo.year,
+          } : null,
+        },
       });
 
       if (error) throw error;
-      if (!data?.enhancedDescription) throw new Error('No enhanced description returned');
+      return data?.enhancedDescription || description;
+    },
+    onError: (error) => {
+      console.error("Error enhancing description:", error);
+      toast.error("Failed to enhance description. Please try again.");
+    },
+  });
 
-      toast.success('Description enhanced successfully');
-      return data.enhancedDescription;
-    } catch (error: any) {
-      toast.error('Failed to enhance description');
-      console.error('Error enhancing description:', error);
-      throw error;
-    }
+  const submitTicket = async (
+    formData: JobTicketFormData,
+    ticketId?: string,
+    appointmentId?: string | null
+  ) => {
+    return submitTicketMutation.mutateAsync({
+      formData,
+      ticketId,
+      appointmentId
+    });
+  };
+
+  const enhanceDescription = async (description: string, vehicleInfo?: any) => {
+    return enhanceDescriptionMutation.mutateAsync({
+      description,
+      vehicleInfo
+    });
   };
 
   return {
     submitTicket,
     enhanceDescription,
+    isSubmitting: submitTicketMutation.isPending,
+    isEnhancing: enhanceDescriptionMutation.isPending,
   };
 };

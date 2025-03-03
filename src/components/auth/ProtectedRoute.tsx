@@ -1,17 +1,32 @@
 
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
+import { useGarage } from "@/contexts/GarageContext";
+import { useEffect, useState } from "react";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { userGarages, loading: garageLoading } = useGarage();
+  const [isReady, setIsReady] = useState(false);
   const location = useLocation();
 
-  if (loading) {
-    return <div>Loading...</div>;
+  useEffect(() => {
+    if (!authLoading && !garageLoading) {
+      setIsReady(true);
+    }
+  }, [authLoading, garageLoading]);
+
+  if (!isReady) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
 
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Check if the user has any garages
+  if (userGarages.length === 0) {
+    return <Navigate to="/create-garage" replace />;
   }
 
   return <>{children}</>;
