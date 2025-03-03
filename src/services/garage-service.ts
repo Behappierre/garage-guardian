@@ -147,48 +147,56 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
   }
 };
 
-// Fix type instantiation issue by using a more explicit approach with typed arrays
+// Fix type instantiation issue by completely rewriting the function with no type inference issues
 export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
   try {
-    // Get all members for the garage
-    const membersResponse = await supabase
+    // 1. Fetch all members for this garage
+    const { data: membersData, error: membersError } = await supabase
       .from("garage_members")
       .select("*")
       .eq("garage_id", garageId);
     
-    if (membersResponse.error) throw membersResponse.error;
+    if (membersError) throw membersError;
     
     // Return empty array if no data
-    if (!membersResponse.data || membersResponse.data.length === 0) {
+    if (!membersData || membersData.length === 0) {
       return { members: [], error: null };
     }
     
-    // Get all user IDs to fetch profiles in a separate query
-    const userIds = membersResponse.data.map(member => member.user_id);
+    // 2. Get all user IDs to fetch profiles 
+    const userIds: string[] = [];
+    for (const member of membersData) {
+      userIds.push(member.user_id);
+    }
     
-    // Fetch profiles separately
-    const profilesResponse = await supabase
+    // 3. Fetch profiles separately
+    const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
       .select("id, first_name, last_name")
       .in("id", userIds);
     
-    if (profilesResponse.error) throw profilesResponse.error;
+    if (profilesError) throw profilesError;
     
-    // Create a map of user_id to profile for easy lookup
-    const profileMap = new Map<string, any>();
-    if (profilesResponse.data) {
-      profilesResponse.data.forEach(profile => {
-        profileMap.set(profile.id, profile);
-      });
+    // 4. Create a lookup map for profiles
+    const profileMap: Record<string, { id: string; first_name: string | null; last_name: string | null }> = {};
+    
+    if (profilesData) {
+      for (const profile of profilesData) {
+        profileMap[profile.id] = {
+          id: profile.id,
+          first_name: profile.first_name,
+          last_name: profile.last_name
+        };
+      }
     }
     
-    // Explicitly type the members array to avoid deep instantiation
+    // 5. Build the final members array without type inference issues
     const members: GarageMember[] = [];
     
-    // Populate the members array with properly typed objects
-    for (const member of membersResponse.data) {
-      const profile = profileMap.get(member.user_id);
+    for (const member of membersData) {
+      const profile = profileMap[member.user_id];
       
+      // Create a properly typed GarageMember object
       const garageMember: GarageMember = {
         id: member.id,
         garage_id: member.garage_id,
@@ -197,8 +205,8 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
         created_at: member.created_at,
         profile: profile ? {
           id: profile.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name
+          first_name: profile.first_name || null,
+          last_name: profile.last_name || null
         } : null
       };
       
