@@ -7,6 +7,7 @@ import { GarageProvider } from "@/contexts/GarageContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ChatAgent } from "@/components/chat/ChatAgent";
+import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
 import Dashboard from "@/pages/Dashboard";
 import Appointments from "@/pages/Appointments";
@@ -30,7 +31,7 @@ function App() {
           <GarageProvider>
             <Router>
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/create-garage" element={<CreateGarage />} />
                 <Route

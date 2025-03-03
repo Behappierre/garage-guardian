@@ -1,56 +1,70 @@
 
-import { Calendar, Users, Clock, History } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import Navbar from "@/components/Navbar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Garage, Wrench } from "lucide-react";
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      <Navbar />
-      
-      <main className="pt-20 px-4 sm:px-6 lg:px-8 animate-fadeIn">
-        <div className="max-w-7xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center py-16 sm:py-20">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Smart Garage Management
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Streamline your garage operations with our comprehensive management solution.
-            </p>
-            <Button size="lg" className="bg-primary hover:bg-primary/90">
-              Get Started
-            </Button>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 py-12">
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <Calendar className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Smart Scheduling</h3>
-              <p className="text-gray-600">Efficiently manage appointments and resource allocation</p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <Users className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Client Management</h3>
-              <p className="text-gray-600">Keep track of client information and service history</p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <Clock className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Time Tracking</h3>
-              <p className="text-gray-600">Log and monitor time spent on repairs</p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <History className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Service History</h3>
-              <p className="text-gray-600">Maintain detailed records of all services</p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col items-center justify-center p-4">
+      <div className="text-center mb-10">
+        <div className="flex items-center justify-center mb-4">
+          <Wrench className="h-12 w-12 text-primary mr-2" />
+          <h1 className="text-4xl font-bold text-gray-900">GarageWizz</h1>
         </div>
-      </main>
+        <p className="text-lg text-gray-600 max-w-md mx-auto">
+          The complete management solution for automotive repair shops
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Garage className="h-6 w-6 mr-2 text-primary" />
+              I have a garage
+            </CardTitle>
+            <CardDescription>
+              Sign in to access your garage's dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate("/auth")} 
+              className="w-full"
+            >
+              Sign In
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="transition-all hover:shadow-md">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Wrench className="h-6 w-6 mr-2 text-primary" />
+              I need to create a garage
+            </CardTitle>
+            <CardDescription>
+              Set up a new garage in just a few minutes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate("/create-garage")} 
+              className="w-full"
+              variant="outline"
+            >
+              Create Garage
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <p className="mt-10 text-sm text-gray-500">
+        GarageWizz provides dedicated workspaces for each garage with complete data isolation
+      </p>
     </div>
   );
 };
