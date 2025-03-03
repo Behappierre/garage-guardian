@@ -146,20 +146,23 @@ export const garageService = {
       // This would typically involve sending an invitation email
       // For now, we'll just create a record in the database
       
-      // First, check if the user exists
-      const { data: userResponse, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      // First, check if the user exists by email using listUsers and filtering
+      const { data: users, error: userError } = await supabase.auth.admin.listUsers();
       
       if (userError) {
         throw userError;
       }
       
-      if (userResponse?.user) {
+      // Find user with matching email
+      const userWithEmail = users?.users?.find(u => u.email === email);
+      
+      if (userWithEmail) {
         // User exists, add them to the garage
         const { error: addError } = await supabase
           .from("garage_members")
           .insert({
             garage_id: garageId,
-            user_id: userResponse.user.id,
+            user_id: userWithEmail.id,
             role
           });
         
