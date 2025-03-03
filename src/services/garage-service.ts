@@ -11,7 +11,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
       .from("profiles")
       .select("id")
       .eq("email", formData.owner_email)
-      .maybeSingle();
+      .single();
     
     if (checkError && checkError.code !== "PGRST116") {
       throw checkError;
