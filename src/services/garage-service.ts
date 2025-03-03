@@ -1,8 +1,17 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CreateGarageFormData, Garage, GarageMember, GarageRole } from "@/types/garage";
 
-type GarageResponse = { garage: Garage | null; error: any };
-type GarageMembersResponse = { members: GarageMember[]; error: any };
+// Define simplified response types to avoid deep nesting
+interface GarageResponse {
+  garage: Garage | null;
+  error: any;
+}
+
+interface GarageMembersResponse {
+  members: GarageMember[];
+  error: any;
+}
 
 export const createGarage = async (formData: CreateGarageFormData): Promise<GarageResponse> => {
   try {
@@ -88,7 +97,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
     
     if (memberResponse.error) throw memberResponse.error;
 
-    // Explicitly create a Garage object with the correct type
+    // Return garage data with explicit typing
     const garage: Garage = {
       id: newGarage.id,
       name: newGarage.name,
@@ -128,7 +137,7 @@ export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => 
     
     const garageData = response.data;
     
-    // Explicitly create a Garage object with the correct type
+    // Return with explicit type to avoid inference issues
     const garage: Garage = {
       id: garageData.id,
       name: garageData.name,
@@ -151,7 +160,7 @@ export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => 
 
 export const getGarageMembers = async (garageId: string): Promise<GarageMembersResponse> => {
   try {
-    // Step 1: Fetch all members for this garage with basic query
+    // Step 1: Fetch garage members
     const { data: membersData, error: membersError } = await supabase
       .from("garage_members")
       .select("*")
@@ -159,18 +168,17 @@ export const getGarageMembers = async (garageId: string): Promise<GarageMembersR
     
     if (membersError) throw membersError;
     
-    // Return empty array if no data
     if (!membersData || membersData.length === 0) {
       return { members: [], error: null };
     }
     
-    // Step 2: Extract user IDs using basic loop instead of map to avoid type issues
+    // Step 2: Extract user IDs using traditional loop
     const userIds: string[] = [];
-    for (const member of membersData) {
-      userIds.push(member.user_id);
+    for (let i = 0; i < membersData.length; i++) {
+      userIds.push(membersData[i].user_id);
     }
     
-    // Step 3: Fetch profiles separately
+    // Step 3: Fetch profiles
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
       .select("id, first_name, last_name")
@@ -178,11 +186,20 @@ export const getGarageMembers = async (garageId: string): Promise<GarageMembersR
     
     if (profilesError) throw profilesError;
     
-    // Step 4: Create a simple lookup object for profiles
-    const profileMap: Record<string, { id: string; first_name: string | null; last_name: string | null }> = {};
+    // Step 4: Create a profile lookup object
+    type ProfileLookup = {
+      [key: string]: {
+        id: string;
+        first_name: string | null;
+        last_name: string | null;
+      }
+    };
+    
+    const profileMap: ProfileLookup = {};
     
     if (profilesData) {
-      for (const profile of profilesData) {
+      for (let i = 0; i < profilesData.length; i++) {
+        const profile = profilesData[i];
         profileMap[profile.id] = {
           id: profile.id,
           first_name: profile.first_name,
@@ -191,14 +208,14 @@ export const getGarageMembers = async (garageId: string): Promise<GarageMembersR
       }
     }
     
-    // Step 5: Build the result array with explicit types
+    // Step 5: Build members array with explicit typing
     const members: GarageMember[] = [];
     
-    for (const member of membersData) {
+    for (let i = 0; i < membersData.length; i++) {
+      const member = membersData[i];
       const profile = profileMap[member.user_id];
       
-      // Create explicitly typed object
-      const garageMember: GarageMember = {
+      members.push({
         id: member.id,
         garage_id: member.garage_id,
         user_id: member.user_id,
@@ -209,9 +226,7 @@ export const getGarageMembers = async (garageId: string): Promise<GarageMembersR
           first_name: profile.first_name || null,
           last_name: profile.last_name || null
         } : null
-      };
-      
-      members.push(garageMember);
+      });
     }
     
     return { members, error: null };
