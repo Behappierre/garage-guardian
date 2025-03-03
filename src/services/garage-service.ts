@@ -12,10 +12,10 @@ interface GarageMembersResponse {
   error: any;
 }
 
-// Simplified auth response interfaces to avoid deep type instantiation
+// Even more simplified auth response type to completely avoid type recursion
 interface AuthUserResponse {
   data: {
-    user?: {
+    user: {
       id: string;
     } | null;
   } | null;
@@ -25,7 +25,7 @@ interface AuthUserResponse {
 // Helper function to handle authentication responses without triggering deep type instantiation
 async function handleSignUp(email: string, password: string, firstName: string, lastName: string): Promise<string | null> {
   try {
-    // Using type assertion with a simpler type structure to avoid deep recursive types
+    // Use any to break the type dependency chain completely
     const response = await supabase.auth.signUp({
       email,
       password,
@@ -35,7 +35,7 @@ async function handleSignUp(email: string, password: string, firstName: string, 
           last_name: lastName,
         }
       }
-    }) as unknown as AuthUserResponse;
+    }) as any;
     
     if (response.error) throw response.error;
     return response.data?.user?.id || null;
@@ -46,11 +46,11 @@ async function handleSignUp(email: string, password: string, firstName: string, 
 
 async function handleSignIn(email: string, password: string): Promise<string | null> {
   try {
-    // Using type assertion with a simpler type structure to avoid deep recursive types
+    // Use any to break the type dependency chain completely
     const response = await supabase.auth.signInWithPassword({
       email,
       password
-    }) as unknown as AuthUserResponse;
+    }) as any;
     
     if (response.error) throw response.error;
     return response.data?.user?.id || null;
