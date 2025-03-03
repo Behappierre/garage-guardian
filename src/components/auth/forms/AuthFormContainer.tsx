@@ -23,7 +23,9 @@ export const AuthFormContainer = ({
 
   // Update mode when URL parameters or initialMode change
   useEffect(() => {
-    setMode(modeParam === 'signup' ? 'signup' : 'signin');
+    const currentMode = modeParam === 'signup' ? 'signup' : 'signin';
+    console.log(`Setting auth mode to: ${currentMode} based on param: ${modeParam}`);
+    setMode(currentMode);
   }, [modeParam]);
 
   // Determine the form title based on mode and whether there's a garage
@@ -37,6 +39,12 @@ export const AuthFormContainer = ({
     }
     
     return mode === "signin" ? "Sign In" : "Create Account";
+  };
+
+  const toggleMode = () => {
+    const newMode = mode === "signin" ? "signup" : "signin";
+    console.log(`Toggling auth mode from ${mode} to ${newMode}`);
+    setMode(newMode);
   };
 
   return (
@@ -57,7 +65,7 @@ export const AuthFormContainer = ({
       <div className="text-center text-sm">
         <button
           type="button"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+          onClick={toggleMode}
           className="text-primary hover:underline"
         >
           {mode === "signin"

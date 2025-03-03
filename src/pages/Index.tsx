@@ -37,14 +37,37 @@ const Index = () => {
             
           if (error) {
             console.error("Error fetching garage name:", error);
+            
+            // Try fetching by ID if it looks like a UUID
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subdomain);
+            if (isUuid) {
+              const { data: idData, error: idError } = await supabase
+                .from('garages')
+                .select('name')
+                .eq('id', subdomain)
+                .maybeSingle();
+                
+              if (!idError && idData) {
+                setGarageName(idData.name);
+                return;
+              }
+            }
+            
+            // Fallback to using the subdomain itself
+            setGarageName(subdomain.charAt(0).toUpperCase() + subdomain.slice(1));
             return;
           }
           
           if (data && data.name) {
             setGarageName(data.name);
+          } else {
+            // Fallback to capitalizing the subdomain
+            setGarageName(subdomain.charAt(0).toUpperCase() + subdomain.slice(1));
           }
         } catch (error) {
           console.error("Error fetching garage name:", error);
+          // Fallback to capitalizing the subdomain
+          setGarageName(subdomain.charAt(0).toUpperCase() + subdomain.slice(1));
         }
       };
       
@@ -66,7 +89,7 @@ const Index = () => {
         {isSubdomain && (
           <div className="mt-4">
             <p className="text-xl font-semibold text-primary">
-              {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))} Garage
+              {garageName || "Loading garage..."}
             </p>
             <p className="text-sm text-gray-500">
               Staff login portal
@@ -85,7 +108,7 @@ const Index = () => {
                 Staff Login
               </CardTitle>
               <CardDescription>
-                Sign in to access the {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))} garage dashboard
+                Sign in to access the {garageName || "garage"} dashboard
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -93,7 +116,7 @@ const Index = () => {
                 onClick={() => navigate(`/auth?garage=${subdomain}`)} 
                 className="w-full bg-primary hover:bg-primary-dark"
               >
-                Sign In to {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))}
+                Sign In to {garageName || "Garage"}
               </Button>
             </CardContent>
           </Card>

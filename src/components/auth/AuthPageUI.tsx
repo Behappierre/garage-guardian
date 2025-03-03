@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { Building, ArrowLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 type AuthPageUIProps = {
   effectiveGarageSlug: string | null;
@@ -20,6 +20,8 @@ export const AuthPageUI = ({
   initialMode = null
 }: AuthPageUIProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const currentMode = searchParams.get('mode') || initialMode;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -83,7 +85,7 @@ export const AuthPageUI = ({
         <AuthForm 
           garageSlug={effectiveGarageSlug} 
           isOwnerView={isOwnerView} 
-          initialMode={initialMode}
+          initialMode={currentMode}
         />
         
         <div className="mt-6 text-center">
@@ -91,7 +93,7 @@ export const AuthPageUI = ({
             <p className="text-sm text-gray-600">
               Don't have an account? {" "}
               <button 
-                onClick={() => navigate("/auth?garageSlug=" + effectiveGarageSlug + "&mode=signup")}
+                onClick={() => navigate(`/auth?mode=signup${effectiveGarageSlug ? `&garage=${effectiveGarageSlug}` : ''}`)}
                 className="text-primary font-medium hover:underline"
               >
                 Sign up

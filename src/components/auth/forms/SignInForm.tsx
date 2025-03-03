@@ -39,8 +39,9 @@ export const SignInForm = ({ garageSlug, isOwnerView = false }: SignInFormProps)
       }
       
       console.log("Sign in successful:", data);
+      toast.success("Login successful!");
       
-      // If a garage slug was provided, store it for the Auth component to use
+      // If a garage slug was provided, store it for navigation
       if (garageSlug) {
         try {
           // Get the garage ID for the provided slug
@@ -55,7 +56,6 @@ export const SignInForm = ({ garageSlug, isOwnerView = false }: SignInFormProps)
           } else if (garageData) {
             console.log(`Setting current garage ID to: ${garageData.id}`);
             localStorage.setItem("currentGarageId", garageData.id);
-            toast.success(`Logged in to ${garageSlug} garage`);
             
             // Redirect to dashboard if on a garage subdomain
             navigate("/dashboard");
@@ -66,24 +66,11 @@ export const SignInForm = ({ garageSlug, isOwnerView = false }: SignInFormProps)
         }
       }
 
-      // Check if the user is an administrator
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', data.user?.id)
-        .single();
-        
-      if (roleError) {
-        console.error("Error fetching user role:", roleError);
-      } else if (roleData && roleData.role === 'administrator') {
-        // Administrator role or owner view, redirect to My Garages
-        console.log("User is administrator or owner login, redirecting to my garages");
-        toast.success("Login successful!");
+      // If user is an admin or we're in owner view, redirect to My Garages
+      if (isOwnerView) {
         navigate("/my-garages");
       } else {
-        // Non-admin role, should be redirected based on role
-        console.log("Non-admin user, redirecting to dashboard");
-        toast.success("Login successful!");
+        // For regular staff, redirect to dashboard
         navigate("/dashboard");
       }
     } catch (error: any) {
