@@ -153,8 +153,8 @@ export const garageService = {
         throw userError;
       }
       
-      // Find user with matching email
-      const userWithEmail = users?.users?.find(u => u.email === email);
+      // Find user with matching email - explicitly specify the type for Supabase User objects
+      const userWithEmail = users?.users?.find((u: { email?: string; id: string }) => u.email === email);
       
       if (userWithEmail) {
         // User exists, add them to the garage
