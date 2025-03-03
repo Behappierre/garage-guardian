@@ -36,23 +36,15 @@ export const useTicketMutations = (onClose: () => void) => {
         if (error) throw error;
         return ticketId;
       } else {
-        // For new tickets, use our custom function to handle job ticket creation
+        // Create new ticket
         const { data, error } = await supabase
-          .functions.invoke("create-job-ticket", {
-            body: {
-              description: dataWithGarage.description,
-              status: dataWithGarage.status,
-              priority: dataWithGarage.priority,
-              assigned_technician_id: dataWithGarage.assigned_technician_id,
-              client_id: dataWithGarage.client_id,
-              vehicle_id: dataWithGarage.vehicle_id,
-              garage_id: dataWithGarage.garage_id
-            }
-          });
+          .from("job_tickets")
+          .insert(dataWithGarage)
+          .select()
+          .single();
 
         if (error) throw error;
-        // The function returns the job ticket ID
-        return data?.jobTicketId as string;
+        return data.id;
       }
     },
     onSuccess: async (jobTicketId, { appointmentId }) => {

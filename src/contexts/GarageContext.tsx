@@ -74,18 +74,17 @@ export const GarageProvider = ({ children }: GarageProviderProps) => {
           throw garagesError;
         }
         
-        // Type casting to ensure types match
-        setUserGarages(garages as unknown as Garage[]);
+        setUserGarages(garages || []);
         
         // Set current garage from localStorage if available
         const storedGarageId = localStorage.getItem("currentGarageId");
         
         if (storedGarageId && garages?.some(g => g.id === storedGarageId)) {
           const current = garages.find(g => g.id === storedGarageId) || null;
-          setCurrentGarageState(current as unknown as Garage);
+          setCurrentGarageState(current);
         } else if (garages && garages.length > 0) {
           // Default to first garage
-          setCurrentGarageState(garages[0] as unknown as Garage);
+          setCurrentGarageState(garages[0]);
           localStorage.setItem("currentGarageId", garages[0].id);
         }
       } catch (err: any) {
