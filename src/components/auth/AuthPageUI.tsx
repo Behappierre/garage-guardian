@@ -8,12 +8,14 @@ type AuthPageUIProps = {
   effectiveGarageSlug: string | null;
   garageName: string | null;
   userGarages?: any[];
+  isOwnerView?: boolean;
 };
 
 export const AuthPageUI = ({ 
   effectiveGarageSlug, 
   garageName,
-  userGarages 
+  userGarages,
+  isOwnerView = false
 }: AuthPageUIProps) => {
   const navigate = useNavigate();
 
@@ -40,7 +42,7 @@ export const AuthPageUI = ({
           </Button>
         </div>
         
-        {effectiveGarageSlug && garageName && (
+        {effectiveGarageSlug && garageName && !isOwnerView && (
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">{garageName}</h2>
             <p className="text-sm text-gray-500">
@@ -49,7 +51,16 @@ export const AuthPageUI = ({
           </div>
         )}
         
-        {!effectiveGarageSlug && (
+        {isOwnerView && (
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Garage Owner Portal</h2>
+            <p className="text-sm text-gray-500">
+              Login to manage your garages
+            </p>
+          </div>
+        )}
+        
+        {!effectiveGarageSlug && !isOwnerView && (
           <>
             <div className="text-center text-sm text-gray-500 mb-4">
               Garage Owner Login
@@ -64,7 +75,7 @@ export const AuthPageUI = ({
           </>
         )}
         
-        <AuthForm garageSlug={effectiveGarageSlug} />
+        <AuthForm garageSlug={effectiveGarageSlug} isOwnerView={isOwnerView} />
         
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">

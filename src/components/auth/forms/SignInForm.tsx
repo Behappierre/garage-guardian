@@ -10,9 +10,10 @@ import { toast } from "sonner";
 
 interface SignInFormProps {
   garageSlug?: string | null;
+  isOwnerView?: boolean;
 }
 
-export const SignInForm = ({ garageSlug }: SignInFormProps) => {
+export const SignInForm = ({ garageSlug, isOwnerView = false }: SignInFormProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -25,6 +26,7 @@ export const SignInForm = ({ garageSlug }: SignInFormProps) => {
 
     try {
       console.log(`Attempting to sign in with email: ${email}`);
+      console.log(`Is owner view: ${isOwnerView}`);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -74,8 +76,8 @@ export const SignInForm = ({ garageSlug }: SignInFormProps) => {
       if (roleError) {
         console.error("Error fetching user role:", roleError);
       } else if (roleData && roleData.role === 'administrator') {
-        // Administrator role, redirect to My Garages
-        console.log("User is administrator, redirecting to my garages");
+        // Administrator role or owner view, redirect to My Garages
+        console.log("User is administrator or owner login, redirecting to my garages");
         toast.success("Login successful!");
         navigate("/my-garages");
       } else {
@@ -122,7 +124,7 @@ export const SignInForm = ({ garageSlug }: SignInFormProps) => {
       </div>
 
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Loading..." : "Sign In"}
+        {loading ? "Loading..." : isOwnerView ? "Sign In as Owner" : "Sign In"}
       </Button>
     </form>
   );

@@ -5,7 +5,7 @@ import { useGarage } from "@/contexts/GarageContext";
 import { AuthPageUI } from "@/components/auth/AuthPageUI";
 import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
 import { GarageNameFetcher } from "@/components/auth/GarageNameFetcher";
-import { getEffectiveGarageSlug } from "@/utils/subdomain";
+import { getEffectiveGarageSlug, getSubdomainInfo } from "@/utils/subdomain";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
@@ -18,9 +18,11 @@ const Auth = () => {
   
   // Determine which garage slug to use - from URL param or subdomain
   const effectiveGarageSlug = getEffectiveGarageSlug(garageSlug);
+  const { isSubdomain } = getSubdomainInfo();
 
   // Log for debugging
   console.log(`Auth page loaded. Effective garage slug: ${effectiveGarageSlug}`);
+  console.log(`Is subdomain: ${isSubdomain}`);
   
   if (isCheckingAuth) {
     return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
@@ -40,6 +42,7 @@ const Auth = () => {
         effectiveGarageSlug={effectiveGarageSlug}
         garageName={garageName}
         userGarages={userGarages}
+        isOwnerView={!isSubdomain && !garageSlug}
       />
     </>
   );

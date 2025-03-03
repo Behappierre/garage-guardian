@@ -7,16 +7,22 @@ type AuthMode = "signin" | "signup";
 
 interface AuthFormContainerProps {
   garageSlug?: string | null;
+  isOwnerView?: boolean;
 }
 
-export const AuthFormContainer = ({ garageSlug }: AuthFormContainerProps) => {
+export const AuthFormContainer = ({ garageSlug, isOwnerView = false }: AuthFormContainerProps) => {
   const [mode, setMode] = useState<AuthMode>("signin");
 
   // Determine the form title based on mode and whether there's a garage
   const getFormTitle = () => {
-    if (garageSlug) {
-      return mode === "signin" ? "Sign In to Your Garage" : "Create Garage Account";
+    if (isOwnerView) {
+      return mode === "signin" ? "Garage Owner Sign In" : "Create Owner Account";
     }
+    
+    if (garageSlug) {
+      return mode === "signin" ? "Staff Sign In" : "Create Staff Account";
+    }
+    
     return mode === "signin" ? "Garage Owner Sign In" : "Create Owner Account";
   };
 
@@ -30,7 +36,7 @@ export const AuthFormContainer = ({ garageSlug }: AuthFormContainerProps) => {
       </div>
 
       {mode === "signin" ? (
-        <SignInForm garageSlug={garageSlug} />
+        <SignInForm garageSlug={garageSlug} isOwnerView={isOwnerView} />
       ) : (
         <SignUpForm garageSlug={garageSlug} />
       )}

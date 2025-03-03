@@ -6,6 +6,7 @@ import { Building, Wrench, Users, KeyRound } from "lucide-react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useGarage } from "@/contexts/GarageContext";
 import { useEffect, useState } from "react";
+import { getSubdomainInfo } from "@/utils/subdomain";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -13,20 +14,8 @@ const Index = () => {
   const { userGarages, currentGarage } = useGarage();
   const [garageName, setGarageName] = useState<string | null>(null);
 
-  // Check if we're on a subdomain
-  const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const hostParts = hostname.split('.');
-  
-  // For localhost testing, check if there's a subdomain in a simulated format
-  // In production, we'd simply check if hostParts.length > 2
-  const isSubdomain = isLocalhost 
-    ? hostname.includes('.')
-    : hostParts.length > 2;
-    
-  const subdomain = isSubdomain 
-    ? hostParts[0] 
-    : null;
+  // Get subdomain info
+  const { isSubdomain, subdomain } = getSubdomainInfo();
 
   // Auto-redirect to dashboard if already logged in with a garage
   useEffect(() => {
@@ -62,7 +51,7 @@ const Index = () => {
           The complete management solution for automotive repair shops
         </p>
         
-        {subdomain && (
+        {isSubdomain && (
           <div className="mt-4">
             <p className="text-xl font-semibold text-primary">
               {garageName || (subdomain.charAt(0).toUpperCase() + subdomain.slice(1))} Garage
@@ -146,7 +135,7 @@ const Index = () => {
       <div className="mt-10 max-w-lg text-center">
         <p className="text-sm text-gray-500 mb-4">
           {isSubdomain 
-            ? `Access this garage directly at ${hostname}`
+            ? `Access this garage directly at ${window.location.hostname}`
             : "Garage owners manage multiple garages from a single account"}
         </p>
         
@@ -157,6 +146,8 @@ const Index = () => {
               className="text-primary p-0"
               onClick={() => {
                 // Generate main domain URL from current URL
+                const { hostname, isLocalhost } = getSubdomainInfo();
+                const hostParts = hostname.split('.');
                 const mainDomain = isLocalhost 
                   ? 'localhost:8080' // For local development
                   : hostParts.slice(1).join('.');
