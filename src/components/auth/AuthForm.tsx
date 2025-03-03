@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ interface AuthFormProps {
 }
 
 export const AuthForm = ({ garageSlug }: AuthFormProps) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -105,24 +107,50 @@ export const AuthForm = ({ garageSlug }: AuthFormProps) => {
         
         // If a garage slug was provided, store it for the Auth component to use
         if (garageSlug) {
-          // Get the garage ID for the provided slug
-          const { data: garageData, error: garageError } = await supabase
-            .from('garages')
-            .select('id')
-            .eq('slug', garageSlug)
-            .single();
-            
-          if (garageError) {
-            console.error("Error fetching garage:", garageError);
-          } else if (garageData) {
-            console.log(`Setting current garage ID to: ${garageData.id}`);
-            localStorage.setItem("currentGarageId", garageData.id);
-            toast.success(`Logged in to ${garageSlug} garage`);
+          try {
+            // Get the garage ID for the provided slug
+            const { data: garageData, error: garageError } = await supabase
+              .from('garages')
+              .select('id')
+              .eq('slug', garageSlug)
+              .single();
+              
+            if (garageError) {
+              console.error("Error fetching garage:", garageError);
+            } else if (garageData) {
+              console.log(`Setting current garage ID to: ${garageData.id}`);
+              localStorage.setItem("currentGarageId", garageData.id);
+              toast.success(`Logged in to ${garageSlug} garage`);
+              
+              // Redirect to dashboard if on a garage subdomain
+              navigate("/dashboard");
+              return;
+            }
+          } catch (error) {
+            console.error("Error processing garage slug:", error);
           }
         }
 
-        // Success notification
-        toast.success("Login successful! Redirecting...");
+        // Check if the user is an administrator
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', data.user?.id)
+          .single();
+          
+        if (roleError) {
+          console.error("Error fetching user role:", roleError);
+        } else if (roleData && roleData.role === 'administrator') {
+          // Administrator role, redirect to My Garages
+          console.log("User is administrator, redirecting to my garages");
+          toast.success("Login successful!");
+          navigate("/my-garages");
+        } else {
+          // Non-admin role, should be redirected based on role
+          console.log("Non-admin user, redirecting to dashboard");
+          toast.success("Login successful!");
+          navigate("/dashboard");
+        }
       }
     } catch (error: any) {
       console.error("Authentication error:", error);

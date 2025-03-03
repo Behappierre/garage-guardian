@@ -25,6 +25,9 @@ const Auth = () => {
   
   // Determine which garage slug to use - from URL param or subdomain
   const effectiveGarageSlug = garageSlug || subdomain;
+
+  // Log for debugging
+  console.log(`Auth page loaded. Subdomain: ${subdomain}, Param: ${garageSlug}, Effective: ${effectiveGarageSlug}`);
   
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
@@ -73,6 +76,7 @@ const Auth = () => {
             }
 
             const isAdministrator = roleData?.role === 'administrator';
+            console.log(`User is administrator: ${isAdministrator}`);
             
             // Check if we're on a subdomain
             if (isSubdomain || effectiveGarageSlug) {
@@ -80,15 +84,17 @@ const Auth = () => {
               let garageToUse;
               
               // Check if the garage slug matches one of the user's garages
-              const { data: garageData } = await supabase
+              const { data: garageData, error: garageError } = await supabase
                 .from('garages')
-                .select('id')
+                .select('id, name')
                 .eq('slug', effectiveGarageSlug)
                 .single();
               
-              if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
+              if (garageError) {
+                console.error("Error fetching garage data:", garageError);
+              } else if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
                 garageToUse = garageData.id;
-                console.log(`Using garage from URL/subdomain: ${garageToUse}`);
+                console.log(`Using garage from URL/subdomain: ${garageToUse} (${garageData.name})`);
                 
                 // Store the current garage ID
                 localStorage.setItem("currentGarageId", garageToUse);
@@ -97,9 +103,12 @@ const Auth = () => {
                 const userGarageRole = garageMembers.find(m => m.garage_id === garageToUse)?.role;
                 
                 if (userGarageRole === 'owner' || userGarageRole === 'admin' || isAdministrator) {
+                  console.log("Redirecting to dashboard");
+                  toast.success(`Logged in to ${garageData.name}`);
                   navigate("/dashboard");
                 } else {
                   // Redirect based on role
+                  console.log(`Redirecting based on role: ${roleData?.role}`);
                   switch (roleData?.role) {
                     case 'technician':
                       navigate("/dashboard/job-tickets");
@@ -125,6 +134,7 @@ const Auth = () => {
                 // Non-admin staff should be redirected to appropriate dashboard
                 // Use first garage for now
                 const garageToUse = garageMembers[0].garage_id;
+                console.log(`Using first garage: ${garageToUse}`);
                 localStorage.setItem("currentGarageId", garageToUse);
                 
                 switch (roleData?.role) {
@@ -168,10 +178,7 @@ const Auth = () => {
           
           if (error) {
             console.error("Error fetching garage info:", error);
-            throw error;
-          }
-          
-          if (data) {
+          } else if (data) {
             console.log(`Found garage name: ${data.name}`);
             setGarageName(data.name);
           }
