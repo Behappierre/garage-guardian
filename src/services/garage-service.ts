@@ -1,8 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CreateGarageFormData, Garage, GarageMember, GarageRole } from "@/types/garage";
 
-export const createGarage = async (formData: CreateGarageFormData): Promise<{ garage: Garage | null; error: any }> => {
+type GarageResponse = { garage: Garage | null; error: any };
+type GarageMembersResponse = { members: GarageMember[]; error: any };
+
+export const createGarage = async (formData: CreateGarageFormData): Promise<GarageResponse> => {
   try {
     let userId: string | undefined;
     
@@ -107,7 +109,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
   }
 };
 
-export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | null; error: any }> => {
+export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => {
   try {
     // Use maybeSingle instead of single to handle not found case without error
     const response = await supabase
@@ -147,10 +149,9 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
   }
 };
 
-// Fix type instantiation issue by completely rewriting the function with no type inference issues
-export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
+export const getGarageMembers = async (garageId: string): Promise<GarageMembersResponse> => {
   try {
-    // 1. Fetch all members for this garage
+    // Step 1: Fetch all members for this garage with basic query
     const { data: membersData, error: membersError } = await supabase
       .from("garage_members")
       .select("*")
@@ -163,13 +164,13 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
       return { members: [], error: null };
     }
     
-    // 2. Get all user IDs to fetch profiles 
+    // Step 2: Extract user IDs using basic loop instead of map to avoid type issues
     const userIds: string[] = [];
     for (const member of membersData) {
       userIds.push(member.user_id);
     }
     
-    // 3. Fetch profiles separately
+    // Step 3: Fetch profiles separately
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
       .select("id, first_name, last_name")
@@ -177,7 +178,7 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
     
     if (profilesError) throw profilesError;
     
-    // 4. Create a lookup map for profiles
+    // Step 4: Create a simple lookup object for profiles
     const profileMap: Record<string, { id: string; first_name: string | null; last_name: string | null }> = {};
     
     if (profilesData) {
@@ -190,13 +191,13 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
       }
     }
     
-    // 5. Build the final members array without type inference issues
+    // Step 5: Build the result array with explicit types
     const members: GarageMember[] = [];
     
     for (const member of membersData) {
       const profile = profileMap[member.user_id];
       
-      // Create a properly typed GarageMember object
+      // Create explicitly typed object
       const garageMember: GarageMember = {
         id: member.id,
         garage_id: member.garage_id,
