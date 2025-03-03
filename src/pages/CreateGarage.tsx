@@ -1,12 +1,11 @@
-
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CreateGarageFormData } from "@/types/garage";
 import { useGarage } from "@/contexts/GarageContext";
@@ -31,13 +30,12 @@ export default function CreateGarage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    // Auto-generate slug from garage name
     if (name === "name") {
       const slug = value
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-") // Replace invalid chars with hyphen
-        .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
-      
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
       setFormData({ 
         ...formData, 
         name: value,
@@ -62,7 +60,6 @@ export default function CreateGarage() {
         return;
       }
 
-      // Check if slug is already taken
       const { data: existingGarage, error: slugCheckError } = await supabase
         .from("garages")
         .select("id")
@@ -78,9 +75,7 @@ export default function CreateGarage() {
         return;
       }
 
-      // If user is already authenticated, use their existing account
       if (user) {
-        // Create garage entry
         const { data: garage, error: garageError } = await supabase
           .from("garages")
           .insert({
@@ -90,7 +85,6 @@ export default function CreateGarage() {
             phone: formData.phone,
             email: formData.email,
             settings: {
-              // Default settings for the garage
               workingHours: {
                 monday: { open: "09:00", close: "17:00" },
                 tuesday: { open: "09:00", close: "17:00" },
@@ -111,7 +105,6 @@ export default function CreateGarage() {
           throw garageError;
         }
 
-        // Add user as garage owner with role "owner"
         const { error: memberError } = await supabase
           .from("garage_members")
           .insert({
@@ -124,7 +117,6 @@ export default function CreateGarage() {
           throw memberError;
         }
 
-        // Add user role if they don't already have one
         const { error: roleError } = await supabase
           .from("user_roles")
           .upsert({
@@ -137,10 +129,8 @@ export default function CreateGarage() {
 
         if (roleError) {
           console.error("Error setting user role:", roleError);
-          // Don't fail the whole process for this
         }
 
-        // If this is the user's first garage, set it as current in localStorage
         if (userGarages.length === 0) {
           localStorage.setItem("currentGarageId", garage.id);
         }
@@ -148,7 +138,6 @@ export default function CreateGarage() {
         toast.success("Garage created successfully!");
         navigate("/dashboard");
       } else {
-        // Create user account, create garage, and set them as owner
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.owner_email,
           password: formData.owner_password,
@@ -177,7 +166,6 @@ export default function CreateGarage() {
             phone: formData.phone,
             email: formData.email,
             settings: {
-              // Default settings for the garage
               workingHours: {
                 monday: { open: "09:00", close: "17:00" },
                 tuesday: { open: "09:00", close: "17:00" },
@@ -198,7 +186,6 @@ export default function CreateGarage() {
           throw garageError;
         }
 
-        // Add user as garage owner with role "owner"
         const { error: memberError } = await supabase
           .from("garage_members")
           .insert({
@@ -211,7 +198,6 @@ export default function CreateGarage() {
           throw memberError;
         }
 
-        // Set user role to administrator
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({
@@ -221,10 +207,8 @@ export default function CreateGarage() {
 
         if (roleError) {
           console.error("Error setting user role:", roleError);
-          // Don't fail the whole process for this
         }
 
-        // Set this garage as current in localStorage for when they first log in
         localStorage.setItem("currentGarageId", garage.id);
 
         toast.success("Garage created successfully! Check your email to verify your account.");
@@ -365,6 +349,14 @@ export default function CreateGarage() {
               </Button>
             </form>
           </CardContent>
+          <CardFooter className="flex justify-center border-t pt-4">
+            <p className="text-sm text-gray-600">
+              Already have a garage? {" "}
+              <Link to="/auth" className="text-primary font-medium hover:underline">
+                Sign in here
+              </Link>
+            </p>
+          </CardFooter>
         </Card>
       </div>
     </div>
