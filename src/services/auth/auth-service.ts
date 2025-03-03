@@ -1,12 +1,22 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+// Define a simple interface for the auth response to avoid excessive type instantiation
+interface AuthResponse {
+  data?: {
+    user?: {
+      id?: string;
+    };
+  };
+  error?: any;
+}
+
 /**
  * Handles user signup with Supabase
  */
 export async function handleSignUp(email: string, password: string, firstName: string, lastName: string): Promise<string | null> {
   try {
-    // Use any to break the type dependency chain completely
+    // Use the simpler AuthResponse interface to break the type dependency chain
     const response = await supabase.auth.signUp({
       email,
       password,
@@ -16,7 +26,7 @@ export async function handleSignUp(email: string, password: string, firstName: s
           last_name: lastName,
         }
       }
-    }) as any;
+    }) as unknown as AuthResponse;
     
     if (response.error) throw response.error;
     return response.data?.user?.id || null;
@@ -30,11 +40,11 @@ export async function handleSignUp(email: string, password: string, firstName: s
  */
 export async function handleSignIn(email: string, password: string): Promise<string | null> {
   try {
-    // Use any to break the type dependency chain completely
+    // Use the simpler AuthResponse interface to break the type dependency chain
     const response = await supabase.auth.signInWithPassword({
       email,
       password
-    }) as any;
+    }) as unknown as AuthResponse;
     
     if (response.error) throw response.error;
     return response.data?.user?.id || null;
