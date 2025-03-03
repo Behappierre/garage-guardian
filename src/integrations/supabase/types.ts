@@ -51,6 +51,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           end_time: string
+          garage_id: string | null
           id: string
           job_ticket_id: string | null
           notes: string | null
@@ -65,6 +66,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           end_time: string
+          garage_id?: string | null
           id?: string
           job_ticket_id?: string | null
           notes?: string | null
@@ -79,6 +81,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           end_time?: string
+          garage_id?: string | null
           id?: string
           job_ticket_id?: string | null
           notes?: string | null
@@ -94,6 +97,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
             referencedColumns: ["id"]
           },
           {
@@ -145,6 +155,7 @@ export type Database = {
           created_at: string
           email: string | null
           first_name: string
+          garage_id: string | null
           id: string
           last_name: string
           notes: string | null
@@ -157,6 +168,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           first_name: string
+          garage_id?: string | null
           id?: string
           last_name: string
           notes?: string | null
@@ -169,6 +181,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           first_name?: string
+          garage_id?: string | null
           id?: string
           last_name?: string
           notes?: string | null
@@ -176,7 +189,15 @@ export type Database = {
           updated_at?: string
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "clients_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clock_events: {
         Row: {
@@ -271,12 +292,84 @@ export type Database = {
           },
         ]
       }
+      garage_members: {
+        Row: {
+          created_at: string | null
+          garage_id: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          garage_id: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          garage_id?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garage_members_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      garages: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          logo_url: string | null
+          name: string
+          phone: string | null
+          settings: Json | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          settings?: Json | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          settings?: Json | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       job_tickets: {
         Row: {
           assigned_technician_id: string | null
           client_id: string | null
           created_at: string
           description: string
+          garage_id: string | null
           id: string
           priority: Database["public"]["Enums"]["ticket_priority"]
           status: Database["public"]["Enums"]["ticket_status"]
@@ -289,6 +382,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           description: string
+          garage_id?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           status?: Database["public"]["Enums"]["ticket_status"]
@@ -301,6 +395,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           description?: string
+          garage_id?: string | null
           id?: string
           priority?: Database["public"]["Enums"]["ticket_priority"]
           status?: Database["public"]["Enums"]["ticket_status"]
@@ -321,6 +416,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_tickets_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
             referencedColumns: ["id"]
           },
           {
@@ -545,6 +647,7 @@ export type Database = {
         Row: {
           client_id: string | null
           created_at: string
+          garage_id: string | null
           id: string
           license_plate: string | null
           make: string
@@ -556,6 +659,7 @@ export type Database = {
         Insert: {
           client_id?: string | null
           created_at?: string
+          garage_id?: string | null
           id?: string
           license_plate?: string | null
           make: string
@@ -567,6 +671,7 @@ export type Database = {
         Update: {
           client_id?: string | null
           created_at?: string
+          garage_id?: string | null
           id?: string
           license_plate?: string | null
           make?: string
@@ -581,6 +686,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
             referencedColumns: ["id"]
           },
         ]
