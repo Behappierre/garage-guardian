@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
 
 type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
@@ -22,7 +23,7 @@ export const AuthForm = ({ garageSlug }: AuthFormProps) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<Role>("front_desk");
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,16 +84,24 @@ export const AuthForm = ({ garageSlug }: AuthFormProps) => {
           }
         }
 
-        toast({
+        uiToast({
           title: "Success!",
           description: "Please check your email to confirm your account.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        console.log(`Attempting to sign in with email: ${email}`);
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+        
+        if (error) {
+          console.error("Sign in error:", error);
+          throw error;
+        }
+        
+        console.log("Sign in successful:", data);
         
         // If a garage slug was provided, store it for the Auth component to use
         if (garageSlug) {
@@ -103,18 +112,24 @@ export const AuthForm = ({ garageSlug }: AuthFormProps) => {
             .eq('slug', garageSlug)
             .single();
             
-          if (!garageError && garageData) {
+          if (garageError) {
+            console.error("Error fetching garage:", garageError);
+          } else if (garageData) {
+            console.log(`Setting current garage ID to: ${garageData.id}`);
             localStorage.setItem("currentGarageId", garageData.id);
+            toast.success(`Logged in to ${garageSlug} garage`);
           }
         }
 
-        // After successful sign in, we'll let Auth component handle redirects
-        // based on garages and roles
+        // Success notification
+        toast.success("Login successful! Redirecting...");
       }
     } catch (error: any) {
-      toast({
+      console.error("Authentication error:", error);
+      toast.error(`Login failed: ${error.message}`);
+      uiToast({
         variant: "destructive",
-        title: "Error",
+        title: "Authentication Error",
         description: error.message,
       });
     } finally {

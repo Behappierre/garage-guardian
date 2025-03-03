@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,20 +8,29 @@ import { toast } from "sonner";
 const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [garageName, setGarageName] = useState<string | null>(null);
+  
+  // Get garage slug from URL params
+  const garageSlug = searchParams.get('garage');
   
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
       try {
         setIsCheckingAuth(true);
+        console.log("Checking auth status...");
+        
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.user) {
           // User is not authenticated, just stop checking and render the auth form
+          console.log("No active session found");
           setIsCheckingAuth(false);
           return;
         }
+        
+        console.log("User is authenticated, checking garages...");
         
         // User is authenticated, proceed with normal redirect logic
         try {
@@ -31,18 +40,44 @@ const Auth = () => {
             .select('garage_id, role')
             .eq('user_id', session.user.id);
 
-          if (garageMembersError) throw garageMembersError;
+          if (garageMembersError) {
+            console.error("Error fetching garage members:", garageMembersError);
+            throw garageMembersError;
+          }
+          
+          console.log("User garages:", garageMembers);
           
           // If user has garages, redirect to dashboard
           if (garageMembers && garageMembers.length > 0) {
-            // Check if there's a stored current garage
-            const storedGarageId = localStorage.getItem("currentGarageId");
+            // Check if there's a stored current garage or if we should use one from the URL
+            let garageToUse;
             
-            // If there's a stored garage ID that matches one of the user's garages, use it
-            // Otherwise use the first garage
-            const garageToUse = storedGarageId && 
-              garageMembers.some(m => m.garage_id === storedGarageId) ? 
-              storedGarageId : garageMembers[0].garage_id;
+            // If there's a garage slug in the URL and it matches one of the user's garages, use that
+            if (garageSlug) {
+              const { data: garageData } = await supabase
+                .from('garages')
+                .select('id')
+                .eq('slug', garageSlug)
+                .single();
+              
+              if (garageData && garageMembers.some(m => m.garage_id === garageData.id)) {
+                garageToUse = garageData.id;
+                console.log(`Using garage from URL: ${garageToUse}`);
+              }
+            }
+            
+            // If no garage was selected from URL, try stored garage
+            if (!garageToUse) {
+              const storedGarageId = localStorage.getItem("currentGarageId");
+              if (storedGarageId && garageMembers.some(m => m.garage_id === storedGarageId)) {
+                garageToUse = storedGarageId;
+                console.log(`Using stored garage: ${garageToUse}`);
+              } else {
+                // Default to first garage
+                garageToUse = garageMembers[0].garage_id;
+                console.log(`Using default garage: ${garageToUse}`);
+              }
+            }
             
             // Store the current garage ID
             localStorage.setItem("currentGarageId", garageToUse);
@@ -55,6 +90,7 @@ const Auth = () => {
             );
             
             if (isOwnerOrAdmin) {
+              console.log("User is owner/admin, redirecting to dashboard");
               navigate("/dashboard");
             } else {
               // Fetch app-wide role
@@ -64,8 +100,13 @@ const Auth = () => {
                 .eq('user_id', session.user.id)
                 .single();
 
-              if (roleError) throw roleError;
+              if (roleError) {
+                console.error("Error fetching user role:", roleError);
+                throw roleError;
+              }
 
+              console.log(`User role: ${roleData?.role}, redirecting accordingly`);
+              
               // Redirect based on role
               switch (roleData?.role) {
                 case 'administrator':
@@ -84,9 +125,11 @@ const Auth = () => {
             }
           } else {
             // User has no garages, redirect to create garage
+            console.log("User has no garages, redirecting to create-garage");
             navigate("/create-garage");
           }
         } catch (error: any) {
+          console.error("Error in redirect logic:", error);
           toast.error("Error fetching user information: " + error.message);
           // Default to dashboard if role fetch fails
           navigate("/dashboard");
@@ -97,22 +140,24 @@ const Auth = () => {
       }
     };
 
-    // Get garage information from URL params if available
-    const params = new URLSearchParams(location.search);
-    const garageSlug = params.get('garage');
-    
     // If a garage slug is provided, fetch the garage name
     if (garageSlug) {
       const fetchGarageName = async () => {
         try {
+          console.log(`Fetching name for garage slug: ${garageSlug}`);
           const { data, error } = await supabase
             .from('garages')
             .select('name')
             .eq('slug', garageSlug)
             .single();
           
-          if (error) throw error;
+          if (error) {
+            console.error("Error fetching garage info:", error);
+            throw error;
+          }
+          
           if (data) {
+            console.log(`Found garage name: ${data.name}`);
             setGarageName(data.name);
           }
         } catch (error) {
@@ -124,15 +169,11 @@ const Auth = () => {
     }
 
     checkAuthAndRedirect();
-  }, [navigate, location]);
+  }, [navigate, garageSlug]);
 
   if (isCheckingAuth) {
     return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
   }
-
-  // Get garage information from URL params if available
-  const params = new URLSearchParams(location.search);
-  const garageSlug = params.get('garage');
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
