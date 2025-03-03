@@ -6,19 +6,19 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
   try {
     let userId: string | undefined;
     
-    // 1. Check if user already exists - use a completely different approach to avoid type recursion
-    const profilesResponse = await supabase
+    // 1. Check if user already exists using raw query to avoid type recursion
+    const profilesQuery = await supabase
       .from("profiles")
       .select("id")
       .eq("email", formData.owner_email);
     
-    if (profilesResponse.error) {
-      throw profilesResponse.error;
+    if (profilesQuery.error) {
+      throw profilesQuery.error;
     }
     
     // If user exists, take the first one
-    if (profilesResponse.data && profilesResponse.data.length > 0) {
-      userId = profilesResponse.data[0].id;
+    if (profilesQuery.data && profilesQuery.data.length > 0) {
+      userId = profilesQuery.data[0].id;
     } else {
       // If user doesn't exist, create a new one
       const authResponse = await supabase.auth.signUp({
@@ -56,7 +56,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
     }
 
     // 2. Create the garage
-    const garageResponse = await supabase
+    const garageInsert = await supabase
       .from("garages")
       .insert({
         name: formData.name,
@@ -68,12 +68,12 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
       })
       .select();
     
-    if (garageResponse.error) throw garageResponse.error;
+    if (garageInsert.error) throw garageInsert.error;
     
-    const garageData = garageResponse.data[0];
+    const garageData = garageInsert.data[0];
 
     // 3. Create the garage member (owner)
-    const memberResponse = await supabase
+    const memberInsert = await supabase
       .from("garage_members")
       .insert({
         garage_id: garageData.id,
@@ -81,12 +81,23 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
         role: "owner",
       });
     
-    if (memberResponse.error) throw memberResponse.error;
+    if (memberInsert.error) throw memberInsert.error;
 
-    return { 
-      garage: garageData as unknown as Garage, 
-      error: null 
+    // Explicitly cast to Garage type to avoid deep type instantiation
+    const garage: Garage = {
+      id: garageData.id,
+      name: garageData.name,
+      slug: garageData.slug,
+      address: garageData.address,
+      phone: garageData.phone,
+      email: garageData.email,
+      logo_url: garageData.logo_url,
+      settings: garageData.settings,
+      created_at: garageData.created_at,
+      updated_at: garageData.updated_at
     };
+
+    return { garage, error: null };
   } catch (error) {
     console.error("Error creating garage:", error);
     return { garage: null, error };
@@ -102,9 +113,27 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
     
     if (response.error) throw response.error;
     
-    const garageData = response.data.length > 0 ? response.data[0] : null;
+    if (!response.data || response.data.length === 0) {
+      return { garage: null, error: null };
+    }
     
-    return { garage: garageData as unknown as Garage, error: null };
+    const garageData = response.data[0];
+    
+    // Explicitly cast to Garage type to avoid deep type instantiation
+    const garage: Garage = {
+      id: garageData.id,
+      name: garageData.name,
+      slug: garageData.slug,
+      address: garageData.address,
+      phone: garageData.phone,
+      email: garageData.email,
+      logo_url: garageData.logo_url,
+      settings: garageData.settings,
+      created_at: garageData.created_at,
+      updated_at: garageData.updated_at
+    };
+    
+    return { garage, error: null };
   } catch (error) {
     console.error("Error fetching garage by slug:", error);
     return { garage: null, error };
@@ -123,10 +152,17 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
     
     if (response.error) throw response.error;
     
-    return { 
-      members: response.data as unknown as GarageMember[], 
-      error: null 
-    };
+    // Explicitly map to avoid deep type instantiation
+    const members: GarageMember[] = response.data.map((member: any) => ({
+      id: member.id,
+      garage_id: member.garage_id,
+      user_id: member.user_id,
+      role: member.role,
+      created_at: member.created_at,
+      profile: member.profile
+    }));
+    
+    return { members, error: null };
   } catch (error) {
     console.error("Error fetching garage members:", error);
     return { members: [], error };
