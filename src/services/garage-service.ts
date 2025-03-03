@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CreateGarageFormData, Garage, GarageMember, GarageRole } from "@/types/garage";
 
@@ -13,18 +12,11 @@ interface GarageMembersResponse {
   error: any;
 }
 
-// Define simplified auth response types to avoid type recursion
-interface AuthResponse {
-  data: { 
-    user: { id: string } | null | undefined 
-  };
-  error: any | null;
-}
-
 // Helper function to handle authentication responses without triggering deep type instantiation
 async function handleSignUp(email: string, password: string, firstName: string, lastName: string): Promise<string | null> {
   try {
-    const { data, error } = await supabase.auth.signUp({
+    // Using type assertion with a simpler type structure to avoid deep recursive types
+    const response: any = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -35,8 +27,8 @@ async function handleSignUp(email: string, password: string, firstName: string, 
       }
     });
     
-    if (error) throw error;
-    return data?.user?.id || null;
+    if (response.error) throw response.error;
+    return response.data?.user?.id || null;
   } catch (error) {
     throw error;
   }
@@ -44,13 +36,14 @@ async function handleSignUp(email: string, password: string, firstName: string, 
 
 async function handleSignIn(email: string, password: string): Promise<string | null> {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // Using type assertion with a simpler type structure to avoid deep recursive types
+    const response: any = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
-    if (error) throw error;
-    return data?.user?.id || null;
+    if (response.error) throw response.error;
+    return response.data?.user?.id || null;
   } catch (error) {
     throw error;
   }
@@ -81,12 +74,16 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
           formData.owner_password,
           formData.owner_first_name,
           formData.owner_last_name
-        ) as string;
+        );
+        
+        if (!userId) {
+          throw new Error("Failed to create user account");
+        }
       } catch (error: any) {
         // If the error is "User already registered", try to get the user's ID
         if (error.message === "User already registered") {
           // Try to sign in to get the user ID
-          userId = await handleSignIn(formData.owner_email, formData.owner_password) as string;
+          userId = await handleSignIn(formData.owner_email, formData.owner_password);
           if (!userId) {
             throw new Error("Could not retrieve user ID after sign in");
           }
