@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useGarage } from "@/contexts/GarageContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { getSubdomainInfo } from "@/utils/subdomain";
 
 interface SidebarFooterProps {
   isCollapsed: boolean;
@@ -19,40 +20,51 @@ export const SidebarFooter = ({ isCollapsed, userRole, garageRole }: SidebarFoot
   const navigate = useNavigate();
 
   // Check if we're on a subdomain
-  const isSubdomain = window.location.hostname.split('.').length > 2;
-  const mainDomain = window.location.hostname.split('.').slice(-2).join('.');
+  const { isSubdomain, hostname, isLocalhost } = getSubdomainInfo();
+  
+  // Generate main domain URL
+  const getMainDomain = () => {
+    const hostParts = hostname.split('.');
+    return isLocalhost 
+      ? 'localhost:8080' // For local development
+      : hostParts.length > 2 ? hostParts.slice(1).join('.') : hostname;
+  };
+  
+  const mainDomain = getMainDomain();
 
+  // LOGOUT: Redirects to the same garage subdomain login page
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
-    navigate("/");
+    
+    // Stay on the same subdomain (same garage) for a new user to log in
+    navigate("/auth");
   };
 
-  const handleGarageExit = () => {
-    // Clear only the current garage selection, but keep user logged in
+  // EXIT GARAGE: Takes user to the create garage page and logs them out completely
+  const handleGarageExit = async () => {
+    // First sign out the user
+    await supabase.auth.signOut();
+    
+    // Clear any garage selection data
     localStorage.removeItem("currentGarageId");
     
-    // If on a subdomain, redirect to main domain
-    if (isSubdomain) {
-      const protocol = window.location.protocol;
-      window.location.href = `${protocol}//${mainDomain}`;
-    } else {
-      toast.success("Exited garage. Redirecting to garage selection...");
-      navigate("/auth");
-    }
+    // Redirect to create-garage page on main domain
+    const protocol = window.location.protocol;
+    toast.success("Exited garage. Redirecting to create garage page...");
+    window.location.href = `${protocol}//${mainDomain}/create-garage`;
   };
 
-  // Check if user is allowed to exit garage (admin or owner)
-  const canExitGarage = userRole === 'administrator' || garageRole === 'owner' || garageRole === 'admin';
-  
-  // Generate the garage selector URL (main domain if on subdomain)
-  const getGarageSelectorUrl = () => {
-    if (isSubdomain) {
-      const protocol = window.location.protocol;
-      return `${protocol}//${mainDomain}/auth`;
-    }
-    return "/auth";
+  // MANAGE GARAGES: Takes garage owner to My Garages page to manage their garages
+  const handleManageGarages = () => {
+    const protocol = window.location.protocol;
+    
+    // Open in same window, go to my-garages on main domain
+    window.location.href = `${protocol}//${mainDomain}/my-garages`;
   };
+
+  // Check if user is allowed to exit garage or manage garages (admin or owner)
+  const canExitGarage = userRole === 'administrator' || garageRole === 'owner' || garageRole === 'admin';
 
   return (
     <div className={cn(
@@ -95,22 +107,21 @@ export const SidebarFooter = ({ isCollapsed, userRole, garageRole }: SidebarFoot
               </Button>
             </li>
             
-            {isSubdomain && (
-              <li>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full flex items-center justify-start gap-2 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md",
-                    isCollapsed && "justify-center px-2"
-                  )}
-                  onClick={() => window.open(getGarageSelectorUrl(), '_blank')}
-                  title="Manage Garages"
-                >
-                  <ExternalLink className="shrink-0 w-5 h-5" />
-                  {!isCollapsed && <span>Manage Garages</span>}
-                </Button>
-              </li>
-            )}
+            {/* Show Manage Garages for owners and admins */}
+            <li>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full flex items-center justify-start gap-2 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md",
+                  isCollapsed && "justify-center px-2"
+                )}
+                onClick={handleManageGarages}
+                title="Manage Garages"
+              >
+                <ExternalLink className="shrink-0 w-5 h-5" />
+                {!isCollapsed && <span>Manage Garages</span>}
+              </Button>
+            </li>
           </>
         )}
         
