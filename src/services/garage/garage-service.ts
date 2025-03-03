@@ -12,11 +12,11 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
   try {
     let userId: string | undefined;
     
-    // 1. Check if user already exists
+    // 1. Check if user already exists - use type assertion to break type chain
     const profilesResponse = await supabase
       .from("profiles")
       .select("id")
-      .eq("email", formData.owner_email);
+      .eq("email", formData.owner_email) as { data: {id: string}[] | null, error: any };
     
     if (profilesResponse.error) {
       throw profilesResponse.error;
@@ -67,7 +67,8 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
         email: formData.email,
         logo_url: formData.logo_url,
       })
-      .select("id, name, slug, address, phone, email, logo_url, settings, created_at, updated_at");
+      .select("id, name, slug, address, phone, email, logo_url, settings, created_at, updated_at") as 
+        { data: any[] | null, error: any };
     
     if (garageResponse.error) throw garageResponse.error;
     if (!garageResponse.data || garageResponse.data.length === 0) {
@@ -83,7 +84,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
         garage_id: newGarage.id,
         user_id: userId,
         role: "owner",
-      });
+      }) as { error: any };
     
     if (memberResponse.error) throw memberResponse.error;
 
@@ -113,12 +114,12 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
  */
 export const getGarageBySlug = async (slug: string): Promise<GarageResponse> => {
   try {
-    // Explicitly type the response to prevent excessive type instantiation
-    const response: PostgrestSingleResponse<any> = await supabase
+    // Use type assertion to break the complex type chain
+    const response = await supabase
       .from("garages")
       .select("*")
       .eq("slug", slug)
-      .maybeSingle();
+      .maybeSingle() as { data: any, error: any };
     
     if (response.error) {
       throw response.error;
