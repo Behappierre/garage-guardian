@@ -9,11 +9,14 @@ import { createGarage } from "@/services/garage-service";
 import { CreateGarageFormData } from "@/types/garage";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const CreateGarage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [formData, setFormData] = useState<CreateGarageFormData>({
     name: "",
     slug: "",
@@ -45,6 +48,7 @@ const CreateGarage = () => {
     
     try {
       setIsSubmitting(true);
+      setErrorMessage(null);
       
       if (!formData.name || !formData.slug) {
         toast.error("Garage name and slug are required");
@@ -60,6 +64,7 @@ const CreateGarage = () => {
       
       if (error) {
         console.error("Failed to create garage:", error);
+        setErrorMessage(error.message || "Failed to create garage");
         toast.error(error.message || "Failed to create garage");
         return;
       }
@@ -70,6 +75,7 @@ const CreateGarage = () => {
       }
     } catch (error: any) {
       console.error("Error:", error);
+      setErrorMessage(error.message || "An unexpected error occurred");
       toast.error(error.message || "An error occurred");
     } finally {
       setIsSubmitting(false);
@@ -87,6 +93,13 @@ const CreateGarage = () => {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {errorMessage && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="name">Garage Name</Label>
               <Input
