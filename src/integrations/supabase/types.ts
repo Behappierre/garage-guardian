@@ -702,6 +702,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_job_ticket: {
+        Args: {
+          p_description: string
+          p_status: string
+          p_priority: string
+          p_assigned_technician_id: string
+          p_client_id: string
+          p_vehicle_id: string
+          p_garage_id: string
+        }
+        Returns: string
+      }
       execute_read_only_query: {
         Args: {
           query_text: string

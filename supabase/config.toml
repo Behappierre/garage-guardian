@@ -1,4 +1,5 @@
 
 project_id = "hcdchflecgmlsxkrmrkv"
-[functions.send-appointment-reminder]
+
+[functions.create-job-ticket]
 verify_jwt = false
