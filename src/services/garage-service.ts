@@ -149,32 +149,39 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
 
 export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
   try {
-    // Fix the query to correctly join with profiles
-    const response = await supabase
+    // Fix the query to avoid the join that's causing issues
+    const membersResponse = await supabase
       .from("garage_members")
-      .select(`
-        id,
-        garage_id,
-        user_id,
-        role,
-        created_at,
-        profiles (id, first_name, last_name)
-      `)
+      .select("*")
       .eq("garage_id", garageId);
     
-    if (response.error) throw response.error;
-    if (!response.data) {
+    if (membersResponse.error) throw membersResponse.error;
+    if (!membersResponse.data) {
       return { members: [], error: null };
     }
     
-    // Correctly map the data to the GarageMember type, handling the nested profile data
-    const members: GarageMember[] = response.data.map(member => {
-      // Create a properly typed profile object or null if not available
-      const profile = member.profiles ? {
-        id: member.profiles.id,
-        first_name: member.profiles.first_name,
-        last_name: member.profiles.last_name
-      } : null;
+    // Get all user IDs to fetch profiles in a separate query
+    const userIds = membersResponse.data.map(member => member.user_id);
+    
+    // Fetch profiles separately
+    const profilesResponse = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name")
+      .in("id", userIds);
+    
+    if (profilesResponse.error) throw profilesResponse.error;
+    
+    // Create a map of user_id to profile for easy lookup
+    const profileMap = new Map();
+    if (profilesResponse.data) {
+      profilesResponse.data.forEach(profile => {
+        profileMap.set(profile.id, profile);
+      });
+    }
+    
+    // Map the members with their profiles
+    const members: GarageMember[] = membersResponse.data.map(member => {
+      const profile = profileMap.get(member.user_id);
       
       return {
         id: member.id,
@@ -182,7 +189,11 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
         user_id: member.user_id,
         role: member.role as GarageRole,
         created_at: member.created_at,
-        profile: profile
+        profile: profile ? {
+          id: profile.id,
+          first_name: profile.first_name,
+          last_name: profile.last_name
+        } : null
       };
     });
     
