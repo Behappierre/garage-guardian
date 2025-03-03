@@ -6,22 +6,22 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
   try {
     let userId: string | undefined;
     
-    // 1. Check if user already exists - use a different approach to avoid type recursion
-    const { data: existingUsers, error: checkError } = await supabase
+    // 1. Check if user already exists - use a completely different approach to avoid type recursion
+    const profilesResponse = await supabase
       .from("profiles")
       .select("id")
       .eq("email", formData.owner_email);
     
-    if (checkError) {
-      throw checkError;
+    if (profilesResponse.error) {
+      throw profilesResponse.error;
     }
     
     // If user exists, take the first one
-    if (existingUsers && existingUsers.length > 0) {
-      userId = existingUsers[0].id;
+    if (profilesResponse.data && profilesResponse.data.length > 0) {
+      userId = profilesResponse.data[0].id;
     } else {
       // If user doesn't exist, create a new one
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const authResponse = await supabase.auth.signUp({
         email: formData.owner_email,
         password: formData.owner_password,
         options: {
@@ -32,22 +32,22 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
         }
       });
       
-      if (authError) {
+      if (authResponse.error) {
         // If the error is "User already registered", try to get the user's ID
-        if (authError.message === "User already registered") {
+        if (authResponse.error.message === "User already registered") {
           // Try to sign in to get the user ID
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          const signInResponse = await supabase.auth.signInWithPassword({
             email: formData.owner_email,
             password: formData.owner_password
           });
           
-          if (signInError) throw signInError;
-          userId = signInData.user?.id;
+          if (signInResponse.error) throw signInResponse.error;
+          userId = signInResponse.data.user?.id;
         } else {
-          throw authError;
+          throw authResponse.error;
         }
       } else {
-        userId = authData.user?.id;
+        userId = authResponse.data.user?.id;
       }
     }
     
@@ -56,7 +56,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
     }
 
     // 2. Create the garage
-    const { data: garageData, error: garageError } = await supabase
+    const garageResponse = await supabase
       .from("garages")
       .insert({
         name: formData.name,
@@ -66,13 +66,14 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
         email: formData.email,
         logo_url: formData.logo_url,
       })
-      .select()
-      .single();
+      .select();
     
-    if (garageError) throw garageError;
+    if (garageResponse.error) throw garageResponse.error;
+    
+    const garageData = garageResponse.data[0];
 
     // 3. Create the garage member (owner)
-    const { error: memberError } = await supabase
+    const memberResponse = await supabase
       .from("garage_members")
       .insert({
         garage_id: garageData.id,
@@ -80,7 +81,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
         role: "owner",
       });
     
-    if (memberError) throw memberError;
+    if (memberResponse.error) throw memberResponse.error;
 
     return { 
       garage: garageData as unknown as Garage, 
@@ -94,15 +95,16 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
 
 export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | null; error: any }> => {
   try {
-    const { data, error } = await supabase
+    const response = await supabase
       .from("garages")
       .select("*")
-      .eq("slug", slug)
-      .single();
+      .eq("slug", slug);
     
-    if (error) throw error;
+    if (response.error) throw response.error;
     
-    return { garage: data as unknown as Garage, error: null };
+    const garageData = response.data.length > 0 ? response.data[0] : null;
+    
+    return { garage: garageData as unknown as Garage, error: null };
   } catch (error) {
     console.error("Error fetching garage by slug:", error);
     return { garage: null, error };
@@ -111,7 +113,7 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
 
 export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
   try {
-    const { data, error } = await supabase
+    const response = await supabase
       .from("garage_members")
       .select(`
         *,
@@ -119,10 +121,10 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
       `)
       .eq("garage_id", garageId);
     
-    if (error) throw error;
+    if (response.error) throw response.error;
     
     return { 
-      members: data as unknown as GarageMember[], 
+      members: response.data as unknown as GarageMember[], 
       error: null 
     };
   } catch (error) {
