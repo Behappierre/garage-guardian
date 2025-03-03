@@ -13,6 +13,14 @@ interface GarageMembersResponse {
   error: any;
 }
 
+// Define simplified auth response types to avoid type recursion
+interface AuthResponse {
+  data: { 
+    user: { id: string } | null | undefined 
+  };
+  error: any | null;
+}
+
 export const createGarage = async (formData: CreateGarageFormData): Promise<GarageResponse> => {
   try {
     let userId: string | undefined;
@@ -32,8 +40,8 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
       userId = profilesResponse.data[0].id;
     } else {
       // If user doesn't exist, create a new one
-      // Use type assertion for auth responses to avoid deep type instantiation
-      const authResponse = await supabase.auth.signUp({
+      // Use custom interface to simplify type handling
+      const authResponse: AuthResponse = await supabase.auth.signUp({
         email: formData.owner_email,
         password: formData.owner_password,
         options: {
@@ -42,24 +50,24 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
             last_name: formData.owner_last_name,
           }
         }
-      }) as { data: { user?: { id?: string } | null }, error: any };
+      }) as any; // Use any temporarily to break circular references
       
       if (authResponse.error) {
         // If the error is "User already registered", try to get the user's ID
         if (authResponse.error.message === "User already registered") {
           // Try to sign in to get the user ID
-          const signInResponse = await supabase.auth.signInWithPassword({
+          const signInResponse: AuthResponse = await supabase.auth.signInWithPassword({
             email: formData.owner_email,
             password: formData.owner_password
-          }) as { data: { user?: { id?: string } | null }, error: any };
+          }) as any; // Use any temporarily to break circular references
           
           if (signInResponse.error) throw signInResponse.error;
-          userId = signInResponse.data.user?.id;
+          userId = signInResponse.data?.user?.id;
         } else {
           throw authResponse.error;
         }
       } else {
-        userId = authResponse.data.user?.id;
+        userId = authResponse.data?.user?.id;
       }
     }
     
