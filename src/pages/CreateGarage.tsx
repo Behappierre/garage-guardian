@@ -89,6 +89,20 @@ export default function CreateGarage() {
             address: formData.address,
             phone: formData.phone,
             email: formData.email,
+            settings: {
+              // Default settings for the garage
+              workingHours: {
+                monday: { open: "09:00", close: "17:00" },
+                tuesday: { open: "09:00", close: "17:00" },
+                wednesday: { open: "09:00", close: "17:00" },
+                thursday: { open: "09:00", close: "17:00" },
+                friday: { open: "09:00", close: "17:00" },
+                saturday: { open: "10:00", close: "15:00" },
+                sunday: { open: "", close: "" }
+              },
+              serviceTypes: ["Oil Change", "Tire Rotation", "Brake Service"],
+              currency: "USD"
+            }
           })
           .select()
           .single();
@@ -162,6 +176,20 @@ export default function CreateGarage() {
             address: formData.address,
             phone: formData.phone,
             email: formData.email,
+            settings: {
+              // Default settings for the garage
+              workingHours: {
+                monday: { open: "09:00", close: "17:00" },
+                tuesday: { open: "09:00", close: "17:00" },
+                wednesday: { open: "09:00", close: "17:00" },
+                thursday: { open: "09:00", close: "17:00" },
+                friday: { open: "09:00", close: "17:00" },
+                saturday: { open: "10:00", close: "15:00" },
+                sunday: { open: "", close: "" }
+              },
+              serviceTypes: ["Oil Change", "Tire Rotation", "Brake Service"],
+              currency: "USD"
+            }
           })
           .select()
           .single();

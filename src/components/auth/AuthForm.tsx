@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +11,6 @@ type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
 
 export const AuthForm = () => {
-  const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -59,7 +57,7 @@ export const AuthForm = () => {
           description: "Please check your email to confirm your account.",
         });
       } else {
-        const { data: signInData, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
