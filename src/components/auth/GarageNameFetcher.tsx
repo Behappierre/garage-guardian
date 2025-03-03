@@ -11,40 +11,49 @@ export const GarageNameFetcher = ({
   effectiveGarageSlug, 
   onGarageNameChange 
 }: GarageNameFetcherProps) => {
-  
   useEffect(() => {
-    // If a garage slug is provided, fetch the garage name
-    if (effectiveGarageSlug) {
-      const fetchGarageName = async () => {
-        try {
-          console.log(`Fetching name for garage slug: ${effectiveGarageSlug}`);
-          const { data, error } = await supabase
-            .from('garages')
-            .select('name')
-            .eq('slug', effectiveGarageSlug)
-            .maybeSingle();
-          
-          if (error) {
-            console.error("Error fetching garage info:", error);
-            onGarageNameChange(null);
-          } else if (data) {
-            console.log(`Found garage name: ${data.name}`);
-            onGarageNameChange(data.name);
-          } else {
-            console.log("No garage found with that slug");
-            onGarageNameChange(null);
-          }
-        } catch (error) {
-          console.error("Error fetching garage info:", error);
+    const fetchGarageName = async () => {
+      try {
+        if (!effectiveGarageSlug) {
+          console.log("No garage slug provided");
+          onGarageNameChange(null);
+          return;
+        }
+        
+        console.log(`Fetching name for garage slug: ${effectiveGarageSlug}`);
+        
+        const { data, error } = await supabase
+          .from('garages')
+          .select('name')
+          .eq('slug', effectiveGarageSlug)
+          .maybeSingle();
+        
+        if (error) {
+          console.error("Error fetching garage name:", error);
+          onGarageNameChange(null);
+          return;
+        }
+        
+        if (data) {
+          console.log(`Found garage name: ${data.name}`);
+          onGarageNameChange(data.name);
+        } else {
+          console.log("No garage found with that slug");
           onGarageNameChange(null);
         }
-      };
-      
-      fetchGarageName();
-    } else {
+      } catch (error) {
+        console.error("Error in garage name fetcher:", error);
+        onGarageNameChange(null);
+      }
+    };
+    
+    fetchGarageName();
+    
+    // Clean up function to reset the name if component unmounts
+    return () => {
       onGarageNameChange(null);
-    }
+    };
   }, [effectiveGarageSlug, onGarageNameChange]);
-
+  
   return null;
 };

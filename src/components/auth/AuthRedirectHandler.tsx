@@ -21,6 +21,7 @@ export const AuthRedirectHandler = ({
         onCheckingChange(true);
         console.log("Checking auth status...");
         
+        // Make sure this completes even if there's no session
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.user) {
@@ -42,7 +43,9 @@ export const AuthRedirectHandler = ({
 
           if (garageMembersError) {
             console.error("Error fetching garage members:", garageMembersError);
-            throw garageMembersError;
+            onCheckingChange(false); // Make sure to stop checking even if there's an error
+            toast.error("Error loading garage information");
+            return;
           }
           
           console.log("User garages:", garageMembers);
@@ -58,7 +61,9 @@ export const AuthRedirectHandler = ({
 
             if (roleError && roleError.code !== 'PGRST116') { // Not found is ok
               console.error("Error fetching user role:", roleError);
-              throw roleError;
+              onCheckingChange(false); // Make sure to stop checking even if there's an error
+              toast.error("Error loading user role information");
+              return;
             }
 
             const isAdministrator = roleData?.role === 'administrator';
@@ -111,12 +116,14 @@ export const AuthRedirectHandler = ({
                 }
               } else {
                 // Garage slug doesn't match user's garages
+                console.log("No garage found with that slug");
                 onCheckingChange(false);
-                toast.error("You don't have access to this garage");
-                navigate("/my-garages");
+                // Don't auto-navigate to my-garages here, let the user choose what to do
+                // This prevents getting stuck in redirect loops
+                return;
               }
             } else {
-              // If on main domain and user is an owner/admin, go to My Garages
+              // If on main domain and user is an administrator, go to My Garages
               if (isAdministrator) {
                 console.log("User is administrator, redirecting to my garages");
                 navigate("/my-garages");
@@ -147,15 +154,22 @@ export const AuthRedirectHandler = ({
         } catch (error: any) {
           console.error("Error in redirect logic:", error);
           toast.error("Error fetching user information: " + error.message);
+          // Ensure we complete the check even if there's an error
           onCheckingChange(false);
         }
       } catch (error) {
         console.error("Auth check error:", error);
+        // Ensure we complete the check even if there's an error
         onCheckingChange(false);
       }
     };
 
     checkAuthAndRedirect();
+
+    // The cleanup function that ensures we update the checking state if the component unmounts
+    return () => {
+      onCheckingChange(false);
+    };
   }, [navigate, effectiveGarageSlug, onCheckingChange]);
 
   return null;

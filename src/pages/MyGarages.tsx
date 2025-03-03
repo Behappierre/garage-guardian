@@ -8,42 +8,61 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useGarage } from "@/contexts/GarageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getSubdomainInfo } from "@/utils/subdomain";
 
 const MyGarages = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { userGarages } = useGarage();
+  const { user, loading: authLoading } = useAuth();
+  const { userGarages, loading: garageLoading } = useGarage();
   const [isSubdomain, setIsSubdomain] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   
-  // Detect if we're on a subdomain
+  // Effect to handle authentication and redirect logic
   useEffect(() => {
-    const hostname = window.location.hostname;
-    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const hostParts = hostname.split('.');
+    const checkAuthAndHandleRedirect = async () => {
+      try {
+        // Detect if we're on a subdomain
+        const { isSubdomain } = getSubdomainInfo();
+        setIsSubdomain(isSubdomain);
+        
+        // Wait for auth to be checked
+        if (authLoading) {
+          return; // Still loading auth, wait for it
+        }
+        
+        console.log("Auth loading completed, user:", user ? "authenticated" : "not authenticated");
+        
+        // If user is not authenticated, redirect to auth
+        if (!user) {
+          console.log("Redirecting to auth - no user");
+          navigate("/auth");
+          return;
+        }
+        
+        // If on subdomain, redirect to that subdomain's auth
+        if (isSubdomain) {
+          console.log("Redirecting to auth - on subdomain");
+          navigate("/auth");
+          return;
+        }
+        
+        // Wait for garage data to load if needed
+        if (garageLoading) {
+          return; // Still loading garage data, wait for it
+        }
+        
+        console.log("Garage loading completed, garages:", userGarages.length);
+        
+        // Everything is loaded, we can show the page
+        setPageLoading(false);
+      } catch (error) {
+        console.error("Error in auth check:", error);
+        setPageLoading(false);
+      }
+    };
     
-    // For localhost testing, check if there's a subdomain in a simulated format
-    // In production, we'd simply check if hostParts.length > 2
-    const subdomain = isLocalhost 
-      ? hostname.includes('.') 
-      : hostParts.length > 2;
-      
-    setIsSubdomain(subdomain);
-    
-    // Redirect to auth if not logged in
-    if (!user) {
-      navigate("/auth");
-      return;
-    }
-    
-    // If on subdomain, redirect to that subdomain's auth
-    if (subdomain) {
-      navigate("/auth");
-      return;
-    }
-    
-    setLoading(false);
-  }, [user, navigate]);
+    checkAuthAndHandleRedirect();
+  }, [user, authLoading, garageLoading, userGarages, navigate]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -53,13 +72,13 @@ const MyGarages = () => {
 
   const navigateToGarageSubdomain = (garageSlug: string) => {
     // Get current hostname and protocol
-    const hostname = window.location.hostname;
+    const { hostname, isLocalhost } = getSubdomainInfo();
     const protocol = window.location.protocol;
     
     let targetUrl;
     
     // Handle local development vs production
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (isLocalhost) {
       // For local development, simulate subdomains via URL parameter
       targetUrl = `${protocol}//${hostname}:8080/?garage=${garageSlug}`;
     } else {
@@ -81,13 +100,25 @@ const MyGarages = () => {
     window.location.href = targetUrl;
   };
 
-  // Prevent rendering if on subdomain (the useEffect will redirect)
-  if (isSubdomain || loading) {
+  // Show loading state if still processing
+  if (pageLoading || authLoading || garageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Loading garages...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prevent rendering if on subdomain (the useEffect will redirect)
+  if (isSubdomain) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting...</p>
         </div>
       </div>
     );
