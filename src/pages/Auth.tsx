@@ -17,16 +17,21 @@ const Auth = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [garageName, setGarageName] = useState<string | null>(null);
   
-  // Get garage slug from URL params
+  // Get garage slug and isOwnerView from URL params
   const garageSlug = searchParams.get('garage');
+  const isOwnerViewParam = searchParams.get('isOwnerView');
   
   // Determine which garage slug to use - from URL param or subdomain
   const effectiveGarageSlug = getEffectiveGarageSlug(garageSlug);
   const { isSubdomain } = getSubdomainInfo();
+  
+  // Determine if we're in owner view mode
+  const isOwnerView = isOwnerViewParam === 'true' || (!isSubdomain && !garageSlug);
 
   // Log for debugging
   console.log(`Auth page loaded. Effective garage slug: ${effectiveGarageSlug}`);
   console.log(`Is subdomain: ${isSubdomain}`);
+  console.log(`Is owner view: ${isOwnerView}`);
   
   // If on the main domain and user is already authenticated, check if they should be redirected
   useEffect(() => {
@@ -73,7 +78,7 @@ const Auth = () => {
           effectiveGarageSlug={effectiveGarageSlug}
           garageName={garageName}
           userGarages={userGarages}
-          isOwnerView={!isSubdomain && !garageSlug}
+          isOwnerView={isOwnerView}
         />
       )}
     </>

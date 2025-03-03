@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { SignInForm } from "./SignInForm";
 import { SignUpForm } from "./SignUpForm";
+import { useSearchParams } from "react-router-dom";
 
 type AuthMode = "signin" | "signup";
 
@@ -11,7 +12,9 @@ interface AuthFormContainerProps {
 }
 
 export const AuthFormContainer = ({ garageSlug, isOwnerView = false }: AuthFormContainerProps) => {
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [searchParams] = useSearchParams();
+  const modeParam = searchParams.get('mode');
+  const [mode, setMode] = useState<AuthMode>(modeParam === 'signup' ? 'signup' : 'signin');
 
   // Determine the form title based on mode and whether there's a garage
   const getFormTitle = () => {
@@ -23,7 +26,7 @@ export const AuthFormContainer = ({ garageSlug, isOwnerView = false }: AuthFormC
       return mode === "signin" ? "Staff Sign In" : "Create Staff Account";
     }
     
-    return mode === "signin" ? "Garage Owner Sign In" : "Create Owner Account";
+    return mode === "signin" ? "Sign In" : "Create Account";
   };
 
   return (

@@ -46,7 +46,10 @@ export const AuthPageUI = ({
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">{garageName}</h2>
             <p className="text-sm text-gray-500">
-              Login to access your garage dashboard
+              Staff Sign In
+            </p>
+            <p className="text-sm text-gray-500">
+              Welcome back!
             </p>
           </div>
         )}
@@ -55,7 +58,7 @@ export const AuthPageUI = ({
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-gray-800">Garage Owner Portal</h2>
             <p className="text-sm text-gray-500">
-              Login to manage your garages
+              Sign in to manage your garages
             </p>
           </div>
         )}
@@ -78,15 +81,27 @@ export const AuthPageUI = ({
         <AuthForm garageSlug={effectiveGarageSlug} isOwnerView={isOwnerView} />
         
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have a garage yet? {" "}
-            <button 
-              onClick={() => navigate("/create-garage")}
-              className="text-primary font-medium hover:underline"
-            >
-              Create one here
-            </button>
-          </p>
+          {!isOwnerView ? (
+            <p className="text-sm text-gray-600">
+              Don't have an account? {" "}
+              <button 
+                onClick={() => navigate("/auth?garageSlug=" + effectiveGarageSlug + "&mode=signup")}
+                className="text-primary font-medium hover:underline"
+              >
+                Sign up
+              </button>
+            </p>
+          ) : (
+            <p className="text-sm text-gray-600">
+              Don't have a garage yet? {" "}
+              <button 
+                onClick={() => navigate("/create-garage")}
+                className="text-primary font-medium hover:underline"
+              >
+                Create one here
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>
