@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -26,6 +26,12 @@ export default function CreateGarage() {
     owner_email: user?.email || "",
     owner_password: "",
   });
+
+  useEffect(() => {
+    if (user && userGarages.length > 0) {
+      navigate('/dashboard');
+    }
+  }, [user, userGarages, navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -224,7 +230,8 @@ export default function CreateGarage() {
 
   const handleSignInClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/auth");
+    
+    window.location.href = "/auth";
   };
 
   return (

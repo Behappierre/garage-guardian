@@ -32,8 +32,14 @@ function App() {
             <Router>
               <Routes>
                 <Route path="/" element={<Index />} />
+                
+                {/* Public routes that don't require authentication */}
                 <Route path="/auth" element={<Auth />} />
+                
+                {/* Semi-protected route - requires auth but accessible even with no garages */}
                 <Route path="/create-garage" element={<CreateGarage />} />
+                
+                {/* Protected routes that require authentication and garage */}
                 <Route
                   path="/dashboard/*"
                   element={
