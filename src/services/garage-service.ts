@@ -32,6 +32,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
       userId = profilesResponse.data[0].id;
     } else {
       // If user doesn't exist, create a new one
+      // Use type assertion for auth responses to avoid deep type instantiation
       const authResponse = await supabase.auth.signUp({
         email: formData.owner_email,
         password: formData.owner_password,
@@ -41,7 +42,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
             last_name: formData.owner_last_name,
           }
         }
-      });
+      }) as { data: { user?: { id?: string } | null }, error: any };
       
       if (authResponse.error) {
         // If the error is "User already registered", try to get the user's ID
@@ -50,7 +51,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<Gara
           const signInResponse = await supabase.auth.signInWithPassword({
             email: formData.owner_email,
             password: formData.owner_password
-          });
+          }) as { data: { user?: { id?: string } | null }, error: any };
           
           if (signInResponse.error) throw signInResponse.error;
           userId = signInResponse.data.user?.id;
