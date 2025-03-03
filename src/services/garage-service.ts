@@ -109,17 +109,14 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
 
 export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | null; error: any }> => {
   try {
+    // Use maybeSingle instead of single to handle not found case without error
     const response = await supabase
       .from("garages")
       .select("*")
       .eq("slug", slug)
-      .single();
+      .maybeSingle();
     
     if (response.error) {
-      if (response.error.code === 'PGRST116') {
-        // No data found
-        return { garage: null, error: null };
-      }
       throw response.error;
     }
     
@@ -152,6 +149,7 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
 
 export const getGarageMembers = async (garageId: string): Promise<{ members: GarageMember[]; error: any }> => {
   try {
+    // Fix the query to correctly join with profiles
     const response = await supabase
       .from("garage_members")
       .select(`
@@ -160,7 +158,7 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
         user_id,
         role,
         created_at,
-        profiles:profiles(id, first_name, last_name)
+        profiles (id, first_name, last_name)
       `)
       .eq("garage_id", garageId);
     
@@ -169,15 +167,24 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
       return { members: [], error: null };
     }
     
-    // Explicitly map the data to the GarageMember type with proper type assertion for role
-    const members: GarageMember[] = response.data.map(member => ({
-      id: member.id,
-      garage_id: member.garage_id,
-      user_id: member.user_id,
-      role: member.role as GarageRole, // Type assertion to GarageRole
-      created_at: member.created_at,
-      profile: member.profiles
-    }));
+    // Correctly map the data to the GarageMember type, handling the nested profile data
+    const members: GarageMember[] = response.data.map(member => {
+      // Create a properly typed profile object or null if not available
+      const profile = member.profiles ? {
+        id: member.profiles.id,
+        first_name: member.profiles.first_name,
+        last_name: member.profiles.last_name
+      } : null;
+      
+      return {
+        id: member.id,
+        garage_id: member.garage_id,
+        user_id: member.user_id,
+        role: member.role as GarageRole,
+        created_at: member.created_at,
+        profile: profile
+      };
+    });
     
     return { members, error: null };
   } catch (error) {
