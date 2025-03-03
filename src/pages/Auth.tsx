@@ -7,6 +7,7 @@ import { AuthPageUI } from "@/components/auth/AuthPageUI";
 import { AuthRedirectHandler } from "@/components/auth/AuthRedirectHandler";
 import { GarageNameFetcher } from "@/components/auth/GarageNameFetcher";
 import { getEffectiveGarageSlug, getSubdomainInfo } from "@/utils/subdomain";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
