@@ -1,12 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { CreateGarageFormData, Garage, GarageMember } from "@/types/garage";
-
-// Helper type for Supabase response
-type SupabaseResponse<T> = {
-  data: T | null;
-  error: any;
-};
+import { CreateGarageFormData, Garage, GarageMember, GarageRole } from "@/types/garage";
 
 export const createGarage = async (formData: CreateGarageFormData): Promise<{ garage: Garage | null; error: any }> => {
   try {
@@ -87,7 +81,7 @@ export const createGarage = async (formData: CreateGarageFormData): Promise<{ ga
       .insert({
         garage_id: newGarage.id,
         user_id: userId,
-        role: "owner",
+        role: "owner" as GarageRole,
       });
     
     if (memberResponse.error) throw memberResponse.error;
@@ -118,15 +112,22 @@ export const getGarageBySlug = async (slug: string): Promise<{ garage: Garage | 
     const response = await supabase
       .from("garages")
       .select("*")
-      .eq("slug", slug);
+      .eq("slug", slug)
+      .single();
     
-    if (response.error) throw response.error;
+    if (response.error) {
+      if (response.error.code === 'PGRST116') {
+        // No data found
+        return { garage: null, error: null };
+      }
+      throw response.error;
+    }
     
-    if (!response.data || response.data.length === 0) {
+    if (!response.data) {
       return { garage: null, error: null };
     }
     
-    const garageData = response.data[0];
+    const garageData = response.data;
     
     // Explicitly create a Garage object with the correct type
     const garage: Garage = {
@@ -154,8 +155,12 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
     const response = await supabase
       .from("garage_members")
       .select(`
-        *,
-        profile:profiles(id, first_name, last_name)
+        id,
+        garage_id,
+        user_id,
+        role,
+        created_at,
+        profiles:profiles(id, first_name, last_name)
       `)
       .eq("garage_id", garageId);
     
@@ -164,14 +169,14 @@ export const getGarageMembers = async (garageId: string): Promise<{ members: Gar
       return { members: [], error: null };
     }
     
-    // Explicitly map the data to the GarageMember type
+    // Explicitly map the data to the GarageMember type with proper type assertion for role
     const members: GarageMember[] = response.data.map(member => ({
       id: member.id,
       garage_id: member.garage_id,
       user_id: member.user_id,
-      role: member.role,
+      role: member.role as GarageRole, // Type assertion to GarageRole
       created_at: member.created_at,
-      profile: member.profile
+      profile: member.profiles
     }));
     
     return { members, error: null };
