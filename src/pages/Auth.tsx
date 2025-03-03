@@ -1,16 +1,28 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      try {
+        setIsCheckingAuth(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session?.user) {
+          // User is not authenticated, just stop checking and render the auth form
+          setIsCheckingAuth(false);
+          return;
+        }
+        
+        // User is authenticated, proceed with normal redirect logic
         try {
           // First check if the user has any garages
           const { data: garageMembers, error: garageMembersError } = await supabase
@@ -78,11 +90,18 @@ const Auth = () => {
           // Default to dashboard if role fetch fails
           navigate("/dashboard");
         }
+      } catch (error) {
+        console.error("Auth check error:", error);
+        setIsCheckingAuth(false);
       }
     };
 
     checkAuthAndRedirect();
   }, [navigate]);
+
+  if (isCheckingAuth) {
+    return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

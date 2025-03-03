@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -223,6 +222,11 @@ export default function CreateGarage() {
     }
   };
 
+  const handleSignInClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate("/auth");
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -353,9 +357,12 @@ export default function CreateGarage() {
           <CardFooter className="flex justify-center border-t pt-4">
             <p className="text-sm text-gray-600">
               Already have a garage? {" "}
-              <a href="/auth" className="text-primary font-medium hover:underline">
+              <button 
+                onClick={handleSignInClick}
+                className="text-primary font-medium hover:underline"
+              >
                 Sign in here
-              </a>
+              </button>
             </p>
           </CardFooter>
         </Card>

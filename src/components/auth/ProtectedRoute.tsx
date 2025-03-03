@@ -24,8 +24,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Check if the user has any garages
-  if (userGarages.length === 0) {
+  // Only check for garages if we're not already on the create-garage route
+  if (userGarages.length === 0 && !location.pathname.includes('/create-garage')) {
     return <Navigate to="/create-garage" replace />;
   }
 

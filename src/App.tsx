@@ -35,7 +35,7 @@ function App() {
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/create-garage" element={<CreateGarage />} />
                 <Route
-                  path="/dashboard"
+                  path="/dashboard/*"
                   element={
                     <ProtectedRoute>
                       <Dashboard />
