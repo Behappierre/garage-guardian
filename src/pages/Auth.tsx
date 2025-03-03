@@ -9,6 +9,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [garageName, setGarageName] = useState<string | null>(null);
   
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
@@ -96,8 +97,34 @@ const Auth = () => {
       }
     };
 
+    // Get garage information from URL params if available
+    const params = new URLSearchParams(location.search);
+    const garageSlug = params.get('garage');
+    
+    // If a garage slug is provided, fetch the garage name
+    if (garageSlug) {
+      const fetchGarageName = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('garages')
+            .select('name')
+            .eq('slug', garageSlug)
+            .single();
+          
+          if (error) throw error;
+          if (data) {
+            setGarageName(data.name);
+          }
+        } catch (error) {
+          console.error("Error fetching garage info:", error);
+        }
+      };
+      
+      fetchGarageName();
+    }
+
     checkAuthAndRedirect();
-  }, [navigate]);
+  }, [navigate, location]);
 
   if (isCheckingAuth) {
     return <div className="min-h-screen flex items-center justify-center">Checking authentication...</div>;
@@ -113,9 +140,17 @@ const Auth = () => {
         <h1 className="text-center text-3xl font-bold text-gray-900 mb-8">
           GarageWizz
         </h1>
-        {garageSlug && (
+        {garageSlug && garageName && (
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">{garageName}</h2>
+            <p className="text-sm text-gray-500">
+              Login to access your garage dashboard
+            </p>
+          </div>
+        )}
+        {!garageSlug && (
           <div className="text-center text-sm text-gray-500 mb-4">
-            Logging in to garage: <span className="font-medium">{garageSlug}</span>
+            Garage Owner Login
           </div>
         )}
         <AuthForm garageSlug={garageSlug} />

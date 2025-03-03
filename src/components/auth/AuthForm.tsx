@@ -122,10 +122,18 @@ export const AuthForm = ({ garageSlug }: AuthFormProps) => {
     }
   };
 
+  // Determine the form title based on mode and whether there's a garage
+  const getFormTitle = () => {
+    if (garageSlug) {
+      return mode === "signin" ? "Sign In to Your Garage" : "Create Garage Account";
+    }
+    return mode === "signin" ? "Garage Owner Sign In" : "Create Owner Account";
+  };
+
   return (
     <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-lg">
       <div className="text-center">
-        <h2 className="text-2xl font-bold">{mode === "signin" ? "Sign In" : "Create Account"}</h2>
+        <h2 className="text-2xl font-bold">{getFormTitle()}</h2>
         <p className="mt-2 text-sm text-gray-600">
           {mode === "signin" ? "Welcome back!" : "Join GarageWizz today"}
         </p>

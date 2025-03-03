@@ -1,3 +1,4 @@
+
 import { NavLink } from "react-router-dom";
 import { Settings, LogOut, ArrowLeftCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,9 +10,11 @@ import { toast } from "sonner";
 
 interface SidebarFooterProps {
   isCollapsed: boolean;
+  userRole?: string;
+  garageRole?: string;
 }
 
-export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
+export const SidebarFooter = ({ isCollapsed, userRole, garageRole }: SidebarFooterProps) => {
   const { currentGarage } = useGarage();
   const navigate = useNavigate();
 
@@ -25,6 +28,9 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
     toast.success("Exited garage. Redirecting to garage selection...");
     navigate("/auth");
   };
+
+  // Check if user is allowed to exit garage (admin or owner)
+  const canExitGarage = userRole === 'administrator' || garageRole === 'owner' || garageRole === 'admin';
 
   return (
     <div className={cn(
@@ -48,20 +54,22 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
             {!isCollapsed && <span>Settings</span>}
           </NavLink>
         </li>
-        <li>
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full flex items-center justify-start gap-2 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md",
-              isCollapsed && "justify-center px-2"
-            )}
-            onClick={handleGarageExit}
-            title="Exit Garage"
-          >
-            <ArrowLeftCircle className="shrink-0 w-5 h-5" />
-            {!isCollapsed && <span>Exit Garage</span>}
-          </Button>
-        </li>
+        {canExitGarage && (
+          <li>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full flex items-center justify-start gap-2 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md",
+                isCollapsed && "justify-center px-2"
+              )}
+              onClick={handleGarageExit}
+              title="Exit Garage"
+            >
+              <ArrowLeftCircle className="shrink-0 w-5 h-5" />
+              {!isCollapsed && <span>Exit Garage</span>}
+            </Button>
+          </li>
+        )}
         <li>
           <Button
             variant="ghost"
