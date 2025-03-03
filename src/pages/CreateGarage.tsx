@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useGarage } from "@/contexts/GarageContext";
 
 export default function CreateGarage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { userGarages } = useGarage();
   const [isLoading, setIsLoading] = useState(false);
@@ -230,7 +232,8 @@ export default function CreateGarage() {
 
   const handleSignInClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    navigate("/auth?isOwnerView=true");
+    // Direct users to the auth page with signin mode explicitly set
+    navigate("/auth?isOwnerView=true&mode=signin");
   };
 
   return (

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SignInForm } from "./SignInForm";
 import { SignUpForm } from "./SignUpForm";
 import { useSearchParams } from "react-router-dom";
@@ -15,6 +15,11 @@ export const AuthFormContainer = ({ garageSlug, isOwnerView = false }: AuthFormC
   const [searchParams] = useSearchParams();
   const modeParam = searchParams.get('mode');
   const [mode, setMode] = useState<AuthMode>(modeParam === 'signup' ? 'signup' : 'signin');
+
+  // Update mode when URL parameters change
+  useEffect(() => {
+    setMode(modeParam === 'signup' ? 'signup' : 'signin');
+  }, [modeParam]);
 
   // Determine the form title based on mode and whether there's a garage
   const getFormTitle = () => {
