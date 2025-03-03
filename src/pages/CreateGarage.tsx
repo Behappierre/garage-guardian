@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CreateGarageFormData } from "@/types/garage";
+import { useGarage } from "@/contexts/GarageContext";
 
 export default function CreateGarage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { userGarages } = useGarage();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<CreateGarageFormData>({
     name: "",
@@ -95,7 +97,7 @@ export default function CreateGarage() {
           throw garageError;
         }
 
-        // Add user as garage owner
+        // Add user as garage owner with role "owner"
         const { error: memberError } = await supabase
           .from("garage_members")
           .insert({
@@ -108,12 +110,31 @@ export default function CreateGarage() {
           throw memberError;
         }
 
+        // Add user role if they don't already have one
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .upsert({
+            user_id: user.id,
+            role: "administrator"
+          }, {
+            onConflict: 'user_id',
+            ignoreDuplicates: true
+          });
+
+        if (roleError) {
+          console.error("Error setting user role:", roleError);
+          // Don't fail the whole process for this
+        }
+
+        // If this is the user's first garage, set it as current in localStorage
+        if (userGarages.length === 0) {
+          localStorage.setItem("currentGarageId", garage.id);
+        }
+
         toast.success("Garage created successfully!");
         navigate("/dashboard");
       } else {
         // Create user account, create garage, and set them as owner
-        // This would typically be done using a server-side function
-        // for better security, but for demonstration:
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.owner_email,
           password: formData.owner_password,
@@ -149,7 +170,7 @@ export default function CreateGarage() {
           throw garageError;
         }
 
-        // Add user as garage owner
+        // Add user as garage owner with role "owner"
         const { error: memberError } = await supabase
           .from("garage_members")
           .insert({
@@ -161,6 +182,22 @@ export default function CreateGarage() {
         if (memberError) {
           throw memberError;
         }
+
+        // Set user role to administrator
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({
+            user_id: authData.user.id,
+            role: "administrator"
+          });
+
+        if (roleError) {
+          console.error("Error setting user role:", roleError);
+          // Don't fail the whole process for this
+        }
+
+        // Set this garage as current in localStorage for when they first log in
+        localStorage.setItem("currentGarageId", garage.id);
 
         toast.success("Garage created successfully! Check your email to verify your account.");
         navigate("/auth");

@@ -1,12 +1,13 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Garage } from "@/types/garage";
+import { Garage, GarageMember } from "@/types/garage";
 import { toast } from "sonner";
 
 type GarageContextType = {
   currentGarage: Garage | null;
   userGarages: Garage[];
+  userGarageRoles: Record<string, string>;
   setCurrentGarage: (garage: Garage) => void;
   loading: boolean;
   error: string | null;
@@ -15,6 +16,7 @@ type GarageContextType = {
 const GarageContext = createContext<GarageContextType>({
   currentGarage: null,
   userGarages: [],
+  userGarageRoles: {},
   setCurrentGarage: () => {},
   loading: true,
   error: null,
@@ -29,6 +31,7 @@ type GarageProviderProps = {
 export const GarageProvider = ({ children }: GarageProviderProps) => {
   const [currentGarage, setCurrentGarageState] = useState<Garage | null>(null);
   const [userGarages, setUserGarages] = useState<Garage[]>([]);
+  const [userGarageRoles, setUserGarageRoles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,10 +50,10 @@ export const GarageProvider = ({ children }: GarageProviderProps) => {
           return;
         }
         
-        // Get user's garages
+        // Get user's garages with their roles
         const { data: garageMembers, error: membersError } = await supabase
           .from("garage_members")
-          .select("garage_id")
+          .select("garage_id, role")
           .eq("user_id", user.id);
         
         if (membersError) {
@@ -64,6 +67,13 @@ export const GarageProvider = ({ children }: GarageProviderProps) => {
         }
         
         const garageIds = garageMembers.map(member => member.garage_id);
+        
+        // Store user's role for each garage
+        const rolesMap: Record<string, string> = {};
+        garageMembers.forEach(member => {
+          rolesMap[member.garage_id] = member.role;
+        });
+        setUserGarageRoles(rolesMap);
         
         const { data: garages, error: garagesError } = await supabase
           .from("garages")
@@ -133,6 +143,7 @@ export const GarageProvider = ({ children }: GarageProviderProps) => {
       value={{
         currentGarage,
         userGarages,
+        userGarageRoles,
         setCurrentGarage,
         loading,
         error,
