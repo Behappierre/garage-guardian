@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Garage, Wrench } from "lucide-react";
+import { Building, Wrench } from "lucide-react";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const Index = () => {
         <Card className="transition-all hover:shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Garage className="h-6 w-6 mr-2 text-primary" />
+              <Building className="h-6 w-6 mr-2 text-primary" />
               I have a garage
             </CardTitle>
             <CardDescription>
