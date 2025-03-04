@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, garageId } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
   const [isVerifyingRole, setIsVerifyingRole] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -16,22 +16,25 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const verifyAccess = async () => {
       if (user) {
         try {
+          console.log("Verifying access for user:", user.id);
+          
           // Check user role
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
           
           if (roleError) {
             console.error("Error fetching user role:", roleError.message);
             toast.error("Could not verify your account role");
-            await supabase.auth.signOut();
             setIsVerifyingRole(false);
+            setHasAccess(false);
             return;
           }
 
           setUserRole(roleData?.role || null);
+          console.log("User role:", roleData?.role);
           
           // For garage management, only allow administrators
           if (location.pathname.includes('/garage-management')) {
@@ -55,23 +58,30 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             }
             
             // Check if user has a garage membership
-            const { data: memberData, error: memberError } = await supabase
-              .from('garage_members')
-              .select('id')
-              .eq('user_id', user.id)
-              .limit(1);
+            try {
+              const { data: memberData, error: memberError } = await supabase
+                .from('garage_members')
+                .select('id')
+                .eq('user_id', user.id)
+                .limit(1);
+                
+              if (memberError) {
+                console.error("Error checking garage membership:", memberError.message);
+                toast.error("Error verifying your garage access");
+                setHasAccess(false);
+                setIsVerifyingRole(false);
+                return;
+              }
               
-            if (memberError) {
-              console.error("Error checking garage membership:", memberError.message);
-              toast.error("Error verifying your garage access");
-              setHasAccess(false);
-              setIsVerifyingRole(false);
-              return;
-            }
-            
-            if (!memberData || memberData.length === 0) {
-              console.log("User has no garage memberships");
-              toast.error("You don't have access to any garage. Please contact an administrator.");
+              if (!memberData || memberData.length === 0) {
+                console.log("User has no garage memberships");
+                toast.error("You don't have access to any garage. Please contact an administrator.");
+                setHasAccess(false);
+                setIsVerifyingRole(false);
+                return;
+              }
+            } catch (err) {
+              console.error("Exception checking garage membership:", err);
               setHasAccess(false);
               setIsVerifyingRole(false);
               return;
@@ -80,22 +90,24 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           
           // If we reach this point, the user has proper access
           setHasAccess(true);
+          setIsVerifyingRole(false);
         } catch (error: any) {
           console.error("Error verifying access:", error.message);
           toast.error("Error verifying your access permissions");
           setHasAccess(false);
-        } finally {
           setIsVerifyingRole(false);
         }
       } else {
         setIsVerifyingRole(false);
+        setHasAccess(false);
       }
     };
 
     if (!loading && user) {
       verifyAccess();
-    } else {
+    } else if (!loading) {
       setIsVerifyingRole(false);
+      setHasAccess(false);
     }
   }, [user, loading, location.pathname]);
 

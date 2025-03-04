@@ -1,17 +1,37 @@
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface SidebarFooterProps {
   isCollapsed: boolean;
 }
 
 export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
+  const navigate = useNavigate();
+
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error("Error signing out:", error.message);
+        toast.error("Error signing out. Please try again.");
+        return;
+      }
+      
+      console.log("User signed out successfully");
+      toast.success("Signed out successfully");
+      
+      // Navigate to auth page after successful sign out
+      navigate("/auth");
+    } catch (err) {
+      console.error("Exception during sign out:", err);
+      toast.error("Error signing out. Please try again.");
+    }
   };
 
   return (

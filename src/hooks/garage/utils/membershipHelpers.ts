@@ -15,8 +15,8 @@ export const addUserToGarage = async (
     const { data, error } = await supabase
       .from('garage_members')
       .select('id')
-      .eq('garage_members.user_id', userId)
-      .eq('garage_members.garage_id', garageId)
+      .eq('user_id', userId)
+      .eq('garage_id', garageId)
       .limit(1);
       
     if (error) {
@@ -47,11 +47,10 @@ export const addUserToGarage = async (
     console.log(`Added user ${userId} to garage ${garageId} with role ${role}`);
     
     // Update the user's profile with the garage ID for convenience
-    // Explicitly qualify the garage_id column with the profiles table name
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: garageId })
-      .eq('profiles.id', userId);
+      .eq('id', userId);
       
     if (profileError) {
       console.error("Non-critical error updating profile with garage_id:", profileError.message);
@@ -69,12 +68,11 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
   try {
     console.log(`Fetching garage memberships for user ${userId}`);
     
-    // Fix: Remove the table qualifier from the select statement
-    // The issue is that when using the .select('garage_id') syntax, we should not qualify the column name
+    // Use the correct format for select without table qualifier
     const { data, error } = await supabase
       .from('garage_members')
-      .select('garage_id')  // Remove the table qualifier here
-      .eq('garage_members.user_id', userId);
+      .select('garage_id')
+      .eq('user_id', userId);
     
     if (error) {
       console.error("Error fetching garage memberships:", error.message);

@@ -27,6 +27,8 @@ const Auth = () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          console.log("User already authenticated:", session.user.id);
+          
           try {
             // Fetch user role
             const { data: roleData, error: roleError } = await supabase
@@ -46,26 +48,20 @@ const Auth = () => {
 
             // For owner login page, only allow administrators
             if (type === "owner") {
-              if (roleData?.role !== 'administrator') {
-                toast.error("You don't have permission to access the garage owner area");
-                setIsChecking(false);
+              if (roleData?.role === 'administrator') {
+                // Redirect administrators to garage management
+                navigate("/garage-management");
                 return;
               }
-              
-              // If the user is an administrator, redirect to garage management
-              navigate("/garage-management");
-              return;
-            }
-
-            // Staff login: Block administrators from logging in as staff
-            if (type !== "owner" && roleData?.role === 'administrator') {
+            } else if (roleData?.role === 'administrator') {
+              // Administrator on staff login page
               toast.error("Administrators should use the garage owner login");
+              // Sign out the user if they're on the wrong login page
+              await supabase.auth.signOut();
               setIsChecking(false);
               return;
-            }
-            
-            // For staff roles, handle based on role
-            if (roleData?.role) {
+            } else if (roleData?.role) {
+              // Regular staff role, redirect to appropriate page
               switch (roleData.role) {
                 case 'technician':
                   navigate("/dashboard/job-tickets");
@@ -74,13 +70,13 @@ const Auth = () => {
                   navigate("/dashboard/appointments");
                   break;
                 default:
-                  // If no matching role is found, redirect to dashboard
                   navigate("/dashboard");
               }
-            } else {
-              // If no role is set yet, stay on the auth page
-              setIsChecking(false);
+              return;
             }
+            
+            // If no role is set yet, stay on the auth page
+            setIsChecking(false);
           } catch (error: any) {
             console.error("Error verifying role:", error.message);
             toast.error("Error verifying role: " + error.message);
