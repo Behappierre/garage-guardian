@@ -80,7 +80,6 @@ const GarageManagement = () => {
         <CreateGarageForm 
           onBack={() => garages.length > 0 ? setShowCreateForm(false) : {}} 
           onComplete={handleGarageCreated}
-          userId={userData?.id}
         />
       </div>
     );
