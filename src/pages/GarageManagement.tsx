@@ -8,6 +8,7 @@ import { GarageLoadingState } from "@/components/garage/GarageLoadingState";
 import { GarageContent } from "@/components/garage/GarageContent";
 import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const GarageManagement = () => {
   const { garages, loading, error, refreshGarages } = useGarages();
@@ -22,8 +23,17 @@ const GarageManagement = () => {
   // Get current user data
   useEffect(() => {
     const getUserData = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUserData(data.user);
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error("Error fetching user data:", error.message);
+          return;
+        }
+        setUserData(data.user);
+        console.log("Current user:", data.user);
+      } catch (err) {
+        console.error("Exception fetching user data:", err);
+      }
     };
     
     getUserData();
@@ -42,6 +52,7 @@ const GarageManagement = () => {
   // Handle garage creation completion
   const handleGarageCreated = (garageId: string) => {
     console.log("Garage created, refreshing list:", garageId);
+    toast.success("Garage created successfully");
     refreshGarages();
     setShowCreateForm(false);
   };

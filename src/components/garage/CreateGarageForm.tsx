@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface CreateGarageFormProps {
   onBack: () => void;
@@ -25,6 +27,7 @@ interface GarageFormValues {
 
 export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, watch, formState: { errors } } = useForm<GarageFormValues>();
   const garageName = watch("name") || "";
 
@@ -41,9 +44,18 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
   const onSubmit = async (data: GarageFormValues) => {
     try {
       setLoading(true);
+      setError(null);
       
       // Auto-generate slug if not provided
       const slug = data.slug || generateSlug(data.name);
+      
+      console.log("Creating garage with data:", {
+        name: data.name,
+        slug,
+        address: data.address,
+        email: data.email,
+        phone: data.phone
+      });
       
       // Create the garage
       const { data: garageData, error: garageError } = await supabase
@@ -57,7 +69,10 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         }])
         .select();
       
-      if (garageError) throw garageError;
+      if (garageError) {
+        console.error("Garage creation error:", garageError);
+        throw garageError;
+      }
       
       if (!garageData || garageData.length === 0) {
         throw new Error("No garage data returned after creation");
@@ -77,6 +92,8 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         }
       }
       
+      console.log("Adding user as garage owner:", currentUserId);
+      
       // Add user as garage owner
       const { error: memberError } = await supabase
         .from('garage_members')
@@ -86,7 +103,10 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
           role: 'owner'
         }]);
       
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error("Garage member creation error:", memberError);
+        throw memberError;
+      }
       
       // Update user profile with garage_id
       const { error: profileError } = await supabase
@@ -98,10 +118,14 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         console.error("Non-critical error updating profile:", profileError.message);
       }
       
+      // Refresh the session to update claims
+      await supabase.auth.refreshSession();
+      
       toast.success("Garage created successfully");
       onComplete(newGarageId);
     } catch (error: any) {
       console.error("Error creating garage:", error);
+      setError(error.message || "Failed to create garage");
       toast.error(`Failed to create garage: ${error.message}`);
     } finally {
       setLoading(false);
@@ -114,6 +138,14 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         title="Create New Garage" 
         description="Set up your garage business details"
       />
+      
+      {error && (
+        <Alert variant="destructive" className="my-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <div className="bg-white shadow-md rounded-lg p-6 mt-6">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

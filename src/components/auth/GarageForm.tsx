@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface GarageFormProps {
   userId: string;
@@ -22,12 +25,14 @@ interface GarageFormValues {
 
 export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors } } = useForm<GarageFormValues>();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const onSubmit = async (data: GarageFormValues) => {
     setLoading(true);
+    setError(null);
     
     try {
       console.log("Creating garage with data:", data);
@@ -37,6 +42,8 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         .toLowerCase()
         .replace(/\s+/g, '-')
         .replace(/[^a-z0-9-]/g, '');
+      
+      console.log("Submitting garage with slug:", slug);
       
       // First, create the garage
       const { data: garageData, error: garageError } = await supabase
@@ -53,6 +60,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         .select();
       
       if (garageError) {
+        console.error("Error creating garage:", garageError);
         throw garageError;
       }
       
@@ -75,6 +83,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         ]);
       
       if (memberError) {
+        console.error("Error adding user as garage member:", memberError);
         throw memberError;
       }
       
@@ -100,6 +109,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       navigate("/garage-management");
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
+      setError(error.message);
       toast({
         variant: "destructive",
         title: "Error",
@@ -119,6 +129,14 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         </p>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
         <div className="space-y-2">
           <Label htmlFor="name">Garage Name</Label>
@@ -133,7 +151,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
 
         <div className="space-y-2">
           <Label htmlFor="address">Address</Label>
-          <Input
+          <Textarea
             id="address"
             {...register("address", { required: "Address is required" })}
           />

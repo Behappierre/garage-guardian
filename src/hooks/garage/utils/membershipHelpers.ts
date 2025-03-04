@@ -33,6 +33,8 @@ export const addUserToGarage = async (
       role: role
     };
     
+    console.log("Creating garage membership with data:", memberData);
+    
     const { error: insertError } = await supabase
       .from('garage_members')
       .insert(memberData);
@@ -43,6 +45,17 @@ export const addUserToGarage = async (
     }
     
     console.log(`Added user ${userId} to garage ${garageId} with role ${role}`);
+    
+    // Update the user's profile with the garage ID for convenience
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ garage_id: garageId })
+      .eq('id', userId);
+      
+    if (profileError) {
+      console.error("Non-critical error updating profile with garage_id:", profileError.message);
+    }
+    
     return true;
   } catch (err) {
     console.error("Exception when adding user as garage member:", err);
