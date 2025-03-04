@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast as useUIToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast as sonnerToast } from "sonner";
 import { GarageForm } from "./GarageForm";
 import { Garage } from "@/types/garage";
@@ -29,9 +29,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<Role>("front_desk");
-  const [garages, setGarages] = useState<Garage[]>([]);
-  const [selectedGarageId, setSelectedGarageId] = useState<string>("");
-  const [fetchingGarages, setFetchingGarages] = useState(true);
   const [showGarageForm, setShowGarageForm] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
 
@@ -43,113 +40,12 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
     }
   }, [userType]);
 
-  useEffect(() => {
-    if (userType === "staff") {
-      const fetchGarages = async () => {
-        try {
-          setFetchingGarages(true);
-          
-          const { data, error } = await supabase
-            .from('garages')
-            .select('id, name, slug, address, email, phone, created_at, owner_id')
-            .order('name');
-          
-          if (error) {
-            console.error("Error fetching garages:", error);
-            throw error;
-          }
-          
-          console.log("Fetched garages:", data);
-          
-          if (data && data.length > 0) {
-            setGarages(data);
-            const tracticGarage = data.find(garage => 
-              garage.name.toLowerCase() === 'tractic' || 
-              garage.slug.toLowerCase() === 'tractic'
-            );
-            
-            if (tracticGarage) {
-              setSelectedGarageId(tracticGarage.id);
-            } else {
-              const fallbackGarages: Garage[] = [
-                { 
-                  id: "00000000-0000-0000-0000-000000000000", 
-                  name: "Tractic", 
-                  slug: "tractic", 
-                  address: null, 
-                  email: null, 
-                  phone: null, 
-                  created_at: new Date().toISOString(),
-                  owner_id: "" 
-                }
-              ];
-              setGarages(fallbackGarages);
-              setSelectedGarageId(fallbackGarages[0].id);
-            }
-          } else {
-            const fallbackGarages: Garage[] = [
-              { 
-                id: "00000000-0000-0000-0000-000000000000", 
-                name: "Tractic", 
-                slug: "tractic", 
-                address: null, 
-                email: null, 
-                phone: null, 
-                created_at: new Date().toISOString(),
-                owner_id: "" 
-              }
-            ];
-            setGarages(fallbackGarages);
-            setSelectedGarageId(fallbackGarages[0].id);
-          }
-        } catch (error: any) {
-          console.error("Error fetching garages:", error.message);
-          
-          const fallbackGarages: Garage[] = [
-            { 
-              id: "00000000-0000-0000-0000-000000000000", 
-              name: "Tractic", 
-              slug: "tractic", 
-              address: null, 
-              email: null, 
-              phone: null, 
-              created_at: new Date().toISOString(),
-              owner_id: "" 
-            }
-          ];
-          setGarages(fallbackGarages);
-          setSelectedGarageId(fallbackGarages[0].id);
-          
-          uiToast({
-            variant: "destructive",
-            title: "Warning",
-            description: "Could not load garages. Using default garage.",
-          });
-        } finally {
-          setFetchingGarages(false);
-        }
-      };
-
-      fetchGarages();
-    }
-  }, [userType]);
-
   const handleGarageCreationComplete = (garageId: string) => {
     navigate("/garage-management");
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (userType === "staff" && !selectedGarageId) {
-      uiToast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please select a garage.",
-      });
-      return;
-    }
-    
     setLoading(true);
 
     try {
@@ -195,12 +91,46 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               description: "Now let's set up your garage.",
             });
           } else {
+            // For staff users, find a default garage to assign
+            const { data: defaultGarage, error: defaultGarageError } = await supabase
+              .from('garages')
+              .select('id')
+              .eq('slug', 'tractic')
+              .limit(1);
+              
+            if (defaultGarageError) {
+              console.error("Error finding default garage:", defaultGarageError);
+              throw new Error("Could not find a default garage to assign you to");
+            }
+            
+            let garageId = null;
+            if (defaultGarage && defaultGarage.length > 0) {
+              garageId = defaultGarage[0].id;
+            } else {
+              // If no default garage exists, find any available garage
+              const { data: anyGarage, error: anyGarageError } = await supabase
+                .from('garages')
+                .select('id')
+                .limit(1);
+                
+              if (anyGarageError) {
+                throw new Error("Could not find any garage to assign you to");
+              }
+              
+              if (anyGarage && anyGarage.length > 0) {
+                garageId = anyGarage[0].id;
+              } else {
+                throw new Error("No garages exist in the system. Please contact an administrator.");
+              }
+            }
+            
+            // Assign the user to the garage
             const { error: garageMemberError } = await supabase
               .from('garage_members')
               .insert([
                 {
                   user_id: signUpData.user.id,
-                  garage_id: selectedGarageId,
+                  garage_id: garageId,
                   role: role
                 }
               ]);
@@ -208,7 +138,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             
             const { error: profileError } = await supabase
               .from('profiles')
-              .update({ garage_id: selectedGarageId })
+              .update({ garage_id: garageId })
               .eq('id', signUpData.user.id);
             if (profileError) throw profileError;
             
@@ -310,36 +240,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
       </div>
 
       <form onSubmit={handleAuth} className="mt-8 space-y-6">
-        {userType === "staff" && (
-          <div className="space-y-2">
-            <Label htmlFor="garage">Select Garage</Label>
-            <Select 
-              value={selectedGarageId} 
-              onValueChange={setSelectedGarageId}
-              disabled={fetchingGarages}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue 
-                  placeholder={fetchingGarages ? "Loading garages..." : "Select a garage"} 
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {garages.length > 0 ? (
-                  garages.map((garage) => (
-                    <SelectItem key={garage.id} value={garage.id}>
-                      {garage.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-garages" disabled>
-                    No garages available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
         {mode === "signup" && (
           <>
             <div className="grid grid-cols-2 gap-4">
@@ -412,7 +312,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         <Button 
           type="submit" 
           className="w-full" 
-          disabled={loading || (userType === "staff" && !selectedGarageId)}
+          disabled={loading}
         >
           {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
         </Button>

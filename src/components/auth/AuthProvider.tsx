@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 interface AuthContextType {
   session: Session | null;
@@ -32,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
-      // Fix: Use column names without table prefixes
+      // First try to get garage_id from profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, garage_id')
@@ -49,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
+      // If no garage_id in profile, check if user owns any garages
       const { data: ownedGarages, error: ownedError } = await supabase
         .from('garages')
         .select('id')
@@ -62,6 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
+        // Update the profile with this garage_id
         await supabase
           .from('profiles')
           .update({ garage_id: ownedGarageId })
@@ -72,6 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
+      // If not an owner, check if user is a member of any garage
       const { data: memberships, error: membershipError } = await supabase
         .from('garage_members')
         .select('garage_id')
@@ -85,6 +89,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
+        // Update the profile with this garage_id
         await supabase
           .from('profiles')
           .update({ garage_id: memberGarageId })
@@ -95,6 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
+      // If no garage found yet, try to use default Tractic garage
       if (!garageId) {
         console.log("Attempting to use default Tractic garage");
         const { data: defaultGarage, error: defaultError } = await supabase
@@ -109,13 +115,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const defaultGarageId = defaultGarage[0].id;
           console.log("Using default garage:", defaultGarageId);
           setGarageId(defaultGarageId);
+          
+          // Add user as a member of this default garage
+          await supabase
+            .from('garage_members')
+            .upsert([
+              { user_id: userId, garage_id: defaultGarageId, role: 'front_desk' }
+            ]);
+            
+          // Update profile with this garage_id
+          await supabase
+            .from('profiles')
+            .update({ garage_id: defaultGarageId })
+            .eq('id', userId);
+            
           setHasFetchedGarage(true);
         } else {
+          // No default garage found
           console.error("Could not find default garage");
+          toast.error("No garage found for your account. Please contact an administrator.");
         }
       }
     } catch (error) {
       console.error("Error fetching user garage:", error);
+      toast.error("Error finding your garage. Please try again or contact support.");
     } finally {
       setFetchingGarage(false);
       setLoading(false);
