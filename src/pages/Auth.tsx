@@ -49,7 +49,7 @@ const Auth = () => {
             }
             
             // If the user is an administrator and is on the owner login page, 
-            // always redirect to garage management
+            // redirect to garage management
             navigate("/garage-management");
             return;
           }

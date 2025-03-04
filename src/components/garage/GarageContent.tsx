@@ -23,6 +23,7 @@ interface GarageContentProps {
   debugInfo: string | null;
   onSelectGarage: (garageId: string) => Promise<void>;
   refreshGarages: () => void;
+  onCreateGarage?: () => void;
 }
 
 export const GarageContent = ({ 
@@ -31,7 +32,8 @@ export const GarageContent = ({
   error, 
   debugInfo,
   onSelectGarage,
-  refreshGarages
+  refreshGarages,
+  onCreateGarage
 }: GarageContentProps) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -42,12 +44,32 @@ export const GarageContent = ({
     toast.success("Garage created successfully");
   };
 
+  const handleCreateClick = () => {
+    if (onCreateGarage) {
+      onCreateGarage();
+    } else {
+      setShowCreateForm(true);
+    }
+  };
+
+  if (showCreateForm) {
+    return (
+      <CreateGarageForm 
+        onBack={() => setShowCreateForm(false)}
+        onComplete={handleGarageCreated}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
       <div className="max-w-4xl w-full space-y-8">
         <PageHeader 
           title="Your Garages" 
-          description="Select a garage to manage or create a new one"
+          description={garages.length > 0 
+            ? "Select a garage to manage or create a new one"
+            : "Get started by creating your first garage"
+          }
         />
         
         <GarageAlerts 
@@ -60,14 +82,19 @@ export const GarageContent = ({
           garages={garages}
           loading={loading}
           onSelectGarage={onSelectGarage}
-          onCreateGarage={() => setShowCreateForm(true)}
+          onCreateGarage={handleCreateClick}
         />
         
-        {showCreateForm && (
-          <CreateGarageForm 
-            onBack={() => setShowCreateForm(false)}
-            onComplete={handleGarageCreated}
-          />
+        {garages.length === 0 && !loading && (
+          <div className="text-center">
+            <Button 
+              size="lg" 
+              onClick={handleCreateClick}
+              className="mt-4"
+            >
+              Create Your First Garage
+            </Button>
+          </div>
         )}
         
         <div className="text-center mt-8">

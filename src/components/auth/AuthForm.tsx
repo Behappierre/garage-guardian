@@ -50,64 +50,67 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   }, [userType]);
 
   useEffect(() => {
-    const fetchGarages = async () => {
-      try {
-        setFetchingGarages(true);
-        
-        // Simple query to get all garages
-        const { data, error } = await supabase
-          .from('garages')
-          .select('id, name, slug')
-          .order('name');
-        
-        if (error) throw error;
-        
-        console.log("Fetched garages:", data);
-        
-        if (data && data.length > 0) {
-          setGarages(data);
-          // Always look for Tractic garage first
-          const tracticGarage = data.find(garage => 
-            garage.name.toLowerCase() === 'tractic' || 
-            garage.slug.toLowerCase() === 'tractic'
-          );
+    // Only fetch garages for staff members, not for garage owners
+    if (userType === "staff") {
+      const fetchGarages = async () => {
+        try {
+          setFetchingGarages(true);
           
-          if (tracticGarage) {
-            setSelectedGarageId(tracticGarage.id);
+          // Simple query to get all garages
+          const { data, error } = await supabase
+            .from('garages')
+            .select('id, name, slug')
+            .order('name');
+          
+          if (error) throw error;
+          
+          console.log("Fetched garages:", data);
+          
+          if (data && data.length > 0) {
+            setGarages(data);
+            // Always look for Tractic garage first
+            const tracticGarage = data.find(garage => 
+              garage.name.toLowerCase() === 'tractic' || 
+              garage.slug.toLowerCase() === 'tractic'
+            );
+            
+            if (tracticGarage) {
+              setSelectedGarageId(tracticGarage.id);
+            } else {
+              // Otherwise use the first garage in the list
+              setSelectedGarageId(data[0].id);
+            }
           } else {
-            // Otherwise use the first garage in the list
-            setSelectedGarageId(data[0].id);
+            // Fallback option if no garages are found
+            const fallbackGarages: Garage[] = [
+              { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
+            ];
+            setGarages(fallbackGarages);
+            setSelectedGarageId(fallbackGarages[0].id);
           }
-        } else {
-          // Fallback option if no garages are found
+        } catch (error: any) {
+          console.error("Error fetching garages:", error.message);
+          
+          // Fallback to hardcoded Tractic garage in case of any errors
           const fallbackGarages: Garage[] = [
             { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
           ];
           setGarages(fallbackGarages);
           setSelectedGarageId(fallbackGarages[0].id);
+          
+          toast({
+            variant: "destructive",
+            title: "Warning",
+            description: "Could not load garages. Using default garage.",
+          });
+        } finally {
+          setFetchingGarages(false);
         }
-      } catch (error: any) {
-        console.error("Error fetching garages:", error.message);
-        
-        // Fallback to hardcoded Tractic garage in case of any errors
-        const fallbackGarages: Garage[] = [
-          { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
-        ];
-        setGarages(fallbackGarages);
-        setSelectedGarageId(fallbackGarages[0].id);
-        
-        toast({
-          variant: "destructive",
-          title: "Warning",
-          description: "Could not load garages. Using default garage.",
-        });
-      } finally {
-        setFetchingGarages(false);
-      }
-    };
+      };
 
-    fetchGarages();
-  }, []);
+      fetchGarages();
+    }
+  }, [userType]);
 
   const handleGarageCreationComplete = (garageId: string) => {
     // After garage creation, proceed to garage management page
@@ -159,6 +162,11 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             // For garage owners, show the garage creation form
             setNewUserId(signUpData.user.id);
             setShowGarageForm(true);
+            
+            toast({
+              title: "Account created!",
+              description: "Now let's set up your garage.",
+            });
           } else {
             // For staff, add them to an existing garage
             // Add user to garage_members table
@@ -179,12 +187,12 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               .update({ garage_id: selectedGarageId })
               .eq('id', signUpData.user.id);
             if (profileError) throw profileError;
+            
+            toast({
+              title: "Success!",
+              description: "Please check your email to confirm your account.",
+            });
           }
-
-          toast({
-            title: "Success!",
-            description: "Please check your email to confirm your account.",
-          });
         }
       } else {
         // Sign in logic

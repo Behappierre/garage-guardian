@@ -42,9 +42,17 @@ export const useGarages = (): GarageHookReturn => {
       return user;
     } catch (error: any) {
       console.error("Error fetching garages:", error.message);
-      setError("Failed to load your garages. Please try again later.");
-      toast.error("Failed to load your garages");
-      setGarages([]);
+      
+      // Don't show error for administrators with no garages
+      if (error.message === "No garages found for your account.") {
+        console.log("Administrator has no garages yet - this is expected for new users");
+        setError(null);
+        setGarages([]);
+      } else {
+        setError("Failed to load your garages. Please try again later.");
+        toast.error("Failed to load your garages");
+        setGarages([]);
+      }
       
       // Increment fetch attempts
       setFetchAttempts(prev => prev + 1);
