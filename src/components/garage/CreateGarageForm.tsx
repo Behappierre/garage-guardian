@@ -65,7 +65,7 @@ export const CreateGarageForm = ({ onBack, onComplete }: CreateGarageFormProps) 
         throw new Error("Could not determine current user");
       }
       
-      // Create the garage - bare minimum required fields
+      // Create the garage - explicitly reference columns to avoid ambiguity
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert({
@@ -76,7 +76,7 @@ export const CreateGarageForm = ({ onBack, onComplete }: CreateGarageFormProps) 
           phone: data.phone,
           owner_id: userData.user.id
         })
-        .select();
+        .select('id, name, slug, address, email, phone, owner_id');
       
       if (garageError) {
         console.error("Garage creation error:", garageError);

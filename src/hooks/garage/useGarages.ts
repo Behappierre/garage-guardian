@@ -26,10 +26,11 @@ export const useGarages = (): GarageHookReturn => {
         return null;
       }
       
-      // Simple direct fetch of garages where the user is the owner
+      // Simplified and explicit query to avoid ambiguous column references
+      // Specifically name the columns we want to select from the garages table
       const { data: ownedGarages, error: ownedError } = await supabase
         .from('garages')
-        .select('id, name, slug, address, created_at, owner_id')
+        .select('id, name, slug, address, created_at, owner_id, email, phone')
         .eq('owner_id', user.id);
         
       if (ownedError) {
