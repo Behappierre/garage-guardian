@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -64,11 +63,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Update the profile with this garage_id
+          // Update the profile with this garage_id using match instead of eq
           const { error: updateError } = await supabase
             .from('profiles')
             .update({ garage_id: ownedGarageId })
-            .eq('id', userId);
+            .match({ id: userId });
             
           if (updateError) {
             console.error("Error updating profile with garage_id:", updateError);
@@ -113,11 +112,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
-        // Update the profile with this garage_id
+        // Update the profile with this garage_id using match instead of eq
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ garage_id: ownedGarageId })
-          .eq('id', userId);
+          .match({ id: userId });
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
@@ -143,11 +142,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
-        // Update the profile with this garage_id
+        // Update the profile with this garage_id using match instead of eq
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ garage_id: memberGarageId })
-          .eq('id', userId);
+          .match({ id: userId });
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
@@ -162,7 +161,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If no garage found yet, try to use default Tractic garage
       console.log("Attempting to use default Tractic garage");
       
-      // FIX: Use explicit column names without table prefixes for the select
       const { data: defaultGarage, error: defaultError } = await supabase
         .from('garages')
         .select('id')
@@ -187,11 +185,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error adding user to default garage:", memberError);
         }
           
-        // Update profile with this garage_id
+        // Update profile with this garage_id using match instead of eq
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ garage_id: defaultGarageId })
-          .eq('id', userId);
+          .match({ id: userId });
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);

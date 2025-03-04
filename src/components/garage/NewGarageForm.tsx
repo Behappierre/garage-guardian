@@ -88,11 +88,11 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Update user profile - FIX: Specify the full column name to avoid ambiguity
+      // Update user profile using match instead of eq
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: newGarage[0].id })
-        .eq('id', userData.user.id);
+        .match({ id: userData.user.id });
         
       if (profileError) {
         console.error("Error updating profile:", profileError);
