@@ -44,13 +44,19 @@ const Auth = () => {
             }
 
             console.log("User role:", roleData?.role);
-            console.log("User type:", type);
+            console.log("User type page:", type);
 
             // For owner login page, only allow administrators
             if (type === "owner") {
               if (roleData?.role === 'administrator') {
                 // Redirect administrators to garage management
                 navigate("/garage-management");
+                return;
+              } else {
+                // Non-administrator on owner login page
+                toast.error("Only administrators can access the garage owner area");
+                await supabase.auth.signOut();
+                setIsChecking(false);
                 return;
               }
             } else {
@@ -83,7 +89,8 @@ const Auth = () => {
           } catch (error: any) {
             console.error("Error verifying role:", error.message);
             toast.error("Error verifying role: " + error.message);
-            // Don't sign out on error, just stay on the auth page
+            // Sign out to allow a clean authentication
+            await supabase.auth.signOut();
             setIsChecking(false);
           }
         } else {

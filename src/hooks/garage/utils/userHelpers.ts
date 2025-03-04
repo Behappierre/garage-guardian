@@ -1,113 +1,61 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { User } from "@supabase/supabase-js";
 
-// Check if a user has the administrator role
-export const isAdministrator = async (userId: string): Promise<boolean> => {
+// Check if a user has a specific role
+export const hasRole = async (userId: string, role: 'administrator' | 'technician' | 'front_desk'): Promise<boolean> => {
   try {
-    console.log(`Checking if user ${userId} has administrator role`);
-    
     const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'administrator')
-      .maybeSingle();
-    
+      .rpc('has_role', { 
+        user_id: userId, 
+        role: role 
+      });
+      
     if (error) {
-      console.error("Error checking administrator role:", error.message);
+      console.error("Error checking role:", error.message);
       return false;
     }
     
-    console.log("User role data:", data);
     return !!data;
   } catch (err) {
-    console.error("Exception when checking if user is administrator:", err);
+    console.error("Exception checking role:", err);
     return false;
   }
 };
 
-// Assign administrator role to a user
-export const assignAdministratorRole = async (userId: string): Promise<boolean> => {
+// Check if user is a garage owner
+export const isGarageOwner = async (userId: string): Promise<boolean> => {
   try {
-    // First check if the user already has the administrator role
-    const isAdmin = await isAdministrator(userId);
-    
-    if (isAdmin) {
-      console.log(`User ${userId} already has administrator role`);
+    // First check if user owns any garages directly
+    const { data: ownedGarages, error: ownedError } = await supabase
+      .from('garages')
+      .select('id')
+      .eq('owner_id', userId)
+      .limit(1);
+      
+    if (!ownedError && ownedGarages && ownedGarages.length > 0) {
       return true;
     }
     
-    // If not, assign the administrator role
-    const { error } = await supabase
-      .from('user_roles')
-      .insert([
-        { 
-          user_id: userId,
-          role: 'administrator'
-        }
-      ]);
-    
-    if (error) {
-      console.error("Error assigning administrator role:", error.message);
+    // As a fallback, check the membership table
+    const { data, error } = await supabase
+      .from('garage_members')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'owner')
+      .limit(1);
+      
+    if (error || !data || data.length === 0) {
       return false;
     }
     
-    console.log(`Assigned administrator role to user ${userId}`);
     return true;
   } catch (err) {
-    console.error("Exception when assigning administrator role:", err);
+    console.error("Error checking if user is garage owner:", err);
     return false;
   }
 };
 
-// Get all roles for a user
-export const getUserRoles = async (userId: string): Promise<string[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-    
-    if (error) {
-      console.error("Error fetching user roles:", error.message);
-      return [];
-    }
-    
-    if (!data || data.length === 0) {
-      return [];
-    }
-    
-    return data.map(item => item.role);
-  } catch (err) {
-    console.error("Exception when getting user roles:", err);
-    return [];
-  }
-};
-
-// Get the primary role for a user (first role found)
-export const getUserRole = async (userId: string): Promise<string | null> => {
-  try {
-    console.log(`Getting primary role for user ${userId}`);
-    
-    const roles = await getUserRoles(userId);
-    
-    if (roles.length === 0) {
-      console.log(`No roles found for user ${userId}`);
-      return null;
-    }
-    
-    // Return the first role as the primary role
-    // Prioritize administrator if it exists
-    if (roles.includes('administrator')) {
-      console.log(`User ${userId} has administrator role`);
-      return 'administrator';
-    }
-    
-    console.log(`Primary role for user ${userId}: ${roles[0]}`);
-    return roles[0];
-  } catch (err) {
-    console.error("Exception when getting user's primary role:", err);
-    return null;
-  }
+// Check if user is an administrator
+export const isAdministrator = async (userId: string): Promise<boolean> => {
+  return await hasRole(userId, 'administrator');
 };

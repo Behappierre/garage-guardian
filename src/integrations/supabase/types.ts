@@ -352,6 +352,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          owner_id: string | null
           phone: string | null
           settings: Json | null
           slug: string
@@ -364,6 +365,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          owner_id?: string | null
           phone?: string | null
           settings?: Json | null
           slug: string
@@ -376,6 +378,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          owner_id?: string | null
           phone?: string | null
           settings?: Json | null
           slug?: string

@@ -60,7 +60,18 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         phone: data.phone
       });
       
-      // Create the garage with a clear insert operation
+      // Get the current user if not provided
+      let currentUserId = userId;
+      if (!currentUserId) {
+        const { data: userData } = await supabase.auth.getUser();
+        currentUserId = userData.user?.id;
+        
+        if (!currentUserId) {
+          throw new Error("Could not determine current user");
+        }
+      }
+      
+      // Create the garage with owner_id directly set
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert({
@@ -68,7 +79,8 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
           slug: slug,
           address: data.address,
           email: data.email,
-          phone: data.phone
+          phone: data.phone,
+          owner_id: currentUserId  // Set the owner directly
         })
         .select();
       
@@ -87,23 +99,20 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
       const newGarageId = garageData[0].id;
       console.log("Created garage:", newGarageId);
       
-      // Get the current user if not provided
-      let currentUserId = userId;
-      if (!currentUserId) {
-        const { data: userData } = await supabase.auth.getUser();
-        currentUserId = userData.user?.id;
-        
-        if (!currentUserId) {
-          throw new Error("Could not determine current user");
-        }
-      }
-      
-      console.log("Adding user as garage owner:", currentUserId);
-      
-      // Add user as garage owner
+      // For backward compatibility, also add the user as a garage member
       const success = await addUserToGarage(currentUserId, newGarageId, 'owner');
       if (!success) {
-        throw new Error("Failed to add user as garage owner");
+        console.warn("Failed to add user as garage member, but garage was created successfully");
+      }
+      
+      // Update user's profile with selected garage
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: newGarageId })
+        .eq('id', currentUserId);
+      
+      if (profileError && !profileError.message.includes("recursive")) {
+        console.warn("Non-critical error updating profile:", profileError.message);
       }
       
       // Refresh the session to update claims

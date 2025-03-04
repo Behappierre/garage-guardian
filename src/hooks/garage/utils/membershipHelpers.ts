@@ -1,96 +1,88 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Garage } from "../types";
 
-// Add user as a member of a garage - using proper SELECT and INSERT queries
+// Add a user to a garage with a specific role
 export const addUserToGarage = async (
-  userId: string, 
-  garageId: string, 
-  role: string = 'owner'
+  userId: string,
+  garageId: string,
+  role: 'owner' | 'staff' | 'technician' | 'front_desk'
 ): Promise<boolean> => {
   try {
-    console.log(`Attempting to add user ${userId} to garage ${garageId} with role ${role}`);
+    console.log(`Adding user ${userId} as ${role} to garage ${garageId}`);
     
-    // First check if the membership already exists
-    const { data, error } = await supabase
-      .from('garage_members')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('garage_id', garageId)
-      .limit(1);
+    // If the role is 'owner', update the garage record directly
+    if (role === 'owner') {
+      const { error: ownerError } = await supabase
+        .from('garages')
+        .update({ owner_id: userId })
+        .eq('id', garageId);
       
-    if (error) {
-      console.error("Error checking existing membership:", error.message);
-    } else if (data && data.length > 0) {
-      console.log(`User ${userId} is already a member of garage ${garageId}`);
-      return true;
+      if (ownerError) {
+        console.error("Error setting garage owner:", ownerError.message);
+        return false;
+      }
     }
     
-    // If no existing membership found, create one
-    const memberData = {
-      user_id: userId,
-      garage_id: garageId,
-      role: role
-    };
-    
-    console.log("Creating garage membership with data:", memberData);
-    
-    const { error: insertError } = await supabase
+    // We still add a record to garage_members for compatibility with existing code
+    const { error } = await supabase
       .from('garage_members')
-      .insert(memberData);
-      
-    if (insertError) {
-      console.error("Error adding user to garage:", insertError.message);
+      .insert({
+        user_id: userId,
+        garage_id: garageId,
+        role: role
+      });
+    
+    if (error) {
+      console.error("Error adding user to garage:", error.message);
       return false;
     }
     
-    console.log(`Added user ${userId} to garage ${garageId} with role ${role}`);
-    
-    // Update the user's profile with the garage ID for convenience
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userId);
-      
-    if (profileError) {
-      console.error("Non-critical error updating profile with garage_id:", profileError.message);
-    }
-    
+    console.log(`Successfully added user ${userId} as ${role} to garage ${garageId}`);
     return true;
-  } catch (err) {
-    console.error("Exception when adding user as garage member:", err);
+  } catch (err: any) {
+    console.error("Exception adding user to garage:", err.message);
     return false;
   }
 };
 
-// Get user's garage memberships - using proper SQL SELECT
-export const getUserGarageMemberships = async (userId: string): Promise<string[]> => {
+// Get list of garages a user is a member of
+export const getUserGarages = async (userId: string): Promise<string[]> => {
   try {
-    console.log(`Fetching garage memberships for user ${userId}`);
+    console.log(`Getting garages for user ${userId}`);
     
-    // Use the correct format for select without table qualifier
-    const { data, error } = await supabase
+    // First check garages owned by the user
+    const { data: ownedGarages, error: ownedError } = await supabase
+      .from('garages')
+      .select('id')
+      .eq('owner_id', userId);
+    
+    if (ownedError) {
+      console.error("Error getting owned garages:", ownedError.message);
+      return [];
+    }
+    
+    // Then check garage memberships
+    const { data: memberships, error: membershipError } = await supabase
       .from('garage_members')
       .select('garage_id')
       .eq('user_id', userId);
     
-    if (error) {
-      console.error("Error fetching garage memberships:", error.message);
+    if (membershipError) {
+      console.error("Error getting garage memberships:", membershipError.message);
       return [];
     }
     
-    if (!data || data.length === 0) {
-      console.log("No garage memberships found for user");
-      return [];
-    }
+    // Combine both results (owned garages + memberships)
+    const ownedIds = ownedGarages.map(g => g.id);
+    const membershipIds = memberships.map(m => m.garage_id);
     
-    // Extract garage IDs from the data array
-    const garageIds = data.map(item => item.garage_id);
+    // Use Set to remove duplicates
+    const uniqueGarageIds = [...new Set([...ownedIds, ...membershipIds])];
     
-    console.log("User garage IDs:", garageIds);
-    return garageIds;
-  } catch (err) {
-    console.error("Exception when getting user garage memberships:", err);
+    console.log(`Found ${uniqueGarageIds.length} garages for user ${userId}`);
+    return uniqueGarageIds;
+  } catch (err: any) {
+    console.error("Exception getting user garages:", err.message);
     return [];
   }
 };

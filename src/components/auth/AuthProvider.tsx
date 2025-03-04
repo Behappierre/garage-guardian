@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserGarage = async (userId: string) => {
     try {
-      // First try to get garage from profiles table
+      // Try to get from profile first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('garage_id')
@@ -69,51 +69,63 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // If profile query fails with recursion error or no garage_id, try direct SQL query
-      if (profileError || !profileData?.garage_id) {
-        console.log("Getting garage via RPC due to profile query issue:", 
-                    profileError ? profileError.message : "No garage in profile");
+      // Check if user owns any garages
+      const { data: ownedGarages, error: ownedError } = await supabase
+        .from('garages')
+        .select('id')
+        .eq('owner_id', userId)
+        .limit(1);
         
-        // Use RPC function to bypass RLS policies
-        const { data, error } = await supabase.rpc('execute_read_only_query', {
-          query_text: `SELECT garage_id FROM garage_members WHERE user_id = '${userId}' LIMIT 1`
-        });
+      if (!ownedError && ownedGarages && ownedGarages.length > 0) {
+        const ownedGarageId = ownedGarages[0].id;
+        setGarageId(ownedGarageId);
         
-        if (error) {
-          console.error("Error in RPC garage query:", error.message);
+        // Try to update profile with this garage for future use
+        await supabase
+          .from('profiles')
+          .update({ garage_id: ownedGarageId })
+          .eq('id', userId);
           
-          // If all else fails, get default Tractic garage as fallback
-          const { data: garageData } = await supabase.rpc('execute_read_only_query', {
-            query_text: `SELECT id FROM garages WHERE name = 'Tractic' OR slug = 'tractic' LIMIT 1`
-          });
+        setLoading(false);
+        return;
+      }
+      
+      // As a fallback, check garage memberships
+      const { data: memberships, error: membershipError } = await supabase
+        .from('garage_members')
+        .select('garage_id')
+        .eq('user_id', userId)
+        .limit(1);
+        
+      if (!membershipError && memberships && memberships.length > 0) {
+        const memberGarageId = memberships[0].garage_id;
+        setGarageId(memberGarageId);
+        
+        // Try to update profile with this garage
+        await supabase
+          .from('profiles')
+          .update({ garage_id: memberGarageId })
+          .eq('id', userId);
           
-          if (garageData && Array.isArray(garageData) && garageData.length > 0) {
-            const defaultGarageId = (garageData[0] as Record<string, any>).id as string;
-            setGarageId(defaultGarageId);
-            
-            // Try to update the user's profile with this garage
-            await supabase
-              .from('profiles')
-              .update({ garage_id: defaultGarageId })
-              .eq('id', userId);
-              
-            console.log("Using default Tractic garage:", defaultGarageId);
-          } else {
-            console.error("Could not find any garage, including default");
-            setGarageId(null);
-          }
-        } else if (data && Array.isArray(data) && data.length > 0) {
-          const fetchedGarageId = (data[0] as Record<string, any>).garage_id as string;
-          setGarageId(fetchedGarageId);
-          console.log("Found garage via RPC:", fetchedGarageId);
-        } else {
-          console.log("No garage membership found via RPC");
-          setGarageId(null);
+        setLoading(false);
+        return;
+      }
+      
+      // If all else fails, use default garage as fallback
+      if (!garageId) {
+        const { data: defaultGarage } = await supabase
+          .from('garages')
+          .select('id')
+          .eq('slug', 'tractic')
+          .limit(1);
+          
+        if (defaultGarage && defaultGarage.length > 0) {
+          const defaultGarageId = defaultGarage[0].id;
+          setGarageId(defaultGarageId);
         }
       }
     } catch (error) {
-      console.error("Unexpected error fetching user garage:", error);
-      setGarageId(null);
+      console.error("Error fetching user garage:", error);
     } finally {
       setLoading(false);
     }
