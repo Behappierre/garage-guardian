@@ -69,9 +69,11 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
   try {
     console.log(`Fetching garage memberships for user ${userId}`);
     
+    // Fix: Remove the table qualifier from the select statement
+    // The issue is that when using the .select('garage_id') syntax, we should not qualify the column name
     const { data, error } = await supabase
       .from('garage_members')
-      .select('garage_members.garage_id')
+      .select('garage_id')  // Remove the table qualifier here
       .eq('garage_members.user_id', userId);
     
     if (error) {
