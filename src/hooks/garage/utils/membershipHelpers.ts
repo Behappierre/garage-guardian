@@ -15,8 +15,8 @@ export const addUserToGarage = async (
     const { data, error } = await supabase
       .from('garage_members')
       .select('id')
-      .eq('user_id', userId)
-      .eq('garage_id', garageId)
+      .eq('garage_members.user_id', userId)
+      .eq('garage_members.garage_id', garageId)
       .limit(1);
       
     if (error) {
@@ -47,11 +47,11 @@ export const addUserToGarage = async (
     console.log(`Added user ${userId} to garage ${garageId} with role ${role}`);
     
     // Update the user's profile with the garage ID for convenience
-    // Explicitly specify the table name for garage_id in the SQL query
+    // Explicitly qualify the garage_id column with the profiles table name
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: garageId })
-      .eq('id', userId);
+      .eq('profiles.id', userId);
       
     if (profileError) {
       console.error("Non-critical error updating profile with garage_id:", profileError.message);
@@ -71,8 +71,8 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
     
     const { data, error } = await supabase
       .from('garage_members')
-      .select('garage_id')
-      .eq('user_id', userId);
+      .select('garage_members.garage_id')
+      .eq('garage_members.user_id', userId);
     
     if (error) {
       console.error("Error fetching garage memberships:", error.message);
