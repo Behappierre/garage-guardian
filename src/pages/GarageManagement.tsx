@@ -214,9 +214,9 @@ const GarageManagement = () => {
         )}
         
         {garages.length === 0 && !error && (
-          <Alert variant="warning" className="mb-4 bg-yellow-50 border-yellow-200">
-            <InfoIcon className="h-4 w-4 text-yellow-700" />
-            <AlertDescription className="text-yellow-700">
+          <Alert variant="warning" className="mb-4">
+            <InfoIcon className="h-4 w-4" />
+            <AlertDescription>
               No garages found. You can create a new garage using the button below.
             </AlertDescription>
           </Alert>
