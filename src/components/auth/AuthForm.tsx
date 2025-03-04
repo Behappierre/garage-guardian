@@ -9,9 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { GarageForm } from "./GarageForm";
 
 type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
+type UserType = "owner" | "staff";
 
 interface Garage {
   id: string;
@@ -19,7 +21,11 @@ interface Garage {
   slug: string;
 }
 
-export const AuthForm = () => {
+interface AuthFormProps {
+  userType: UserType;
+}
+
+export const AuthForm = ({ userType }: AuthFormProps) => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [loading, setLoading] = useState(false);
@@ -31,7 +37,18 @@ export const AuthForm = () => {
   const [garages, setGarages] = useState<Garage[]>([]);
   const [selectedGarageId, setSelectedGarageId] = useState<string>("");
   const [fetchingGarages, setFetchingGarages] = useState(true);
+  const [showGarageForm, setShowGarageForm] = useState(false);
+  const [newUserId, setNewUserId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Set default role based on user type
+  useEffect(() => {
+    if (userType === "owner") {
+      setRole("administrator");
+    } else {
+      setRole("front_desk");
+    }
+  }, [userType]);
 
   useEffect(() => {
     const fetchGarages = async () => {
@@ -106,10 +123,15 @@ export const AuthForm = () => {
     fetchGarages();
   }, []);
 
+  const handleGarageCreationComplete = (garageId: string) => {
+    // After garage creation, proceed to dashboard
+    navigate("/dashboard");
+  };
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedGarageId) {
+    if (userType === "staff" && !selectedGarageId) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -147,30 +169,37 @@ export const AuthForm = () => {
             ]);
           if (roleError) throw roleError;
           
-          // Add user to garage_members table
-          const { error: garageMemberError } = await supabase
-            .from('garage_members')
-            .insert([
-              {
-                user_id: signUpData.user.id,
-                garage_id: selectedGarageId,
-                role: role
-              }
-            ]);
-          if (garageMemberError) throw garageMemberError;
-          
-          // Update user's profile with garage_id
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ garage_id: selectedGarageId })
-            .eq('id', signUpData.user.id);
-          if (profileError) throw profileError;
-        }
+          if (userType === "owner") {
+            // For garage owners, show the garage creation form
+            setNewUserId(signUpData.user.id);
+            setShowGarageForm(true);
+          } else {
+            // For staff, add them to an existing garage
+            // Add user to garage_members table
+            const { error: garageMemberError } = await supabase
+              .from('garage_members')
+              .insert([
+                {
+                  user_id: signUpData.user.id,
+                  garage_id: selectedGarageId,
+                  role: role
+                }
+              ]);
+            if (garageMemberError) throw garageMemberError;
+            
+            // Update user's profile with garage_id
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ garage_id: selectedGarageId })
+              .eq('id', signUpData.user.id);
+            if (profileError) throw profileError;
+          }
 
-        toast({
-          title: "Success!",
-          description: "Please check your email to confirm your account.",
-        });
+          toast({
+            title: "Success!",
+            description: "Please check your email to confirm your account.",
+          });
+        }
       } else {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
@@ -238,44 +267,54 @@ export const AuthForm = () => {
     }
   };
 
+  if (showGarageForm && newUserId) {
+    return <GarageForm userId={newUserId} onComplete={handleGarageCreationComplete} />;
+  }
+
   return (
     <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-lg">
       <div className="text-center">
-        <h2 className="text-2xl font-bold">{mode === "signin" ? "Sign In" : "Create Account"}</h2>
+        <h2 className="text-2xl font-bold">
+          {userType === "owner" 
+            ? (mode === "signin" ? "Garage Owner Sign In" : "Create Garage Owner Account") 
+            : (mode === "signin" ? "Staff Sign In" : "Create Staff Account")}
+        </h2>
         <p className="mt-2 text-sm text-gray-600">
-          {mode === "signin" ? "Welcome back!" : "Join GarageGuardian today"}
+          {mode === "signin" ? "Welcome back!" : "Join GarageWizz today"}
         </p>
       </div>
 
       <form onSubmit={handleAuth} className="mt-8 space-y-6">
-        {/* Garage Selection - shown for both sign in and sign up */}
-        <div className="space-y-2">
-          <Label htmlFor="garage">Select Garage</Label>
-          <Select 
-            value={selectedGarageId} 
-            onValueChange={setSelectedGarageId}
-            disabled={fetchingGarages}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue 
-                placeholder={fetchingGarages ? "Loading garages..." : "Select a garage"} 
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {garages.length > 0 ? (
-                garages.map((garage) => (
-                  <SelectItem key={garage.id} value={garage.id}>
-                    {garage.name}
+        {/* Garage Selection - Only shown for staff */}
+        {userType === "staff" && (
+          <div className="space-y-2">
+            <Label htmlFor="garage">Select Garage</Label>
+            <Select 
+              value={selectedGarageId} 
+              onValueChange={setSelectedGarageId}
+              disabled={fetchingGarages}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue 
+                  placeholder={fetchingGarages ? "Loading garages..." : "Select a garage"} 
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {garages.length > 0 ? (
+                  garages.map((garage) => (
+                    <SelectItem key={garage.id} value={garage.id}>
+                      {garage.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-garages" disabled>
+                    No garages available
                   </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="no-garages" disabled>
-                  No garages available
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {mode === "signup" && (
           <>
@@ -302,23 +341,25 @@ export const AuthForm = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Select Your Role</Label>
-              <RadioGroup value={role} onValueChange={(value) => setRole(value as Role)} className="grid grid-cols-1 gap-2">
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="administrator" id="admin" />
-                  <Label htmlFor="admin">Administrator</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="technician" id="technician" />
-                  <Label htmlFor="technician">Technician</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="front_desk" id="front_desk" />
-                  <Label htmlFor="front_desk">Front Desk</Label>
-                </div>
-              </RadioGroup>
-            </div>
+            {userType === "staff" && (
+              <div className="space-y-2">
+                <Label>Select Your Role</Label>
+                <RadioGroup value={role} onValueChange={(value) => setRole(value as Role)} className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="administrator" id="admin" />
+                    <Label htmlFor="admin">Administrator</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="technician" id="technician" />
+                    <Label htmlFor="technician">Technician</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="front_desk" id="front_desk" />
+                    <Label htmlFor="front_desk">Front Desk</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
           </>
         )}
 
@@ -344,7 +385,11 @@ export const AuthForm = () => {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading || !selectedGarageId}>
+        <Button 
+          type="submit" 
+          className="w-full" 
+          disabled={loading || (userType === "staff" && !selectedGarageId)}
+        >
           {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
         </Button>
 
@@ -357,6 +402,19 @@ export const AuthForm = () => {
             {mode === "signin"
               ? "Don't have an account? Sign up"
               : "Already have an account? Sign in"}
+          </button>
+        </div>
+
+        {/* Link to switch between owner and staff forms */}
+        <div className="text-center text-sm pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={() => navigate(userType === "owner" ? "/auth?type=staff" : "/")}
+            className="text-gray-600 hover:underline"
+          >
+            {userType === "owner" 
+              ? "Sign in as Staff Member instead" 
+              : "Return to Home Page"}
           </button>
         </div>
       </form>

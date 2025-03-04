@@ -7,6 +7,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ChatAgent } from "@/components/chat/ChatAgent";
 import Auth from "@/pages/Auth";
+import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
 import Appointments from "@/pages/Appointments";
 import Clients from "@/pages/Clients";
@@ -27,7 +28,7 @@ function App() {
         <AuthProvider>
           <Router>
             <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
               <Route
                 path="/dashboard"

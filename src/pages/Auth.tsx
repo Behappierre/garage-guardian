@@ -1,14 +1,26 @@
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [userType, setUserType] = useState<"owner" | "staff">("staff");
 
   useEffect(() => {
+    // Check if we should show owner or staff sign-up/in
+    const params = new URLSearchParams(location.search);
+    const type = params.get("type");
+    if (type === "owner") {
+      setUserType("owner");
+    } else {
+      setUserType("staff");
+    }
+
+    // Check if user is already authenticated
     const checkAuthAndRole = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -46,7 +58,7 @@ const Auth = () => {
     };
 
     checkAuthAndRole();
-  }, [navigate]);
+  }, [navigate, location.search]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -54,7 +66,7 @@ const Auth = () => {
         <h1 className="text-center text-3xl font-bold text-gray-900 mb-8">
           GarageWizz
         </h1>
-        <AuthForm />
+        <AuthForm userType={userType} />
       </div>
     </div>
   );
