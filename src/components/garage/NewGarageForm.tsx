@@ -88,7 +88,9 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Update the user's profile with the garage ID using our new function
+      // Update the user's profile with the garage ID using our function
+      // Make sure we're passing valid UUID strings
+      console.log("Updating profile with garage_id:", newGarage[0].id);
       const { error: profileError } = await supabase.rpc(
         'update_profile_garage', 
         { 
@@ -99,6 +101,8 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         
       if (profileError) {
         console.error("Error updating profile:", profileError);
+      } else {
+        console.log("Profile updated successfully with garage ID");
       }
       
       toast.success("Garage created successfully");

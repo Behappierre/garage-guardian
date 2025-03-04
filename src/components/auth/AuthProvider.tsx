@@ -64,7 +64,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Update the profile with this garage_id using our new function
+          // Update the profile with this garage_id using our RPC function
+          console.log("Updating profile with owned garage_id:", ownedGarageId);
           const { error: updateError } = await supabase.rpc(
             'update_profile_garage', 
             { 
@@ -75,6 +76,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
           if (updateError) {
             console.error("Error updating profile with garage_id:", updateError);
+          } else {
+            console.log("Profile updated successfully with owned garage ID");
           }
             
           setLoading(false);
@@ -116,7 +119,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
-        // Update the profile with this garage_id using our new function
+        // Update the profile with this garage_id using our RPC function
+        console.log("Updating profile with owned garage_id:", ownedGarageId);
         const { error: updateError } = await supabase.rpc(
           'update_profile_garage', 
           { 
@@ -127,6 +131,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
+        } else {
+          console.log("Profile updated successfully with owned garage ID");
         }
           
         setLoading(false);
@@ -149,7 +155,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
-        // Update the profile with this garage_id using our new function
+        // Update the profile with this garage_id using our RPC function
+        console.log("Updating profile with member garage_id:", memberGarageId);
         const { error: updateError } = await supabase.rpc(
           'update_profile_garage', 
           { 
@@ -160,6 +167,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
+        } else {
+          console.log("Profile updated successfully with member garage ID");
         }
           
         setLoading(false);
@@ -195,7 +204,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error adding user to default garage:", memberError);
         }
           
-        // Update profile with this garage_id using our new function
+        // Update profile with this garage_id using our RPC function
+        console.log("Updating profile with default garage_id:", defaultGarageId);
         const { error: updateError } = await supabase.rpc(
           'update_profile_garage', 
           { 
@@ -206,6 +216,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
+        } else {
+          console.log("Profile updated successfully with default garage ID");
         }
       } else {
         // No default garage found
