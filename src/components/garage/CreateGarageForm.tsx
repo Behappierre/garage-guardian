@@ -105,13 +105,13 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         console.warn("Failed to add user as garage member, but garage was created successfully");
       }
       
-      // Update user's profile with selected garage
+      // Update user's profile with selected garage - Use a specific column name in the query
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: newGarageId })
         .eq('id', currentUserId);
       
-      if (profileError && !profileError.message.includes("recursive")) {
+      if (profileError) {
         console.warn("Non-critical error updating profile:", profileError.message);
       }
       
