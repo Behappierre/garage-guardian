@@ -23,10 +23,37 @@ export const useGarages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        setGarages([]);
+        setLoading(false);
         return null;
       }
       
       console.log("Current user:", user.email);
+      
+      // Get the user's role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (roleError) {
+        console.error("Error fetching user role:", roleError.message);
+        setGarages([]);
+        setLoading(false);
+        return user;
+      }
+      
+      console.log("User role:", roleData?.role);
+      
+      // If the user is not an administrator, they shouldn't be accessing garages management
+      if (roleData?.role !== 'administrator') {
+        toast.error("You don't have permission to access garage management");
+        await supabase.auth.signOut();
+        setGarages([]);
+        setLoading(false);
+        return user;
+      }
       
       // First check if there's a direct entry for this user in the garage_members table
       const { data: memberData, error: memberError } = await supabase
@@ -46,13 +73,14 @@ export const useGarages = () => {
         const { data: tracticData, error: tracticError } = await supabase
           .from('garages')
           .select('*')
-          .or('name.eq.Tractic,slug.eq.tractic')
+          .or('name.ilike.tractic,slug.ilike.tractic')
           .limit(1);
           
         if (!tracticError && tracticData && tracticData.length > 0) {
           console.log("Found Tractic garage for user with no memberships:", tracticData[0]);
           
-          // Add this user as a member of the Tractic garage
+          // Add this user as a member of the Tractic garage if they have a tractic email
+          // or if they're olivier@andre.org.uk
           if (user.email?.includes("tractic.co.uk") || user.email === "olivier@andre.org.uk") {
             const { error: addMemberError } = await supabase
               .from('garage_members')
@@ -96,15 +124,21 @@ export const useGarages = () => {
       // Create a mutable copy of the garage data
       let garageData = data ? [...data] : [];
       
-      // Check specifically for the Tractic garage if the user is olivier@andre.org.uk
-      if (user.email === "olivier@andre.org.uk") {
-        const tracticGarage = garageData.find(g => g.name === "Tractic" || g.slug === "tractic");
+      // Check specifically for the Tractic garage
+      const isTracticUser = user.email?.includes("tractic.co.uk") || user.email === "olivier@andre.org.uk";
+      
+      if (isTracticUser) {
+        const tracticGarage = garageData.find(g => 
+          g.name.toLowerCase() === "tractic" || 
+          g.slug.toLowerCase() === "tractic"
+        );
+        
         if (!tracticGarage) {
           // Try to fetch it directly
           const { data: tracticData, error: tracticError } = await supabase
             .from('garages')
             .select('*')
-            .or('name.eq.Tractic,slug.eq.tractic')
+            .or('name.ilike.tractic,slug.ilike.tractic')
             .limit(1);
             
           if (!tracticError && tracticData && tracticData.length > 0) {
@@ -138,6 +172,7 @@ export const useGarages = () => {
     } catch (error: any) {
       console.error("Error fetching garages:", error.message);
       toast.error("Failed to load your garages");
+      setGarages([]);
       return null;
     } finally {
       setLoading(false);

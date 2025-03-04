@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -55,33 +54,20 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
       try {
         setFetchingGarages(true);
         
-        // Use direct database access bypassing RLS policies completely
-        const { data, error } = await supabase.rpc('execute_read_only_query', {
-          query_text: 'SELECT id, name, slug FROM garages ORDER BY name'
-        });
+        // Simple query to get all garages
+        const { data, error } = await supabase
+          .from('garages')
+          .select('id, name, slug')
+          .order('name');
         
         if (error) throw error;
         
-        // Parse the jsonb result
-        let parsedGarages: Garage[] = [];
-        if (data && Array.isArray(data)) {
-          parsedGarages = data.map(row => {
-            // Since row is of type Json, we need to safely access properties
-            const jsonRow = row as Record<string, any>;
-            return {
-              id: jsonRow.id as string,
-              name: jsonRow.name as string,
-              slug: jsonRow.slug as string
-            };
-          });
-        }
+        console.log("Fetched garages:", data);
         
-        console.log("Fetched garages:", parsedGarages);
-        
-        if (parsedGarages.length > 0) {
-          setGarages(parsedGarages);
+        if (data && data.length > 0) {
+          setGarages(data);
           // Always look for Tractic garage first
-          const tracticGarage = parsedGarages.find(garage => 
+          const tracticGarage = data.find(garage => 
             garage.name.toLowerCase() === 'tractic' || 
             garage.slug.toLowerCase() === 'tractic'
           );
@@ -90,7 +76,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             setSelectedGarageId(tracticGarage.id);
           } else {
             // Otherwise use the first garage in the list
-            setSelectedGarageId(parsedGarages[0].id);
+            setSelectedGarageId(data[0].id);
           }
         } else {
           // Fallback option if no garages are found
@@ -201,6 +187,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           });
         }
       } else {
+        // Sign in logic
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -210,6 +197,25 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         // After successful sign in, we'll handle the garage association
         if (signInData.user) {
           try {
+            // Get user role first
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', signInData.user.id)
+              .single();
+
+            if (roleError) {
+              console.error("Error fetching user role:", roleError.message);
+              // Default redirect if role fetch fails
+              navigate("/dashboard");
+              return;
+            }
+
+            // If trying to sign in as owner but not an administrator, show error
+            if (userType === "owner" && roleData?.role !== 'administrator') {
+              throw new Error("You don't have permission to access the garage owner area");
+            }
+
             // Update the user's profile with the selected garage for staff
             if (userType === "staff") {
               const { error: profileError } = await supabase
@@ -221,44 +227,38 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
                 console.error("Non-critical error updating profile:", profileError.message);
               }
             }
-          } catch (updateError) {
-            console.error("Error updating profile garage:", updateError);
-            // Continue with sign-in process even if this fails
-          }
 
-          // Fetch user role and redirect
-          const { data: roleData, error: roleError } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', signInData.user.id)
-            .single();
-
-          if (roleError) {
-            console.error("Error fetching user role:", roleError.message);
-            // Default redirect if role fetch fails
-            navigate("/dashboard");
-            return;
-          }
-
-          // Redirect based on role
-          if (roleData?.role === 'administrator' && userType === "owner") {
-            // For administrators (garage owners), go to garage management
-            navigate("/garage-management");
-          } else {
-            // For staff roles or direct dashboard access
-            switch (roleData?.role) {
-              case 'administrator':
-                navigate("/dashboard");
-                break;
-              case 'technician':
-                navigate("/dashboard/job-tickets");
-                break;
-              case 'front_desk':
-                navigate("/dashboard/appointments");
-                break;
-              default:
-                navigate("/dashboard");
+            // Redirect based on role
+            if (roleData?.role === 'administrator' && userType === "owner") {
+              // For administrators (garage owners), go to garage management
+              navigate("/garage-management");
+            } else {
+              // For staff roles or direct dashboard access
+              switch (roleData?.role) {
+                case 'administrator':
+                  navigate("/dashboard");
+                  break;
+                case 'technician':
+                  navigate("/dashboard/job-tickets");
+                  break;
+                case 'front_desk':
+                  navigate("/dashboard/appointments");
+                  break;
+                default:
+                  navigate("/dashboard");
+              }
             }
+          } catch (error: any) {
+            console.error("Error during sign-in flow:", error.message);
+            toast({
+              variant: "destructive",
+              title: "Access Denied",
+              description: error.message,
+            });
+            // Sign out on error
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
           }
         }
       }

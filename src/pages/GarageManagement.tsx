@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,44 @@ const GarageManagement = () => {
   const navigate = useNavigate();
   const { garages, loading, refreshGarages } = useGarages();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [checkingAccess, setCheckingAccess] = useState(true);
+
+  // Check if the user is an administrator
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        setCheckingAccess(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          navigate("/auth?type=owner");
+          return;
+        }
+        
+        // Fetch user role
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (roleError) throw roleError;
+        
+        if (roleData?.role !== 'administrator') {
+          toast.error("Only administrators can access garage management");
+          navigate("/auth?type=owner");
+        }
+      } catch (error: any) {
+        console.error("Error checking admin access:", error.message);
+        toast.error("Authentication error");
+        navigate("/auth?type=owner");
+      } finally {
+        setCheckingAccess(false);
+      }
+    };
+    
+    checkAdminAccess();
+  }, [navigate]);
 
   const handleSelectGarage = async (garageId: string) => {
     try {
@@ -20,7 +58,7 @@ const GarageManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        navigate("/auth");
+        navigate("/auth?type=owner");
         return;
       }
       
@@ -41,10 +79,15 @@ const GarageManagement = () => {
   };
 
   const handleGarageCreated = (garageId: string) => {
-    // Refresh the list of garages
     refreshGarages();
     setShowCreateForm(false);
   };
+
+  if (checkingAccess || loading) {
+    return <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+      Loading...
+    </div>;
+  }
 
   if (showCreateForm) {
     return (

@@ -34,7 +34,17 @@ const Auth = () => {
 
           if (roleError) throw roleError;
 
-          // Redirect based on role
+          console.log("User role:", roleData?.role);
+          console.log("User type:", type);
+
+          // For owner login page, only allow administrators
+          if (type === "owner" && roleData?.role !== 'administrator') {
+            toast.error("You don't have permission to access the garage owner area");
+            await supabase.auth.signOut();
+            return;
+          }
+
+          // Redirect based on role and type
           if (roleData?.role === 'administrator') {
             // For administrators (garage owners), check if they came from type=owner
             if (type === "owner") {
