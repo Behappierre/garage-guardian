@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -95,7 +94,7 @@ const GarageManagement = () => {
       const garageIds = memberData.map(item => item.garage_id);
       
       // Fetch the full garage details
-      const { data: garageData, error: garageError } = await supabase
+      const { data, error: garageError } = await supabase
         .from('garages')
         .select('*')
         .in('id', garageIds);
@@ -105,9 +104,12 @@ const GarageManagement = () => {
         throw garageError;
       }
       
+      // Create a mutable copy of the garage data
+      let garageData = data ? [...data] : [];
+      
       // Check specifically for the Tractic garage if the user is olivier@andre.org.uk
       if (user.email === "olivier@andre.org.uk") {
-        const tracticGarage = garageData?.find(g => g.name === "Tractic" || g.slug === "tractic");
+        const tracticGarage = garageData.find(g => g.name === "Tractic" || g.slug === "tractic");
         if (!tracticGarage) {
           // Try to fetch it directly
           const { data: tracticData, error: tracticError } = await supabase
@@ -134,11 +136,7 @@ const GarageManagement = () => {
               console.log("Added user as Tractic garage member");
               
               // Add the Tractic garage to our list
-              if (garageData) {
-                garageData.push(tracticData[0]);
-              } else {
-                garageData = tracticData;
-              }
+              garageData.push(tracticData[0]);
             }
           }
         }
