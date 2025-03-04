@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -55,11 +54,9 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         try {
           setFetchingGarages(true);
           
-          // Fix the ambiguous column reference by explicitly specifying the table
-          // This is the key change to fix the error
           const { data, error } = await supabase
             .from('garages')
-            .select('garages.id, garages.name, garages.slug')
+            .select('id, name, slug')
             .order('name');
           
           if (error) throw error;
