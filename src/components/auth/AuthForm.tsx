@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -47,11 +48,15 @@ export const AuthForm = () => {
         // Parse the jsonb result
         let parsedGarages: Garage[] = [];
         if (data && Array.isArray(data)) {
-          parsedGarages = data.map(garage => ({
-            id: garage.id,
-            name: garage.name,
-            slug: garage.slug
-          }));
+          parsedGarages = data.map(row => {
+            // Since row is of type Json, we need to safely access properties
+            const jsonRow = row as Record<string, any>;
+            return {
+              id: jsonRow.id as string,
+              name: jsonRow.name as string,
+              slug: jsonRow.slug as string
+            };
+          });
         }
         
         console.log("Fetched garages:", parsedGarages);
