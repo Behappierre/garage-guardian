@@ -46,6 +46,7 @@ export const useGarages = (): GarageHookReturn => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        console.log("No authenticated user found");
         setGarages([]);
         setLoading(false);
         return null;
@@ -76,9 +77,11 @@ export const useGarages = (): GarageHookReturn => {
       
       // Get garage memberships
       const garageIds = await getUserGarageMemberships(user.id);
+      console.log("Fetched garage IDs:", garageIds);
       
       // For Tractic users with no memberships, handle specially
       if (garageIds.length === 0 && isTracticUser(user.email)) {
+        console.log("No garages found for Tractic user, setting up default garage");
         const tracticGarages = await handleTracticUserGarages(user);
         setGarages(tracticGarages);
         setLoading(false);
@@ -87,7 +90,9 @@ export const useGarages = (): GarageHookReturn => {
       
       // If user has memberships, fetch the garages
       if (garageIds.length > 0) {
+        console.log("Fetching garages for IDs:", garageIds);
         const userGarages = await getGaragesByIds(garageIds);
+        console.log("User garages:", userGarages);
         setGarages(userGarages);
       } else {
         console.log("No garages found for user");

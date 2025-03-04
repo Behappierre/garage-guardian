@@ -48,14 +48,16 @@ const GarageManagement = () => {
 
         // If we have a stored garage ID in profile, check for the Tractic garage membership
         if (user.email?.toLowerCase().includes("tractic") || user.email === "olivier@andre.org.uk") {
+          console.log("Detected Tractic user, ensuring garage membership");
           // Look for Tractic garage
           const { data: tracticData, error: tracticError } = await supabase
             .from('garages')
             .select('id')
-            .or('name.ilike.tractic,slug.ilike.tractic')
+            .or('name.ilike.%tractic%,slug.ilike.%tractic%')
             .limit(1);
             
           if (!tracticError && tracticData && tracticData.length > 0) {
+            console.log("Found Tractic garage:", tracticData[0].id);
             // Try to add user as a member of the Tractic garage if not already
             const { data: memberExists, error: memberCheckError } = await supabase
               .from('garage_members')
@@ -74,6 +76,9 @@ const GarageManagement = () => {
                   garage_id: tracticData[0].id,
                   role: 'owner'
                 });
+                
+              // Refresh garages after adding membership
+              refreshGarages();
             }
           }
         }
@@ -87,7 +92,7 @@ const GarageManagement = () => {
     };
     
     checkAdminAccess();
-  }, [navigate]);
+  }, [navigate, refreshGarages]);
 
   const handleSelectGarage = async (garageId: string) => {
     try {
@@ -145,6 +150,14 @@ const GarageManagement = () => {
           title="Your Garages" 
           description="Select a garage to manage or create a new one"
         />
+        
+        {garages.length === 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+            <p className="text-yellow-700">
+              No garages found. You can create a new garage using the button below.
+            </p>
+          </div>
+        )}
         
         <GarageList 
           garages={garages}

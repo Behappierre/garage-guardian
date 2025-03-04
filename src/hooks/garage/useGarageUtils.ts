@@ -77,6 +77,8 @@ export const addUserToGarage = async (
   role: string = 'owner'
 ): Promise<boolean> => {
   try {
+    console.log(`Attempting to add user ${userId} to garage ${garageId} with role ${role}`);
+    
     const { error } = await supabase
       .from('garage_members')
       .upsert({
@@ -98,9 +100,11 @@ export const addUserToGarage = async (
   }
 };
 
-// Get user's garage memberships
+// Get user's garage memberships - directly fetch garage IDs from garage_members
 export const getUserGarageMemberships = async (userId: string): Promise<string[]> => {
   try {
+    console.log(`Fetching garage memberships for user ${userId}`);
+    
     const { data, error } = await supabase
       .from('garage_members')
       .select('garage_id')
@@ -112,10 +116,13 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
     }
     
     if (!data || data.length === 0) {
+      console.log("No garage memberships found for user");
       return [];
     }
     
-    return data.map((item: Record<string, any>) => item.garage_id as string);
+    const garageIds = data.map(item => item.garage_id);
+    console.log("User garage IDs:", garageIds);
+    return garageIds;
   } catch (err) {
     console.error("Exception when getting user garage memberships:", err);
     return [];
@@ -129,6 +136,8 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
   }
   
   try {
+    console.log(`Fetching garages by IDs: ${garageIds.join(', ')}`);
+    
     const { data, error } = await supabase
       .from('garages')
       .select('*')
@@ -139,6 +148,7 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
       return [];
     }
     
+    console.log("Fetched garages:", data);
     return (data || []) as unknown as Garage[];
   } catch (err) {
     console.error("Exception when getting garages by IDs:", err);
