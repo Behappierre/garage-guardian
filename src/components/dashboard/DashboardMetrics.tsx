@@ -76,7 +76,9 @@ export const DashboardMetrics = () => {
         bookedRatio: Math.round(bookedRatio * 100)
       };
     },
-    enabled: !!garageId // Only run query when garageId is available
+    enabled: !!garageId, // Only run query when garageId is available
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 1000 * 60 * 5, // Refresh every 5 minutes
   });
 
   const metrics = [

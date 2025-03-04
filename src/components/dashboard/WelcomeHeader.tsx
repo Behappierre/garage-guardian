@@ -25,7 +25,8 @@ export const WelcomeHeader = () => {
       
       return data;
     },
-    enabled: !!garageId
+    enabled: !!garageId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
   
   const { data: userProfile, isLoading: isProfileLoading } = useQuery({
@@ -46,7 +47,8 @@ export const WelcomeHeader = () => {
       
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
   
   const firstName = userProfile?.first_name || user?.email?.split('@')[0] || 'there';

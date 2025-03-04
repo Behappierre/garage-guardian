@@ -26,10 +26,10 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
  * Attempts to assign a user to the default 'tractic' garage or any available garage
  */
 export async function assignUserToDefaultGarage(userId: string, userRole: string) {
-  // Try to use default Tractic garage
+  // Try to use default Tractic garage - fix the ambiguous column reference
   const { data: defaultGarage } = await supabase
     .from('garages')
-    .select('id')
+    .select('garages.id')
     .eq('slug', 'tractic')
     .limit(1);
     
@@ -53,7 +53,7 @@ export async function assignUserToDefaultGarage(userId: string, userRole: string
     // If no default garage, find any available garage
     const { data: anyGarage } = await supabase
       .from('garages')
-      .select('id')
+      .select('garages.id')
       .limit(1);
       
     if (anyGarage && anyGarage.length > 0) {

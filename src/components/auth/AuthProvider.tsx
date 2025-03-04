@@ -103,9 +103,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // If no garage found yet, try to use default Tractic garage
       console.log("Attempting to use default Tractic garage");
       
+      // Fix the ambiguous column reference by being more specific in the query
       const { data: defaultGarage, error: defaultError } = await supabase
         .from('garages')
-        .select('id')
+        .select('garages.id')
         .eq('slug', 'tractic')
         .limit(1);
           
@@ -178,6 +179,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           // Reset garage fetch flag when auth state changes
           setHasFetchedGarage(false);
+          setGarageId(null); // Clear the garage ID to ensure it refreshes
           fetchUserGarage(session.user.id);
         } else {
           setGarageId(null);
