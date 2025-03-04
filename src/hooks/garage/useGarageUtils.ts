@@ -156,7 +156,12 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
       return [];
     }
     
-    const garageIds = data.map(item => item.garage_id);
+    // Fix: Type-safe access to the JSON data with explicit casting
+    const garageIds = data.map(item => {
+      const typedItem = item as Record<string, unknown>;
+      return typedItem.garage_id as string;
+    });
+    
     console.log("User garage IDs:", garageIds);
     return garageIds;
   } catch (err) {
@@ -231,7 +236,9 @@ export const getUserRole = async (userId: string): Promise<string | null> => {
       return null;
     }
     
-    return data[0].role;
+    // Fix: Type-safe access to the JSON data with explicit casting
+    const typedItem = data[0] as Record<string, unknown>;
+    return typedItem.role as string;
   } catch (err) {
     console.error("Exception when getting user role:", err);
     return null;
