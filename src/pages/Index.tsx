@@ -1,212 +1,56 @@
 
-import { useNavigate } from "react-router-dom";
+import { Calendar, Users, Clock, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building, Wrench, Users, KeyRound } from "lucide-react";
-import { useAuth } from "@/components/auth/AuthProvider";
-import { useGarage } from "@/contexts/GarageContext";
-import { useEffect, useState } from "react";
-import { getSubdomainInfo } from "@/utils/subdomain";
-import { supabase } from "@/integrations/supabase/client";
+import Navbar from "@/components/Navbar";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { userGarages, currentGarage } = useGarage();
-  const [garageName, setGarageName] = useState<string | null>(null);
-
-  // Get subdomain info
-  const { isSubdomain, subdomain } = getSubdomainInfo();
-
-  // Auto-redirect to dashboard if already logged in with a garage
-  useEffect(() => {
-    if (user && currentGarage) {
-      navigate("/dashboard");
-    }
-    
-    // If on a subdomain, fetch the garage name for better UX
-    if (subdomain) {
-      const fetchGarageName = async () => {
-        try {
-          // Use supabase directly instead of a fetch request to the API
-          const { data, error } = await supabase
-            .from('garages')
-            .select('name')
-            .eq('slug', subdomain)
-            .maybeSingle();
-            
-          if (error) {
-            console.error("Error fetching garage name:", error);
-            
-            // Try fetching by ID if it looks like a UUID
-            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subdomain);
-            if (isUuid) {
-              const { data: idData, error: idError } = await supabase
-                .from('garages')
-                .select('name')
-                .eq('id', subdomain)
-                .maybeSingle();
-                
-              if (!idError && idData) {
-                setGarageName(idData.name);
-                return;
-              }
-            }
-            
-            // Fallback to using the subdomain itself
-            setGarageName(subdomain.charAt(0).toUpperCase() + subdomain.slice(1));
-            return;
-          }
-          
-          if (data && data.name) {
-            setGarageName(data.name);
-          } else {
-            // Fallback to capitalizing the subdomain
-            setGarageName(subdomain.charAt(0).toUpperCase() + subdomain.slice(1));
-          }
-        } catch (error) {
-          console.error("Error fetching garage name:", error);
-          // Fallback to capitalizing the subdomain
-          setGarageName(subdomain.charAt(0).toUpperCase() + subdomain.slice(1));
-        }
-      };
-      
-      fetchGarageName();
-    }
-  }, [user, currentGarage, navigate, subdomain]);
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col items-center justify-center p-4">
-      <div className="text-center mb-10">
-        <div className="flex items-center justify-center mb-4">
-          <Wrench className="h-12 w-12 text-primary mr-2" />
-          <h1 className="text-4xl font-bold text-gray-900">GarageWizz</h1>
-        </div>
-        <p className="text-lg text-gray-600 max-w-md mx-auto">
-          The complete management solution for automotive repair shops
-        </p>
-        
-        {isSubdomain && (
-          <div className="mt-4">
-            <p className="text-xl font-semibold text-primary">
-              {garageName || "Loading garage..."}
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+      <Navbar />
+      
+      <main className="pt-20 px-4 sm:px-6 lg:px-8 animate-fadeIn">
+        <div className="max-w-7xl mx-auto">
+          {/* Hero Section */}
+          <div className="text-center py-16 sm:py-20">
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+              Smart Garage Management
+            </h1>
+            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+              Streamline your garage operations with our comprehensive management solution.
             </p>
-            <p className="text-sm text-gray-500">
-              Staff login portal
-            </p>
+            <Button size="lg" className="bg-primary hover:bg-primary/90">
+              Get Started
+            </Button>
           </div>
-        )}
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl w-full">
-        {isSubdomain ? (
-          // Subdomain specific view - focused on garage staff login
-          <Card className="col-span-1 md:col-span-2 transition-all hover:shadow-md">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <KeyRound className="h-6 w-6 mr-2 text-primary" />
-                Staff Login
-              </CardTitle>
-              <CardDescription>
-                Sign in to access the {garageName || "garage"} dashboard
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => navigate(`/auth?garage=${subdomain}`)} 
-                className="w-full bg-primary hover:bg-primary-dark"
-              >
-                Sign In to {garageName || "Garage"}
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          // Main domain view - garage owners can login or create new garages
-          <>
-            <Card className="transition-all hover:shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Building className="h-6 w-6 mr-2 text-primary" />
-                  Garage Owner
-                </CardTitle>
-                <CardDescription>
-                  Sign in to access and manage your garages
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  onClick={() => navigate("/auth?isOwnerView=true")} 
-                  className="w-full bg-primary hover:bg-primary-dark"
-                >
-                  Owner Sign In
-                </Button>
-              </CardContent>
-            </Card>
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 py-12">
+            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <Calendar className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Smart Scheduling</h3>
+              <p className="text-gray-600">Efficiently manage appointments and resource allocation</p>
+            </div>
 
-            <Card className="transition-all hover:shadow-md">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Wrench className="h-6 w-6 mr-2 text-primary" />
-                  New to GarageWizz?
-                </CardTitle>
-                <CardDescription>
-                  Set up a new garage in just a few minutes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  onClick={() => navigate("/create-garage")} 
-                  className="w-full"
-                  variant="outline"
-                >
-                  Create Garage
-                </Button>
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
+            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <Users className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Client Management</h3>
+              <p className="text-gray-600">Keep track of client information and service history</p>
+            </div>
 
-      <div className="mt-10 max-w-lg text-center">
-        <p className="text-sm text-gray-500 mb-4">
-          {isSubdomain 
-            ? `Access this garage directly at ${window.location.hostname}`
-            : "Garage owners manage multiple garages from a single account"}
-        </p>
-        
-        {isSubdomain && (
-          <p className="text-sm">
-            <Button 
-              variant="link" 
-              className="text-primary p-0"
-              onClick={() => {
-                // Generate main domain URL from current URL
-                const { hostname, isLocalhost } = getSubdomainInfo();
-                const hostParts = hostname.split('.');
-                const mainDomain = isLocalhost 
-                  ? 'localhost:8080' // For local development
-                  : hostParts.slice(1).join('.');
-                
-                window.location.href = `${window.location.protocol}//${mainDomain}`;
-              }}
-            >
-              Go to GarageWizz Main Site
-            </Button>
-          </p>
-        )}
-        
-        {!isSubdomain && user && userGarages.length > 0 && (
-          <p className="text-sm">
-            <Button 
-              variant="link" 
-              className="text-primary p-0"
-              onClick={() => navigate("/my-garages")}
-            >
-              Access Your Garages
-            </Button>
-          </p>
-        )}
-      </div>
+            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <Clock className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Time Tracking</h3>
+              <p className="text-gray-600">Log and monitor time spent on repairs</p>
+            </div>
+
+            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
+              <History className="h-10 w-10 text-primary mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Service History</h3>
+              <p className="text-gray-600">Maintain detailed records of all services</p>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 };

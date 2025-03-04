@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import { SidebarLogo } from "./sidebar/SidebarLogo";
 import { SidebarNav } from "./sidebar/SidebarNav";
 import { SidebarFooter } from "./sidebar/SidebarFooter";
-import { useGarage } from "@/contexts/GarageContext";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -17,7 +16,6 @@ interface SidebarProps {
 
 export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
   const { user } = useAuth();
-  const { currentGarage, userGarageRoles } = useGarage();
 
   const { data: userRoles } = useQuery({
     queryKey: ["userRole", user?.id],
@@ -35,11 +33,6 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
 
   const isAdmin = userRoles?.includes("administrator");
   const isTechnician = userRoles?.includes("technician");
-  
-  // Get the user's role for the current garage
-  const currentGarageRole = currentGarage ? userGarageRoles[currentGarage.id] : undefined;
-  // Get the first user role if available
-  const primaryUserRole = userRoles?.length ? userRoles[0] : undefined;
 
   return (
     <div 
@@ -71,11 +64,7 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
           isTechnician={isTechnician} 
         />
         
-        <SidebarFooter 
-          isCollapsed={isCollapsed} 
-          userRole={primaryUserRole} 
-          garageRole={currentGarageRole}
-        />
+        <SidebarFooter isCollapsed={isCollapsed} />
       </div>
     </div>
   );
