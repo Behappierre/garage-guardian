@@ -77,3 +77,49 @@ export const createTracticGarage = async (userEmail?: string): Promise<Garage | 
     return null;
   }
 };
+
+// Add a user to a Tractic garage
+export const addUserToGarage = async (userId: string, garageId: string): Promise<boolean> => {
+  try {
+    console.log(`Adding user ${userId} to Tractic garage ${garageId}`);
+    
+    // First, let's check if the user is already a member
+    const { data: existingMembership, error: checkError } = await supabase
+      .from('garage_members')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('garage_id', garageId)
+      .limit(1);
+      
+    if (checkError) {
+      console.error("Error checking existing membership:", checkError.message);
+      return false;
+    }
+    
+    // If user is already a member, return success
+    if (existingMembership && existingMembership.length > 0) {
+      console.log(`User ${userId} is already a member of garage ${garageId}`);
+      return true;
+    }
+    
+    // Add the user as a member with a role
+    const { error: addError } = await supabase
+      .from('garage_members')
+      .insert({
+        user_id: userId,
+        garage_id: garageId,
+        role: 'staff'  // Default role for Tractic users
+      });
+      
+    if (addError) {
+      console.error("Error adding user to garage:", addError.message);
+      return false;
+    }
+    
+    console.log(`Successfully added user ${userId} to Tractic garage ${garageId}`);
+    return true;
+  } catch (err) {
+    console.error("Exception adding user to garage:", err);
+    return false;
+  }
+};

@@ -77,3 +77,31 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
     return [];
   }
 };
+
+// Re-export utility functions from other files
+export * from './membershipHelpers';
+export * from './userHelpers';
+export * from './tracticHelpers';
+
+// Implement any missing functions that were imported but not defined
+
+// Simple function to check if a user has a specific role
+export const getUserRole = async (userId: string): Promise<string | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .limit(1);
+      
+    if (error) {
+      console.error("Error fetching user role:", error.message);
+      return null;
+    }
+    
+    return data && data.length > 0 ? data[0].role : null;
+  } catch (err) {
+    console.error("Exception in getUserRole:", err);
+    return null;
+  }
+};
