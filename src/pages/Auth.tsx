@@ -53,26 +53,29 @@ const Auth = () => {
                 navigate("/garage-management");
                 return;
               }
-            } else if (roleData?.role === 'administrator') {
-              // Administrator on staff login page
-              toast.error("Administrators should use the garage owner login");
-              // Sign out the user if they're on the wrong login page
-              await supabase.auth.signOut();
-              setIsChecking(false);
-              return;
-            } else if (roleData?.role) {
-              // Regular staff role, redirect to appropriate page
-              switch (roleData.role) {
-                case 'technician':
-                  navigate("/dashboard/job-tickets");
-                  break;
-                case 'front_desk':
-                  navigate("/dashboard/appointments");
-                  break;
-                default:
-                  navigate("/dashboard");
+            } else {
+              // On staff login page
+              if (roleData?.role === 'administrator') {
+                // Administrator on staff login page
+                toast.error("Administrators should use the garage owner login");
+                // Sign out the user if they're on the wrong login page
+                await supabase.auth.signOut();
+                setIsChecking(false);
+                return;
+              } else if (roleData?.role) {
+                // Regular staff role, redirect to appropriate page
+                switch (roleData.role) {
+                  case 'technician':
+                    navigate("/dashboard/job-tickets");
+                    break;
+                  case 'front_desk':
+                    navigate("/dashboard/appointments");
+                    break;
+                  default:
+                    navigate("/dashboard");
+                }
+                return;
               }
-              return;
             }
             
             // If no role is set yet, stay on the auth page

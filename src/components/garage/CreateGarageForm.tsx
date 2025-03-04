@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { addUserToGarage } from "@/hooks/garage/utils/membershipHelpers";
+import { useNavigate } from "react-router-dom";
 
 interface CreateGarageFormProps {
   onBack: () => void;
@@ -27,6 +28,7 @@ interface GarageFormValues {
 }
 
 export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFormProps) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, watch, formState: { errors } } = useForm<GarageFormValues>();
@@ -72,7 +74,10 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
       
       if (garageError) {
         console.error("Garage creation error:", garageError);
-        throw garageError;
+        setError(garageError.message);
+        toast.error(`Failed to create garage: ${garageError.message}`);
+        setLoading(false);
+        return;
       }
       
       if (!garageData || garageData.length === 0) {
@@ -112,6 +117,15 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
       toast.error(`Failed to create garage: ${error.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBack = () => {
+    console.log("Back button clicked");
+    if (typeof onBack === 'function') {
+      onBack();
+    } else {
+      navigate("/garage-management");
     }
   };
 
@@ -196,7 +210,7 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
             <Button
               type="button"
               variant="outline"
-              onClick={onBack}
+              onClick={handleBack}
             >
               Back
             </Button>
