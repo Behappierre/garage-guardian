@@ -55,114 +55,102 @@ export const useGarages = () => {
         return user;
       }
       
-      // First check if there's a direct entry for this user in the garage_members table
+      // Direct query to get garage_ids from garage_members table
       const { data: memberData, error: memberError } = await supabase
-        .from('garage_members')
-        .select('garage_id, role')
-        .eq('user_id', user.id);
+        .rpc('execute_read_only_query', {
+          query_text: `SELECT garage_id FROM garage_members WHERE user_id = '${user.id}'`
+        });
       
       if (memberError) {
         console.error("Error fetching garage memberships:", memberError.message);
-        throw memberError;
-      }
-      
-      console.log("Garage memberships found:", memberData);
-      
-      if (!memberData || memberData.length === 0) {
-        // No memberships found, check for Tractic garage
-        const { data: tracticData, error: tracticError } = await supabase
-          .from('garages')
-          .select('*')
-          .or('name.ilike.tractic,slug.ilike.tractic')
-          .limit(1);
-          
-        if (!tracticError && tracticData && tracticData.length > 0) {
-          console.log("Found Tractic garage for user with no memberships:", tracticData[0]);
-          
-          // Add this user as a member of the Tractic garage if they have a tractic email
-          // or if they're olivier@andre.org.uk
-          if (user.email?.includes("tractic.co.uk") || user.email === "olivier@andre.org.uk") {
-            const { error: addMemberError } = await supabase
-              .from('garage_members')
-              .upsert({ 
-                user_id: user.id, 
-                garage_id: tracticData[0].id, 
-                role: 'owner' 
-              });
-              
-            if (addMemberError) {
-              console.error("Error adding user as Tractic garage member:", addMemberError.message);
-            } else {
-              console.log("Added user as Tractic garage member");
-            }
+        
+        // Fallback to try fetching the Tractic garage directly
+        const isTracticUser = user.email?.toLowerCase().includes("tractic") || 
+                             user.email === "olivier@andre.org.uk";
+                             
+        if (isTracticUser) {
+          // Direct query to get the Tractic garage
+          const { data: tracticData, error: tracticError } = await supabase
+            .rpc('execute_read_only_query', {
+              query_text: `SELECT * FROM garages WHERE LOWER(name) = 'tractic' OR LOWER(slug) = 'tractic' LIMIT 1`
+            });
+            
+          if (!tracticError && tracticData && tracticData.length > 0) {
+            console.log("Found Tractic garage for user:", tracticData[0]);
+            setGarages(tracticData);
+            setLoading(false);
+            return user;
           }
-          
-          setGarages(tracticData);
-        } else {
-          // No garages found for this user
-          console.log("No garages found for user");
-          setGarages([]);
         }
+        
+        setGarages([]);
         setLoading(false);
         return user;
       }
       
-      // Get the list of garage IDs
+      if (!memberData || memberData.length === 0) {
+        // No garage memberships found, check for Tractic garage for specific emails
+        const isTracticUser = user.email?.toLowerCase().includes("tractic") || 
+                             user.email === "olivier@andre.org.uk";
+                             
+        if (isTracticUser) {
+          // Direct query to get the Tractic garage
+          const { data: tracticData, error: tracticError } = await supabase
+            .rpc('execute_read_only_query', {
+              query_text: `SELECT * FROM garages WHERE LOWER(name) = 'tractic' OR LOWER(slug) = 'tractic' LIMIT 1`
+            });
+            
+          if (!tracticError && tracticData && tracticData.length > 0) {
+            console.log("Found Tractic garage for user with no memberships:", tracticData[0]);
+            
+            // Try to add user as garage member using a direct query
+            try {
+              const { error: addMemberError } = await supabase
+                .rpc('execute_read_only_query', {
+                  query_text: `
+                    INSERT INTO garage_members (user_id, garage_id, role)
+                    VALUES ('${user.id}', '${tracticData[0].id}', 'owner')
+                    ON CONFLICT (user_id, garage_id) DO NOTHING
+                    RETURNING id
+                  `
+                });
+                
+              if (addMemberError) {
+                console.error("Error trying to add user as Tractic garage member:", addMemberError.message);
+              } else {
+                console.log("Added user as Tractic garage member");
+              }
+            } catch (err) {
+              console.error("Exception when adding user as garage member:", err);
+            }
+            
+            setGarages(tracticData);
+            setLoading(false);
+            return user;
+          }
+        }
+        
+        // No garages found for this user
+        console.log("No garages found for user");
+        setGarages([]);
+        setLoading(false);
+        return user;
+      }
+      
+      // Get array of garage IDs from the result
       const garageIds = memberData.map(item => item.garage_id);
       
-      // Fetch the full garage details
-      const { data, error: garageError } = await supabase
-        .from('garages')
-        .select('*')
-        .in('id', garageIds);
+      // Direct query to get garage details
+      const { data: garageData, error: garageError } = await supabase
+        .rpc('execute_read_only_query', {
+          query_text: `SELECT * FROM garages WHERE id IN ('${garageIds.join("','")}')`
+        });
         
       if (garageError) {
         console.error("Error fetching garages:", garageError.message);
-        throw garageError;
-      }
-      
-      // Create a mutable copy of the garage data
-      let garageData = data ? [...data] : [];
-      
-      // Check specifically for the Tractic garage
-      const isTracticUser = user.email?.includes("tractic.co.uk") || user.email === "olivier@andre.org.uk";
-      
-      if (isTracticUser) {
-        const tracticGarage = garageData.find(g => 
-          g.name.toLowerCase() === "tractic" || 
-          g.slug.toLowerCase() === "tractic"
-        );
-        
-        if (!tracticGarage) {
-          // Try to fetch it directly
-          const { data: tracticData, error: tracticError } = await supabase
-            .from('garages')
-            .select('*')
-            .or('name.ilike.tractic,slug.ilike.tractic')
-            .limit(1);
-            
-          if (!tracticError && tracticData && tracticData.length > 0) {
-            console.log("Found Tractic garage but user wasn't a member, adding manually:", tracticData[0]);
-            
-            // Add this user as a member of the Tractic garage
-            const { error: addMemberError } = await supabase
-              .from('garage_members')
-              .upsert({ 
-                user_id: user.id, 
-                garage_id: tracticData[0].id, 
-                role: 'owner' 
-              });
-              
-            if (addMemberError) {
-              console.error("Error adding user as Tractic garage member:", addMemberError.message);
-            } else {
-              console.log("Added user as Tractic garage member");
-              
-              // Add the Tractic garage to our list
-              garageData.push(tracticData[0]);
-            }
-          }
-        }
+        setGarages([]);
+        setLoading(false);
+        return user;
       }
       
       console.log("Fetched garages:", garageData);

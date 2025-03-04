@@ -38,21 +38,22 @@ const Auth = () => {
           console.log("User type:", type);
 
           // For owner login page, only allow administrators
-          if (type === "owner" && roleData?.role !== 'administrator') {
-            toast.error("You don't have permission to access the garage owner area");
-            await supabase.auth.signOut();
+          if (type === "owner") {
+            if (roleData?.role !== 'administrator') {
+              toast.error("You don't have permission to access the garage owner area");
+              await supabase.auth.signOut();
+              return;
+            }
+            
+            // If the user is an administrator and is on the owner login page, 
+            // always redirect to garage management
+            navigate("/garage-management");
             return;
           }
 
-          // Redirect based on role and type
+          // For staff login, handle based on role
           if (roleData?.role === 'administrator') {
-            // For administrators (garage owners), check if they came from type=owner
-            if (type === "owner") {
-              navigate("/garage-management");
-            } else {
-              // Default to dashboard for direct dashboard access
-              navigate("/dashboard");
-            }
+            navigate("/garage-management");
           } else {
             // For staff roles
             switch (roleData?.role) {
@@ -69,8 +70,8 @@ const Auth = () => {
           }
         } catch (error: any) {
           toast.error("Error fetching user role: " + error.message);
-          // Default to dashboard if role fetch fails
-          navigate("/dashboard");
+          // Sign out on error to force re-authentication
+          await supabase.auth.signOut();
         }
       }
     };
