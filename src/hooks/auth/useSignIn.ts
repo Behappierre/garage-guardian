@@ -47,14 +47,11 @@ export const useSignIn = () => {
     }
     
     if (ownedGarages && ownedGarages.length > 0) {
-      // Use updated parameter names
-      await supabase.rpc(
-        'update_profile_garage',
-        { 
-          p_user_id: userId, 
-          p_garage_id: ownedGarages[0].id 
-        }
-      );
+      // Use direct update instead of RPC
+      await supabase
+        .from('profiles')
+        .update({ garage_id: ownedGarages[0].id })
+        .eq('id', userId);
     }
   };
 
@@ -76,14 +73,11 @@ export const useSignIn = () => {
         .limit(1);
         
       if (memberData && memberData.length > 0) {
-        // Update profile with found garage using updated parameter names
-        await supabase.rpc(
-          'update_profile_garage',
-          { 
-            p_user_id: userId, 
-            p_garage_id: memberData[0].garage_id 
-          }
-        );
+        // Update profile with found garage using direct update
+        await supabase
+          .from('profiles')
+          .update({ garage_id: memberData[0].garage_id })
+          .eq('id', userId);
       } else {
         // Try default 'tractic' garage
         const { data: defaultGarage } = await supabase
@@ -101,13 +95,10 @@ export const useSignIn = () => {
               { user_id: userId, garage_id: defaultGarageId, role: userRole }
             ]);
             
-          await supabase.rpc(
-            'update_profile_garage',
-            { 
-              p_user_id: userId, 
-              p_garage_id: defaultGarageId 
-            }
-          );
+          await supabase
+            .from('profiles')
+            .update({ garage_id: defaultGarageId })
+            .eq('id', userId);
         } else {
           // Try any available garage
           const { data: anyGarage } = await supabase
@@ -122,13 +113,10 @@ export const useSignIn = () => {
                 { user_id: userId, garage_id: anyGarage[0].id, role: userRole }
               ]);
               
-            await supabase.rpc(
-              'update_profile_garage',
-              { 
-                p_user_id: userId, 
-                p_garage_id: anyGarage[0].id 
-              }
-            );
+            await supabase
+              .from('profiles')
+              .update({ garage_id: anyGarage[0].id })
+              .eq('id', userId);
           } else {
             throw new Error("No garages found in the system. Please contact an administrator.");
           }

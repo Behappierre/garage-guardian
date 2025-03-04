@@ -87,15 +87,12 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Update the user's profile with the garage ID using our function with updated parameter names
+      // Update the user's profile with the garage ID using direct update
       console.log("Updating profile with garage_id:", newGarage[0].id);
-      const { error: profileError } = await supabase.rpc(
-        'update_profile_garage', 
-        { 
-          p_user_id: userData.user.id, 
-          p_garage_id: newGarage[0].id 
-        }
-      );
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: newGarage[0].id })
+        .eq('id', userData.user.id);
         
       if (profileError) {
         console.error("Error updating profile:", profileError);

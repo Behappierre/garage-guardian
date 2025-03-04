@@ -21,14 +21,11 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       .limit(1);
       
     if (memberData && memberData.length > 0) {
-      // Update profile with found garage_id using updated parameter names
-      await supabase.rpc(
-        'update_profile_garage',
-        { 
-          p_user_id: userId, 
-          p_garage_id: memberData[0].garage_id 
-        }
-      );
+      // Update profile with found garage_id using direct update
+      await supabase
+        .from('profiles')
+        .update({ garage_id: memberData[0].garage_id })
+        .eq('id', userId);
     } else {
       await assignUserToDefaultGarage(userId, userRole);
     }
@@ -56,14 +53,11 @@ export async function assignUserToDefaultGarage(userId: string, userRole: string
         { user_id: userId, garage_id: defaultGarageId, role: userRole }
       ]);
       
-    // Update profile using updated parameter names
-    await supabase.rpc(
-      'update_profile_garage',
-      { 
-        p_user_id: userId, 
-        p_garage_id: defaultGarageId 
-      }
-    );
+    // Update profile using direct update
+    await supabase
+      .from('profiles')
+      .update({ garage_id: defaultGarageId })
+      .eq('id', userId);
   } else {
     // If no default garage, find any available garage
     const { data: anyGarage } = await supabase
@@ -81,14 +75,11 @@ export async function assignUserToDefaultGarage(userId: string, userRole: string
           { user_id: userId, garage_id: garageId, role: userRole }
         ]);
         
-      // Update profile using updated parameter names
-      await supabase.rpc(
-        'update_profile_garage',
-        { 
-          p_user_id: userId, 
-          p_garage_id: garageId 
-        }
-      );
+      // Update profile using direct update
+      await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
     }
   }
 }

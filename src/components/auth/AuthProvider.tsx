@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -64,15 +63,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Update the profile with this garage_id using our RPC function with updated parameter names
+          // Update the profile with this garage_id using direct update
           console.log("Updating profile with owned garage_id:", ownedGarageId);
-          const { error: updateError } = await supabase.rpc(
-            'update_profile_garage', 
-            { 
-              p_user_id: userId, 
-              p_garage_id: ownedGarageId 
-            }
-          );
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ garage_id: ownedGarageId })
+            .eq('id', userId);
             
           if (updateError) {
             console.error("Error updating profile with garage_id:", updateError);
@@ -119,15 +115,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
-        // Update the profile with this garage_id using our RPC function with updated parameter names
+        // Update the profile with this garage_id using direct update
         console.log("Updating profile with owned garage_id:", ownedGarageId);
-        const { error: updateError } = await supabase.rpc(
-          'update_profile_garage', 
-          { 
-            p_user_id: userId, 
-            p_garage_id: ownedGarageId 
-          }
-        );
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ garage_id: ownedGarageId })
+          .eq('id', userId);
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
@@ -155,15 +148,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
-        // Update the profile with this garage_id using our RPC function with updated parameter names
+        // Update the profile with this garage_id using direct update
         console.log("Updating profile with member garage_id:", memberGarageId);
-        const { error: updateError } = await supabase.rpc(
-          'update_profile_garage', 
-          { 
-            p_user_id: userId, 
-            p_garage_id: memberGarageId 
-          }
-        );
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ garage_id: memberGarageId })
+          .eq('id', userId);
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
@@ -204,15 +194,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error adding user to default garage:", memberError);
         }
           
-        // Update profile with this garage_id using our RPC function with updated parameter names
+        // Update profile with this garage_id using direct update
         console.log("Updating profile with default garage_id:", defaultGarageId);
-        const { error: updateError } = await supabase.rpc(
-          'update_profile_garage', 
-          { 
-            p_user_id: userId, 
-            p_garage_id: defaultGarageId 
-          }
-        );
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ garage_id: defaultGarageId })
+          .eq('id', userId);
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);

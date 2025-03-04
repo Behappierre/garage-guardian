@@ -26,7 +26,7 @@ export async function handleAdminOnStaffLogin(userId: string) {
     .limit(1);
     
   if (ownedGarages && ownedGarages.length > 0) {
-    // Update profile with owned garage
+    // Update profile with owned garage using direct update
     await supabase
       .from('profiles')
       .update({ garage_id: ownedGarages[0].id })

@@ -88,21 +88,16 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw memberError;
       }
       
-      // Update the user's profile with the garage ID using our function with updated parameter names
-      console.log("Updating profile using RPC with:", { p_user_id: userId, p_garage_id: garageId });
-      const { error: profileError } = await supabase.rpc(
-        'update_profile_garage', 
-        { 
-          p_user_id: userId, 
-          p_garage_id: garageId 
-        }
-      );
+      // Update the user's profile with the garage ID using direct update
+      console.log("Updating profile with garage_id:", garageId);
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
       
       if (profileError) {
         console.error("Error updating profile:", profileError);
-        if (!profileError.message.includes("infinite recursion")) {
-          console.warn("Non-critical error updating profile:", profileError.message);
-        }
+        console.warn("Non-critical error updating profile:", profileError.message);
       } else {
         console.log("Profile updated successfully with garage ID");
       }
