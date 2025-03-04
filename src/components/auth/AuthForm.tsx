@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -133,6 +134,9 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
 
     try {
       if (mode === "signup") {
+        // For garage owners, always set role to administrator
+        const userRole = userType === "owner" ? "administrator" : role;
+        
         // First, sign up the user
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
@@ -148,12 +152,13 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
 
         // If we have the user data, insert the role
         if (signUpData.user) {
+          // Explicitly set the role as administrator for garage owners
           const { error: roleError } = await supabase
             .from('user_roles')
             .insert([
               { 
                 user_id: signUpData.user.id,
-                role: role
+                role: userRole
               }
             ]);
           if (roleError) throw roleError;
@@ -162,6 +167,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             // For garage owners, show the garage creation form
             setNewUserId(signUpData.user.id);
             setShowGarageForm(true);
+            
+            // No need to create a garage entry yet - we'll do that in GarageForm
             
             toast({
               title: "Account created!",
@@ -214,9 +221,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
 
             if (roleError) {
               console.error("Error fetching user role:", roleError.message);
-              // Default redirect if role fetch fails
-              navigate("/dashboard");
-              return;
+              throw new Error("Could not verify your account role");
             }
 
             // If trying to sign in as owner but not an administrator, show error
@@ -225,7 +230,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             }
 
             // Update the user's profile with the selected garage for staff
-            if (userType === "staff") {
+            if (userType === "staff" && selectedGarageId) {
               const { error: profileError } = await supabase
                 .from('profiles')
                 .update({ garage_id: selectedGarageId })

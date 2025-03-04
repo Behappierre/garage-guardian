@@ -44,7 +44,7 @@ const Auth = () => {
           if (type === "owner") {
             if (roleData?.role !== 'administrator') {
               toast.error("You don't have permission to access the garage owner area");
-              await supabase.auth.signOut();
+              // Don't sign out, just don't redirect
               return;
             }
             
@@ -74,8 +74,7 @@ const Auth = () => {
         } catch (error: any) {
           console.error("Error verifying role:", error.message);
           toast.error("Error verifying role: " + error.message);
-          // Sign out on error to force re-authentication
-          await supabase.auth.signOut();
+          // Don't sign out on error, just stay on the auth page
         }
       }
     };

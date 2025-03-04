@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGarages } from "@/hooks/garage/useGarages";
 import { useGarageSelection } from "@/hooks/garage/useGarageSelection";
 import { useAdminAccessCheck } from "@/hooks/garage/useAdminAccessCheck";
@@ -7,6 +7,7 @@ import { CheckingAccessLoader } from "@/components/garage/CheckingAccessLoader";
 import { GarageLoadingState } from "@/components/garage/GarageLoadingState";
 import { GarageContent } from "@/components/garage/GarageContent";
 import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
+import { supabase } from "@/integrations/supabase/client";
 
 const GarageManagement = () => {
   const { garages, loading, error, refreshGarages } = useGarages();
@@ -16,6 +17,14 @@ const GarageManagement = () => {
   
   // Combine debug info from different sources
   const debugInfo = selectionDebugInfo || accessDebugInfo;
+
+  // Check if user has any garages right after access check completes
+  useEffect(() => {
+    if (!checkingAccess && garages.length === 0 && !loading) {
+      console.log("User has no garages, showing create form");
+      setShowCreateForm(true);
+    }
+  }, [checkingAccess, garages.length, loading]);
 
   // Handle garage creation completion
   const handleGarageCreated = (garageId: string) => {

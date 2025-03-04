@@ -72,7 +72,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       if (memberError) throw memberError;
       
-      console.log("Added user as garage member");
+      console.log("Added user as garage member with owner role");
       
       // Update user's profile with the new garage ID
       const { error: profileError } = await supabase

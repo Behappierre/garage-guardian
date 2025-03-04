@@ -29,6 +29,7 @@ export const getUserRole = async (userId: string): Promise<string | null> => {
 export const isAdministrator = async (userId: string): Promise<boolean> => {
   try {
     const role = await getUserRole(userId);
+    console.log(`User ${userId} has role: ${role}`);
     return role === 'administrator';
   } catch (err) {
     console.error("Error checking administrator role:", err);
@@ -40,10 +41,6 @@ export const isAdministrator = async (userId: string): Promise<boolean> => {
 export const hasGarageOwnerPermission = async (userId: string): Promise<boolean> => {
   // Always check if the user is an administrator first
   const isAdmin = await isAdministrator(userId);
-  if (isAdmin) {
-    return true;
-  }
-  
-  // Additional permission checks could be added here
-  return false;
+  console.log(`User ${userId} is administrator: ${isAdmin}`);
+  return isAdmin;
 };

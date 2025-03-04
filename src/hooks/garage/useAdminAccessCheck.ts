@@ -30,7 +30,7 @@ export const useAdminAccessCheck = () => {
         if (!hasPermission) {
           setDebugInfo("User does not have administrator role");
           toast.error("You don't have permission to access the garage management area");
-          await supabase.auth.signOut();
+          // Don't sign out automatically, just redirect
           navigate("/auth?type=owner");
           return;
         }
