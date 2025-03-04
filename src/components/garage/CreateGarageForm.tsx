@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { addUserToGarage } from "@/hooks/garage/utils/membershipHelpers";
 
 interface CreateGarageFormProps {
   onBack: () => void;
@@ -95,27 +96,9 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
       console.log("Adding user as garage owner:", currentUserId);
       
       // Add user as garage owner
-      const { error: memberError } = await supabase
-        .from('garage_members')
-        .insert([{
-          user_id: currentUserId,
-          garage_id: newGarageId,
-          role: 'owner'
-        }]);
-      
-      if (memberError) {
-        console.error("Garage member creation error:", memberError);
-        throw memberError;
-      }
-      
-      // Update user profile with garage_id
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ garage_id: newGarageId })
-        .eq('id', currentUserId);
-      
-      if (profileError && !profileError.message.includes("recursion")) {
-        console.error("Non-critical error updating profile:", profileError.message);
+      const success = await addUserToGarage(currentUserId, newGarageId, 'owner');
+      if (!success) {
+        throw new Error("Failed to add user as garage owner");
       }
       
       // Refresh the session to update claims
