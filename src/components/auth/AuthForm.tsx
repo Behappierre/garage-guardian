@@ -131,6 +131,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
       if (mode === "signup") {
         const userRole = userType === "owner" ? "administrator" : role;
         
+        console.log(`Signing up user with role: ${userRole}`);
+        
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -213,18 +215,21 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
 
             console.log("User role check for access:", roleData?.role, "Trying to access as:", userType);
 
-            if (userType === "owner" && roleData?.role !== 'administrator') {
-              throw new Error("You don't have permission to access the garage owner area");
+            if (userType === "owner") {
+              if (roleData?.role !== 'administrator') {
+                throw new Error("You don't have permission to access the garage owner area");
+              }
+              
+              navigate("/garage-management");
+              return;
             }
 
             if (userType === "staff" && roleData?.role === 'administrator') {
               throw new Error("Administrators should use the garage owner login");
             }
-
-            if (roleData?.role === 'administrator' && userType === "owner") {
-              navigate("/garage-management");
-            } else {
-              switch (roleData?.role) {
+            
+            if (roleData?.role) {
+              switch (roleData.role) {
                 case 'technician':
                   navigate("/dashboard/job-tickets");
                   break;
@@ -234,6 +239,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
                 default:
                   navigate("/dashboard");
               }
+            } else {
+              throw new Error("Your account does not have an assigned role");
             }
           } catch (error: any) {
             console.error("Error during sign-in flow:", error.message);

@@ -24,33 +24,10 @@ export const useAdminAccessCheck = () => {
           return;
         }
 
-        // Check if user has administrator role
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (roleError) {
-          console.error("Error fetching user role:", roleError?.message);
-          setDebugInfo(`Error fetching user role: ${roleError?.message}`);
-          
-          // If we've retried too many times, give up
-          if (retryCount >= 3) {
-            toast.error("You don't have permission to access the garage management area");
-            navigate("/auth?type=owner");
-            return;
-          }
-          
-          // Increment retry count and try again after a delay
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => {
-            checkAccess();
-          }, 1000);
-          return;
-        }
-
-        if (roleData.role !== 'administrator') {
+        // Use the isAdministrator utility function for consistent role checking
+        const isAdmin = await isAdministrator(user.id);
+        
+        if (!isAdmin) {
           setDebugInfo("User does not have administrator role");
           toast.error("You don't have permission to access the garage management area");
           navigate("/auth?type=owner");
