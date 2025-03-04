@@ -2,17 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
-export interface Garage {
-  id: string;
-  name: string;
-  slug: string;
-  address: string | null;
-  email: string | null;
-  phone: string | null;
-  created_at: string;
-  owner_id: string;
-}
+import { Garage } from "@/types/garage";
 
 export interface OwnerGaragesResult {
   garages: Garage[];

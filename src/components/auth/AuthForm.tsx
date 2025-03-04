@@ -9,16 +9,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { GarageForm } from "./GarageForm";
+import { Garage } from "@/types/garage";
 
 type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
 type UserType = "owner" | "staff";
-
-interface Garage {
-  id: string;
-  name: string;
-  slug: string;
-}
 
 interface AuthFormProps {
   userType: UserType;
@@ -56,7 +51,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           
           const { data, error } = await supabase
             .from('garages')
-            .select('id, name, slug')
+            .select('id, name, slug, address, email, phone, created_at, owner_id')
             .order('name');
           
           if (error) throw error;
@@ -74,14 +69,32 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               setSelectedGarageId(tracticGarage.id);
             } else {
               const fallbackGarages: Garage[] = [
-                { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
+                { 
+                  id: "00000000-0000-0000-0000-000000000000", 
+                  name: "Tractic", 
+                  slug: "tractic", 
+                  address: null, 
+                  email: null, 
+                  phone: null, 
+                  created_at: new Date().toISOString(),
+                  owner_id: "" 
+                }
               ];
               setGarages(fallbackGarages);
               setSelectedGarageId(fallbackGarages[0].id);
             }
           } else {
             const fallbackGarages: Garage[] = [
-              { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
+              { 
+                id: "00000000-0000-0000-0000-000000000000", 
+                name: "Tractic", 
+                slug: "tractic", 
+                address: null, 
+                email: null, 
+                phone: null, 
+                created_at: new Date().toISOString(),
+                owner_id: "" 
+              }
             ];
             setGarages(fallbackGarages);
             setSelectedGarageId(fallbackGarages[0].id);
@@ -90,7 +103,16 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           console.error("Error fetching garages:", error.message);
           
           const fallbackGarages: Garage[] = [
-            { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
+            { 
+              id: "00000000-0000-0000-0000-000000000000", 
+              name: "Tractic", 
+              slug: "tractic", 
+              address: null, 
+              email: null, 
+              phone: null, 
+              created_at: new Date().toISOString(),
+              owner_id: "" 
+            }
           ];
           setGarages(fallbackGarages);
           setSelectedGarageId(fallbackGarages[0].id);
