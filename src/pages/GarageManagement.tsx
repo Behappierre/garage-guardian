@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -131,8 +130,8 @@ const GarageManagement = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
       <div className="max-w-4xl w-full space-y-8">
         <PageHeader 
-          heading="Your Garages" 
-          subheading="Select a garage to manage or create a new one"
+          title="Your Garages" 
+          description="Select a garage to manage or create a new one"
         />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
