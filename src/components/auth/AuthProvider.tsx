@@ -33,10 +33,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setFetchingGarage(true);
       
-      // Try to get from profile first
+      // Try to get from profile first - fix the ambiguous column reference by being explicit
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('garage_id')
+        .select('profiles.garage_id')
         .eq('id', userId)
         .single();
       

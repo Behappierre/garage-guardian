@@ -45,7 +45,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // First, create the garage
+      // First, create the garage - fix the missing comma after phone field
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert([
@@ -54,7 +54,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
             slug: slug,
             address: data.address,
             email: data.email,
-            phone: data.phone || null
+            phone: data.phone || null,
             owner_id: userId  // Add this line to set the owner ID
           }
         ])

@@ -796,12 +796,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      user_is_in_garage: {
-        Args: {
-          garage_id: string
-        }
-        Returns: boolean
-      }
+      user_is_in_garage:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: boolean
+          }
+        | {
+            Args: {
+              garage_id: string
+            }
+            Returns: boolean
+          }
     }
     Enums: {
       app_role: "administrator" | "technician" | "front_desk"
