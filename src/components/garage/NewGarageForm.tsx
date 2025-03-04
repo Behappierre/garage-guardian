@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -52,30 +53,53 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         throw new Error("Authentication required to create a garage");
       }
       
+      // Insert the garage with all fields explicitly defined
       const { data: newGarage, error: garageError } = await supabase
         .from('garages')
-        .insert({
+        .insert([{
           name: data.name,
           slug: slug,
           address: data.address,
           email: data.email,
           phone: data.phone,
           owner_id: userData.user.id
-        })
-        .select('id, name, slug, address, email, phone, owner_id')
-        .single();
+        }])
+        .select();
       
       if (garageError) {
         console.error("Garage creation error:", garageError);
         throw new Error(garageError.message);
       }
       
-      if (!newGarage) {
+      if (!newGarage || newGarage.length === 0) {
         throw new Error("Failed to create garage: No data returned");
       }
       
+      // Add the user as a garage member
+      const { error: memberError } = await supabase
+        .from('garage_members')
+        .insert([{
+          user_id: userData.user.id,
+          garage_id: newGarage[0].id,
+          role: 'owner'
+        }]);
+        
+      if (memberError) {
+        console.error("Error adding member:", memberError);
+      }
+      
+      // Update user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: newGarage[0].id })
+        .eq('id', userData.user.id);
+        
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
+      }
+      
       toast.success("Garage created successfully");
-      onComplete(newGarage.id);
+      onComplete(newGarage[0].id);
     } catch (error: any) {
       console.error("Error creating garage:", error);
       setError(error.message || "Failed to create garage");

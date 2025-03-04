@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -106,8 +107,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       // Force refresh auth session to update user claims
       await supabase.auth.refreshSession();
       
-      // Redirect to garage management
-      navigate("/garage-management");
+      onComplete(garageId);
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
       setError(error.message);

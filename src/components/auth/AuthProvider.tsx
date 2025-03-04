@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -160,9 +161,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // If no garage found yet, try to use default Tractic garage
       console.log("Attempting to use default Tractic garage");
+      // Fix here: Specify the table name for the garage_id column
       const { data: defaultGarage, error: defaultError } = await supabase
         .from('garages')
-        .select('id')
+        .select('garages.id')
         .eq('slug', 'tractic')
         .limit(1);
           
