@@ -13,8 +13,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 export const GarageManager = () => {
   const navigate = useNavigate();
   const { garages, isLoading, error, refreshGarages } = useOwnerGarages();
-  const [showCreateForm, setShowCreateForm] = useState(garages.length === 0);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
+  // Initially show the garages list, even if empty
+  // Only show the form when user explicitly chooses to create a garage
+  
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -41,7 +44,7 @@ export const GarageManager = () => {
   if (showCreateForm) {
     return (
       <NewGarageForm
-        onBack={() => garages.length > 0 ? setShowCreateForm(false) : {}} 
+        onBack={() => setShowCreateForm(false)} 
         onComplete={handleGarageCreated}
       />
     );
