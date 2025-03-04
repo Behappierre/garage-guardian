@@ -70,7 +70,7 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         }
       }
       
-      // Create the garage with owner_id directly set
+      // Create the garage with owner_id directly set - simplifying to just create the garage
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert({
@@ -79,7 +79,7 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
           address: data.address,
           email: data.email,
           phone: data.phone,
-          owner_id: currentUserId  // Set the owner directly
+          owner_id: currentUserId
         })
         .select();
       

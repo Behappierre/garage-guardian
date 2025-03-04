@@ -64,26 +64,34 @@ export const useGarages = (): GarageHookReturn => {
         return null;
       }
       
-      // Get garage memberships
-      const garageIds = await getUserGarageMemberships(user.id);
-      console.log("Fetched garage IDs:", garageIds);
-      
-      // If user has memberships, fetch the garages
-      if (garageIds.length > 0) {
-        console.log("Fetching garages for IDs:", garageIds);
-        const userGarages = await getGaragesByIds(garageIds);
-        console.log("User garages:", userGarages);
+      // Directly fetch garages where the user is the owner
+      console.log("Fetching garages where user is owner");
+      const { data: ownedGarages, error: ownedError } = await supabase
+        .from('garages')
+        .select('id, name, slug, address, created_at, owner_id')
+        .eq('owner_id', user.id);
         
-        if (userGarages.length === 0) {
-          console.log("No garages found for IDs");
-          setError("Could not load garages. Please create a new garage.");
-        } else {
-          setGarages(userGarages);
-        }
+      if (ownedError) {
+        console.error("Error fetching owned garages:", ownedError.message);
+        throw new Error("Failed to load garages you own");
+      }
+      
+      console.log("Owned garages:", ownedGarages);
+      
+      // If user has owned garages, use them
+      if (ownedGarages && ownedGarages.length > 0) {
+        setGarages(ownedGarages);
       } else {
-        console.log("No garages found for user");
-        setError(null); // Clear error since it's expected for new administrators
-        setGarages([]);
+        // As a fallback, try to get memberships
+        const garageIds = await getUserGarageMemberships(user.id);
+        
+        if (garageIds.length > 0) {
+          const userGarages = await getGaragesByIds(garageIds);
+          setGarages(userGarages);
+        } else {
+          console.log("No garages found for user");
+          setGarages([]);
+        }
       }
       
       // Return the successful user for other operations
