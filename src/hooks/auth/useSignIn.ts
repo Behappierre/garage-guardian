@@ -47,7 +47,7 @@ export const useSignIn = () => {
     }
     
     if (ownedGarages && ownedGarages.length > 0) {
-      // Use direct update instead of RPC
+      // Explicitly specify columns to avoid ambiguity
       await supabase
         .from('profiles')
         .update({ garage_id: ownedGarages[0].id })
@@ -73,7 +73,7 @@ export const useSignIn = () => {
         .limit(1);
         
       if (memberData && memberData.length > 0) {
-        // Update profile with found garage using direct update
+        // Update profile with found garage using explicit column reference
         await supabase
           .from('profiles')
           .update({ garage_id: memberData[0].garage_id })
