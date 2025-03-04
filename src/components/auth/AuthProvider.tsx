@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -95,34 +96,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      console.log("Attempting to use default Tractic garage");
-      
-      const { data: defaultGarage, error: defaultError } = await supabase
-        .from('garages')
-        .select('id')
-        .eq('slug', 'tractic')
-        .limit(1);
-          
-      console.log("Default garage:", defaultGarage, "Error:", defaultError);
-          
-      if (defaultGarage && defaultGarage.length > 0) {
-        const defaultGarageId = defaultGarage[0].id;
-        console.log("Using default garage:", defaultGarageId);
-        setGarageId(defaultGarageId);
-        
-        const { error: memberError } = await supabase
-          .from('garage_members')
-          .upsert([
-            { user_id: userId, garage_id: defaultGarageId, role: roleData?.role || 'front_desk' }
-          ]);
-          
-        if (memberError) {
-          console.error("Error adding user to default garage:", memberError);
-        }
-      } else {
-        console.error("Could not find default garage");
-        toast.error("No garage found for your account. Please contact an administrator.");
-      }
+      // Clean solution: No default garage lookup
+      console.log("No garage found for this user");
+      toast.info("You don't have a garage associated with your account. Please create or join one.");
     } catch (error) {
       console.error("Error fetching user garage:", error);
       toast.error("Error finding your garage. Please try again or contact support.");

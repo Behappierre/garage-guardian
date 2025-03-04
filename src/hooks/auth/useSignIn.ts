@@ -47,81 +47,28 @@ export const useSignIn = () => {
     }
     
     if (ownedGarages && ownedGarages.length > 0) {
-      // Explicitly specify columns to avoid ambiguity
+      // Add user as member of their owned garage
       await supabase
-        .from('profiles')
-        .update({ garage_id: ownedGarages[0].id })
-        .eq('id', userId);
+        .from('garage_members')
+        .upsert([{ 
+          user_id: userId, 
+          garage_id: ownedGarages[0].id,
+          role: 'owner'
+        }]);
     }
   };
 
   const handleStaffSignIn = async (userId: string, userRole: string) => {
-    // Get user's garage assignment
-    const { data: profileData } = await supabase
-      .from('profiles')
+    // Check if user is a member of any garage
+    const { data: memberData } = await supabase
+      .from('garage_members')
       .select('garage_id')
-      .eq('id', userId)
-      .single();
-      
-    // If no garage_id, try to find one
-    if (!profileData?.garage_id) {
-      // Check if user is a member of any garage
-      const { data: memberData } = await supabase
-        .from('garage_members')
-        .select('garage_id')
-        .eq('user_id', userId)
-        .limit(1);
+      .eq('user_id', userId)
+      .limit(1);
         
-      if (memberData && memberData.length > 0) {
-        // Update profile with found garage using explicit column reference
-        await supabase
-          .from('profiles')
-          .update({ garage_id: memberData[0].garage_id })
-          .eq('id', userId);
-      } else {
-        // Try default 'tractic' garage
-        const { data: defaultGarage } = await supabase
-          .from('garages')
-          .select('id')
-          .eq('slug', 'tractic')
-          .limit(1);
-          
-        if (defaultGarage && defaultGarage.length > 0) {
-          const defaultGarageId = defaultGarage[0].id;
-          
-          await supabase
-            .from('garage_members')
-            .upsert([
-              { user_id: userId, garage_id: defaultGarageId, role: userRole }
-            ]);
-            
-          await supabase
-            .from('profiles')
-            .update({ garage_id: defaultGarageId })
-            .eq('id', userId);
-        } else {
-          // Try any available garage
-          const { data: anyGarage } = await supabase
-            .from('garages')
-            .select('id')
-            .limit(1);
-            
-          if (anyGarage && anyGarage.length > 0) {
-            await supabase
-              .from('garage_members')
-              .upsert([
-                { user_id: userId, garage_id: anyGarage[0].id, role: userRole }
-              ]);
-              
-            await supabase
-              .from('profiles')
-              .update({ garage_id: anyGarage[0].id })
-              .eq('id', userId);
-          } else {
-            throw new Error("No garages found in the system. Please contact an administrator.");
-          }
-        }
-      }
+    if (!memberData || memberData.length === 0) {
+      // No garage found - we don't automatically assign one anymore
+      throw new Error("You don't have access to any garages. Please contact an administrator.");
     }
   };
 

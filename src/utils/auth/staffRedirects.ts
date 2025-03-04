@@ -38,10 +38,9 @@ export async function handleAdminOnStaffLogin(userId: string) {
     return { shouldRedirect: true, path: "/dashboard" };
   } 
   
-  // Sign out and show error
-  toast.error("Administrators should use the garage owner login");
-  await supabase.auth.signOut();
-  return { shouldRedirect: false, path: null };
+  // No garage found, redirect to garage creation
+  toast.info("You don't have a garage yet. Please create one.");
+  return { shouldRedirect: true, path: "/garage-management" };
 }
 
 /**
@@ -52,7 +51,8 @@ export async function handleStaffLogin(userId: string, userRole: string) {
   const hasGarage = await ensureUserHasGarage(userId, userRole);
   
   if (!hasGarage) {
-    toast.error("No garage found for your account. Please contact an administrator.");
+    toast.info("You don't have a garage associated with your account. Please contact an administrator.");
+    await supabase.auth.signOut();
     return { shouldRedirect: false, path: null };
   }
   
