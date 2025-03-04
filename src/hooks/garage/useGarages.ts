@@ -108,7 +108,8 @@ export const useGarages = (): GarageHookReturn => {
           if (userGarages.length === 0) {
             // If memberships exist but no garages found, handle as default case
             console.log("Membership exists but no garages found, creating default garage");
-            setError("Could not load garages. Creating default garage.");
+            // Clear the error as we're going to fall back to a default garage
+            setError(null);
             const tracticGarages = await handleTracticUserGarages(user);
             setGarages(tracticGarages);
           } else {
@@ -121,6 +122,8 @@ export const useGarages = (): GarageHookReturn => {
           console.error("Error fetching Tractic user garages:", err);
           // Always fall back to default Tractic garage
           console.log("Falling back to default Tractic garage");
+          // Don't set an error if we're going to fall back to a default garage
+          setError(null);
           const tracticGarages = await handleTracticUserGarages(user);
           setGarages(tracticGarages);
           setLoading(false);
@@ -164,7 +167,7 @@ export const useGarages = (): GarageHookReturn => {
           
           if (userGarages.length === 0) {
             console.log("No garages found for IDs");
-            setError("Could not load garages. Using default garage.");
+            setError("Could not load garages. Please create a new garage.");
           } else {
             setGarages(userGarages);
           }
@@ -178,6 +181,8 @@ export const useGarages = (): GarageHookReturn => {
         // For Tractic users, handle specially even if role check fails
         if (isTracticUser(user.email)) {
           console.log("Handling Tractic user specially after role check failure");
+          // Don't set an error since we're falling back to a valid option
+          setError(null);
           const tracticGarages = await handleTracticUserGarages(user);
           setGarages(tracticGarages);
         } else {

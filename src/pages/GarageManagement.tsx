@@ -10,7 +10,7 @@ import { GarageList } from "@/components/garage/GarageList";
 import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, InfoIcon } from "lucide-react";
 
 const GarageManagement = () => {
   const navigate = useNavigate();
@@ -205,19 +205,21 @@ const GarageManagement = () => {
         )}
         
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-            <p className="text-red-700">
-              Error: {error} 
-            </p>
-          </div>
+          <Alert variant={error.includes("Using default garage") ? "default" : "destructive"} className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error}
+            </AlertDescription>
+          </Alert>
         )}
         
         {garages.length === 0 && !error && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
-            <p className="text-yellow-700">
+          <Alert variant="warning" className="mb-4 bg-yellow-50 border-yellow-200">
+            <InfoIcon className="h-4 w-4 text-yellow-700" />
+            <AlertDescription className="text-yellow-700">
               No garages found. You can create a new garage using the button below.
-            </p>
-          </div>
+            </AlertDescription>
+          </Alert>
         )}
         
         <GarageList 
