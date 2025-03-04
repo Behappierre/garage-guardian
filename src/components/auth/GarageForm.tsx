@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { Garage } from "@/types/garage";
 
 interface GarageFormProps {
   userId: string;
@@ -45,7 +45,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // First, create the garage - fix includes adding a comma after phone field and explicitly setting owner_id
+      // First, create the garage with explicit owner_id
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert([

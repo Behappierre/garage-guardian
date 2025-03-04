@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
-      // Fix: Remove table prefixes in select statements
+      // Fix: Use column names without table prefixes
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, garage_id')

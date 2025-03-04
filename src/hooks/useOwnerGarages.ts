@@ -36,7 +36,7 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
 
       console.log("Fetching garages for user:", userData.user.id);
 
-      // Fix: Use column names without table prefixes
+      // Fix: Use column names without table prefixes and ensure owner_id filter
       const { data, error: garagesError } = await supabase
         .from("garages")
         .select("id, name, slug, address, email, phone, created_at, owner_id")
