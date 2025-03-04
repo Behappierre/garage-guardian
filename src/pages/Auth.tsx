@@ -32,7 +32,10 @@ const Auth = () => {
             .eq('user_id', session.user.id)
             .single();
 
-          if (roleError) throw roleError;
+          if (roleError) {
+            console.error("Error fetching role:", roleError.message);
+            throw roleError;
+          }
 
           console.log("User role:", roleData?.role);
           console.log("User type:", type);
@@ -69,7 +72,8 @@ const Auth = () => {
             }
           }
         } catch (error: any) {
-          toast.error("Error fetching user role: " + error.message);
+          console.error("Error verifying role:", error.message);
+          toast.error("Error verifying role: " + error.message);
           // Sign out on error to force re-authentication
           await supabase.auth.signOut();
         }

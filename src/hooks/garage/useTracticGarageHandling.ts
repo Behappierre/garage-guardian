@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Garage } from "./types";
@@ -32,6 +33,16 @@ export const useTracticGarageHandling = () => {
       const memberAdded = await addUserToGarage(user.id, tracticGarage.id);
       if (!memberAdded) {
         console.warn(`Failed to add user ${user.id} to Tractic garage ${tracticGarage.id}`);
+      }
+      
+      // Also update user's profile with the garage ID
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: tracticGarage.id })
+        .eq('id', user.id);
+        
+      if (profileError) {
+        console.warn(`Failed to update profile with garage ID: ${profileError.message}`);
       }
       
       return [tracticGarage];
