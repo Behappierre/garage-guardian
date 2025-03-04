@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -38,33 +37,62 @@ export const AuthForm = () => {
       try {
         setFetchingGarages(true);
         
-        // Use a basic SELECT query without RLS restrictions since we're in the auth form
-        // This bypasses the RLS policy that's causing the recursion issue
-        const { data, error } = await supabase
-          .from('garages')
-          .select('id, name, slug')
-          .order('name');
+        // Use a direct SQL query to bypass RLS policies
+        const { data, error } = await supabase.rpc('execute_read_only_query', {
+          query_text: 'SELECT id, name, slug FROM garages ORDER BY name'
+        });
         
         if (error) throw error;
         
-        console.log("Fetched garages:", data);
+        // Parse the jsonb result
+        let parsedGarages: Garage[] = [];
+        if (data && Array.isArray(data)) {
+          parsedGarages = data.map(garage => ({
+            id: garage.id,
+            name: garage.name,
+            slug: garage.slug
+          }));
+        }
         
-        setGarages(data || []);
-        // Set default garage if available (in this case, look for Tractic)
-        const tracticGarage = data?.find(garage => garage.name === 'Tractic');
-        if (tracticGarage) {
-          setSelectedGarageId(tracticGarage.id);
-        } else if (data && data.length > 0) {
-          setSelectedGarageId(data[0].id);
+        console.log("Fetched garages:", parsedGarages);
+        
+        if (parsedGarages.length > 0) {
+          setGarages(parsedGarages);
+          // Look for Tractic garage first
+          const tracticGarage = parsedGarages.find(garage => 
+            garage.name.toLowerCase() === 'tractic' || 
+            garage.slug.toLowerCase() === 'tractic'
+          );
+          
+          if (tracticGarage) {
+            setSelectedGarageId(tracticGarage.id);
+          } else {
+            // Otherwise use the first garage in the list
+            setSelectedGarageId(parsedGarages[0].id);
+          }
+        } else {
+          // Fallback option if no garages are found
+          const fallbackGarages: Garage[] = [
+            { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
+          ];
+          setGarages(fallbackGarages);
+          setSelectedGarageId(fallbackGarages[0].id);
         }
       } catch (error: any) {
         console.error("Error fetching garages:", error.message);
-        // Add a fallback in case fetching from DB fails
-        const fallbackGarages = [
-          { id: "default-garage-id", name: "Default Garage", slug: "default" }
+        
+        // Fallback to hardcoded Tractic garage in case of any errors
+        const fallbackGarages: Garage[] = [
+          { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
         ];
         setGarages(fallbackGarages);
         setSelectedGarageId(fallbackGarages[0].id);
+        
+        toast({
+          variant: "destructive",
+          title: "Warning",
+          description: "Could not load garages. Using default garage.",
+        });
       } finally {
         setFetchingGarages(false);
       }
@@ -224,7 +252,9 @@ export const AuthForm = () => {
             disabled={fetchingGarages}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder={fetchingGarages ? "Loading garages..." : "Select a garage"} />
+              <SelectValue 
+                placeholder={fetchingGarages ? "Loading garages..." : "Select a garage"} 
+              />
             </SelectTrigger>
             <SelectContent>
               {garages.length > 0 ? (

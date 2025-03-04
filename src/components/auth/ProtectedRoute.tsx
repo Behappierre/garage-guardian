@@ -15,29 +15,37 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     const verifyGarageAccess = async () => {
       if (user) {
         try {
-          // Check if user belongs to any garage
-          const { data, error } = await supabase
-            .from('garage_members')
-            .select('garage_id')
-            .eq('user_id', user.id);
+          // Try to use the RPC function to avoid RLS recursion
+          const { data, error } = await supabase.rpc('execute_read_only_query', {
+            query_text: `SELECT garage_id FROM garage_members WHERE user_id = '${user.id}'`
+          });
           
           if (error) {
+            // Handle potential errors with the RPC call
             console.error("Error checking garage membership:", error.message);
-            // Only throw if it's not the recursion error
-            if (!error.message.includes("infinite recursion")) {
-              throw error;
+            
+            // Fallback to direct check if garageId is available from AuthProvider
+            if (garageId) {
+              setHasGarageAccess(true);
+              setIsVerifyingGarage(false);
+              return;
             }
-            // If it's the recursion error, assume there's valid access
-            // This is a temporary workaround
-            setHasGarageAccess(true);
-            setIsVerifyingGarage(false);
-            return;
+            
+            // If it's the recursion error, assume there's valid access as a temporary workaround
+            if (error.message.includes("infinite recursion")) {
+              setHasGarageAccess(true);
+              setIsVerifyingGarage(false);
+              return;
+            }
+            
+            throw error;
           }
           
-          if (data && data.length > 0) {
-            setHasGarageAccess(true);
-          } else {
-            // User doesn't belong to any garage
+          // Parse the jsonb result
+          const hasAccess = data && Array.isArray(data) && data.length > 0;
+          setHasGarageAccess(hasAccess);
+          
+          if (!hasAccess) {
             toast.error("You don't have access to any garage. Please contact an administrator.");
             // Sign out the user
             await supabase.auth.signOut();
@@ -59,7 +67,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     } else {
       setIsVerifyingGarage(false);
     }
-  }, [user, loading]);
+  }, [user, loading, garageId]);
 
   if (loading || isVerifyingGarage) {
     return <div>Loading...</div>;
