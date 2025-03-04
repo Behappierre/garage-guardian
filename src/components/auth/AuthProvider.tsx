@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -33,7 +32,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
-      // Check if user is an administrator first
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -49,7 +47,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const isAdmin = roleData?.role === 'administrator';
       console.log("Is user admin:", isAdmin);
       
-      // For administrators, check garages they own first 
       if (isAdmin) {
         const { data: ownedGarages, error: ownedError } = await supabase
           .from('garages')
@@ -64,7 +61,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Make sure user is a member of the garage
           await supabase
             .from('garage_members')
             .upsert([{
@@ -80,7 +76,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
       
-      // Check if user is a member of any garage
       const { data: memberships, error: membershipError } = await supabase
         .from('garage_members')
         .select('garage_id, role')
@@ -100,13 +95,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // If no garage found yet, try to use default Tractic garage
       console.log("Attempting to use default Tractic garage");
       
-      // Fix the ambiguous column reference by being more specific in the query
       const { data: defaultGarage, error: defaultError } = await supabase
         .from('garages')
-        .select('garages.id')
+        .select('id')
         .eq('slug', 'tractic')
         .limit(1);
           
@@ -117,7 +110,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Using default garage:", defaultGarageId);
         setGarageId(defaultGarageId);
         
-        // Add user as a member of this default garage
         const { error: memberError } = await supabase
           .from('garage_members')
           .upsert([
@@ -128,7 +120,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error adding user to default garage:", memberError);
         }
       } else {
-        // No default garage found
         console.error("Could not find default garage");
         toast.error("No garage found for your account. Please contact an administrator.");
       }
@@ -177,9 +168,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Reset garage fetch flag when auth state changes
           setHasFetchedGarage(false);
-          setGarageId(null); // Clear the garage ID to ensure it refreshes
+          setGarageId(null);
           fetchUserGarage(session.user.id);
         } else {
           setGarageId(null);
