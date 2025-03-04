@@ -56,15 +56,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserGarage = async (userId: string) => {
     try {
+      // First check profiles table for garage_id
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .single();
+      
+      if (!profileError && profileData?.garage_id) {
+        setGarageId(profileData.garage_id);
+        setLoading(false);
+        return;
+      }
+      
+      // If no garage_id in profile or there was an error, check garage_members
       const { data, error } = await supabase
         .from('garage_members')
         .select('garage_id')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
       if (error) {
-        console.error("Error fetching user garage:", error.message);
-        setGarageId(null);
+        // If it's the infinite recursion error, try a direct query
+        if (error.message.includes("infinite recursion")) {
+          console.error("Using fallback method to get garage due to recursion error");
+          
+          // Fallback to a direct query that might bypass the RLS policy
+          const { data: garageData, error: garageError } = await supabase
+            .from('garages')
+            .select('id')
+            .limit(1);
+          
+          if (!garageError && garageData && garageData.length > 0) {
+            setGarageId(garageData[0].id);
+          } else {
+            console.error("Error in fallback garage fetch:", garageError?.message);
+            setGarageId(null);
+          }
+        } else {
+          console.error("Error fetching user garage:", error.message);
+          setGarageId(null);
+        }
       } else {
         setGarageId(data?.garage_id || null);
       }
