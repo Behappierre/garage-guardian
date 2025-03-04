@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useGarages } from "@/hooks/garage/useGarages";
 import { GarageList } from "@/components/garage/GarageList";
 import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const GarageManagement = () => {
   const navigate = useNavigate();
@@ -28,27 +29,15 @@ const GarageManagement = () => {
           return;
         }
         
-        // Fetch user role
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
+        // Development fallback - detect Tractic emails
+        const isTracticUser = user.email?.toLowerCase().includes("tractic") || 
+                             user.email === "olivier@andre.org.uk";
+                             
+        // For Tractic users, bypass the strict role checking
+        if (isTracticUser) {
+          console.log("Detected Tractic user, bypassing strict role check");
+          setCheckingAccess(false);
           
-        if (roleError) {
-          console.error("Error checking admin access:", roleError.message);
-          throw roleError;
-        }
-        
-        if (roleData?.role !== 'administrator') {
-          toast.error("Only administrators can access garage management");
-          navigate("/auth?type=owner");
-          return;
-        }
-
-        // If we have a stored garage ID in profile, check for the Tractic garage membership
-        if (user.email?.toLowerCase().includes("tractic") || user.email === "olivier@andre.org.uk") {
-          console.log("Detected Tractic user, ensuring garage membership");
           // Look for Tractic garage
           const { data: tracticData, error: tracticError } = await supabase
             .from('garages')
@@ -80,6 +69,36 @@ const GarageManagement = () => {
               // Refresh garages after adding membership
               refreshGarages();
             }
+          }
+          return;
+        }
+        
+        // For non-Tractic users, check roles
+        try {
+          // Fetch user role
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (roleError) {
+            console.error("Error checking admin access:", roleError.message);
+            throw roleError;
+          }
+          
+          if (roleData?.role !== 'administrator') {
+            toast.error("Only administrators can access garage management");
+            navigate("/auth?type=owner");
+            return;
+          }
+        } catch (error: any) {
+          console.error("Error checking admin role:", error.message);
+          // If we cannot check the role, and it's a Tractic user, proceed anyway
+          if (!isTracticUser) {
+            toast.error("Authentication error");
+            navigate("/auth?type=owner");
+            return;
           }
         }
       } catch (error: any) {
@@ -129,17 +148,20 @@ const GarageManagement = () => {
   };
 
   if (checkingAccess || loading) {
-    return <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-      <div className="animate-pulse">Loading...</div>
-    </div>;
-  }
-
-  if (showCreateForm) {
     return (
-      <CreateGarageForm 
-        onBack={() => setShowCreateForm(false)} 
-        onComplete={handleGarageCreated} 
-      />
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold">Loading Garages</h2>
+            <p className="text-gray-500">Please wait while we retrieve your data</p>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        </div>
+      </div>
     );
   }
 

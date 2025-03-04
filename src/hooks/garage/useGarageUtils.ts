@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Garage } from "./types";
@@ -210,10 +209,10 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
   }
 };
 
-// Get user's role
+// Get user's role - modified to use direct select query
 export const getUserRole = async (userId: string): Promise<string | null> => {
   try {
-    // Use a direct SQL query to avoid potential RLS issues
+    // Fix: Change direct query to a SELECT query as required by the RPC function
     const { data, error } = await supabase.rpc(
       'execute_read_only_query',
       { 

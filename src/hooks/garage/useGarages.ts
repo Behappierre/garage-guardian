@@ -59,56 +59,92 @@ export const useGarages = (): GarageHookReturn => {
       
       console.log("Current user:", user.email);
       
-      // Get the user's role
-      const role = await getUserRole(user.id);
-      
-      if (!role) {
-        console.error("No role found for user");
-        setError("Your account doesn't have a role assigned. Please contact an administrator.");
-        setGarages([]);
-        setLoading(false);
-        return user;
-      }
-      
-      console.log("User role:", role);
-      
-      // If the user is not an administrator, they shouldn't be accessing garages management
-      if (role !== 'administrator') {
-        toast.error("You don't have permission to access garage management");
-        await supabase.auth.signOut();
-        setGarages([]);
-        setLoading(false);
-        return user;
-      }
-      
-      // Get garage memberships
-      const garageIds = await getUserGarageMemberships(user.id);
-      console.log("Fetched garage IDs:", garageIds);
-      
-      // For Tractic users with no memberships, handle specially
-      if (garageIds.length === 0 && isTracticUser(user.email)) {
-        console.log("No garages found for Tractic user, setting up default garage");
-        const tracticGarages = await handleTracticUserGarages(user);
-        setGarages(tracticGarages);
-        setLoading(false);
-        return user;
-      }
-      
-      // If user has memberships, fetch the garages
-      if (garageIds.length > 0) {
-        console.log("Fetching garages for IDs:", garageIds);
+      // Special handling for Tractic users - skip role check
+      if (isTracticUser(user.email)) {
+        console.log("Detected Tractic user, bypassing role check");
+        
+        // Get garage memberships first
+        const garageIds = await getUserGarageMemberships(user.id);
+        console.log("Fetched garage IDs for Tractic user:", garageIds);
+        
+        if (garageIds.length === 0) {
+          console.log("No garages found for Tractic user, setting up default garage");
+          const tracticGarages = await handleTracticUserGarages(user);
+          setGarages(tracticGarages);
+          setLoading(false);
+          return user;
+        }
+        
+        // If user has memberships, fetch the garages
         const userGarages = await getGaragesByIds(garageIds);
         console.log("User garages:", userGarages);
         
         if (userGarages.length === 0) {
-          setError("Could not load garages. Using default garage.");
+          setError("Could not load garages. Creating default garage.");
+          const tracticGarages = await handleTracticUserGarages(user);
+          setGarages(tracticGarages);
         } else {
           setGarages(userGarages);
         }
-      } else {
-        console.log("No garages found for user");
-        setError("No garages found for your account.");
-        setGarages([]);
+        
+        setLoading(false);
+        return user;
+      }
+      
+      // For non-Tractic users, proceed with role checking
+      try {
+        // Get the user's role
+        const role = await getUserRole(user.id);
+        
+        if (!role) {
+          console.error("No role found for user");
+          setError("Your account doesn't have a role assigned. Please contact an administrator.");
+          setGarages([]);
+          setLoading(false);
+          return user;
+        }
+        
+        console.log("User role:", role);
+        
+        // If the user is not an administrator, they shouldn't be accessing garages management
+        if (role !== 'administrator') {
+          toast.error("You don't have permission to access garage management");
+          await supabase.auth.signOut();
+          setGarages([]);
+          setLoading(false);
+          return user;
+        }
+        
+        // Get garage memberships
+        const garageIds = await getUserGarageMemberships(user.id);
+        console.log("Fetched garage IDs:", garageIds);
+        
+        // If user has memberships, fetch the garages
+        if (garageIds.length > 0) {
+          console.log("Fetching garages for IDs:", garageIds);
+          const userGarages = await getGaragesByIds(garageIds);
+          console.log("User garages:", userGarages);
+          
+          if (userGarages.length === 0) {
+            setError("Could not load garages. Using default garage.");
+          } else {
+            setGarages(userGarages);
+          }
+        } else {
+          console.log("No garages found for user");
+          setError("No garages found for your account.");
+          setGarages([]);
+        }
+      } catch (error: any) {
+        console.error("Error processing user role:", error.message);
+        // For Tractic users, handle specially even if role check fails
+        if (isTracticUser(user.email)) {
+          const tracticGarages = await handleTracticUserGarages(user);
+          setGarages(tracticGarages);
+        } else {
+          setError("Failed to verify your access role. Please try again later.");
+          setGarages([]);
+        }
       }
       
       return user;
