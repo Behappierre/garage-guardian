@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, garageId } = useAuth();
   const location = useLocation();
   const [isVerifyingRole, setIsVerifyingRole] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -75,41 +75,67 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             return;
           }
           
-          // Check if user has a garage membership
-          try {
-            const { data: memberData, error: memberError } = await supabase
-              .from('garage_members')
-              .select('id')
-              .eq('user_id', user.id)
-              .limit(1);
+          // Check if user has a garage_id (either in profile or as a member)
+          if (!garageId) {
+            // If no garage_id is set in the AuthProvider, try to set one now
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('garage_id')
+              .eq('id', user.id)
+              .single();
               
-            if (memberError) {
-              console.error("Error checking garage membership:", memberError.message);
-              toast.error("Error verifying your garage access");
-              setHasAccess(false);
-              setIsVerifyingRole(false);
-              setHasAttemptedVerification(true);
-              setRedirectTo("/auth");
-              return;
+            if (!profileData?.garage_id) {
+              // If no garage_id in profile, check memberships
+              const { data: memberData, error: memberError } = await supabase
+                .from('garage_members')
+                .select('garage_id')
+                .eq('user_id', user.id)
+                .limit(1);
+                
+              if (memberError) {
+                console.error("Error checking garage membership:", memberError.message);
+                toast.error("Error verifying your garage access");
+                setHasAccess(false);
+                setIsVerifyingRole(false);
+                setHasAttemptedVerification(true);
+                setRedirectTo("/auth");
+                return;
+              }
+              
+              if (!memberData || memberData.length === 0) {
+                // Try default garage
+                const { data: defaultGarage } = await supabase
+                  .from('garages')
+                  .select('id')
+                  .eq('slug', 'tractic')
+                  .limit(1);
+                  
+                if (defaultGarage && defaultGarage.length > 0) {
+                  const defaultGarageId = defaultGarage[0].id;
+                  
+                  // Add user as member
+                  await supabase
+                    .from('garage_members')
+                    .upsert([
+                      { user_id: user.id, garage_id: defaultGarageId, role: roleData?.role || 'front_desk' }
+                    ]);
+                    
+                  // Update profile
+                  await supabase
+                    .from('profiles')
+                    .update({ garage_id: defaultGarageId })
+                    .eq('id', user.id);
+                } else {
+                  console.log("User has no garage memberships and no default garage found");
+                  toast.error("You don't have access to any garage. Please contact an administrator.");
+                  setHasAccess(false);
+                  setIsVerifyingRole(false);
+                  setHasAttemptedVerification(true);
+                  setRedirectTo("/auth");
+                  return;
+                }
+              }
             }
-            
-            if (!memberData || memberData.length === 0) {
-              console.log("User has no garage memberships");
-              toast.error("You don't have access to any garage. Please contact an administrator.");
-              setHasAccess(false);
-              setIsVerifyingRole(false);
-              setHasAttemptedVerification(true);
-              // Important: Redirect to auth instead of cycling through dashboard routes
-              setRedirectTo("/auth");
-              return;
-            }
-          } catch (err) {
-            console.error("Exception checking garage membership:", err);
-            setHasAccess(false);
-            setIsVerifyingRole(false);
-            setHasAttemptedVerification(true);
-            setRedirectTo("/auth");
-            return;
           }
         }
         
@@ -131,7 +157,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     if (!loading) {
       verifyAccess();
     }
-  }, [user, loading, location.pathname, hasAttemptedVerification]);
+  }, [user, loading, location.pathname, hasAttemptedVerification, garageId]);
 
   // Reset verification state when location changes
   useEffect(() => {

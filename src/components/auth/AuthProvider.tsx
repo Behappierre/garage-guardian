@@ -65,10 +65,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setGarageId(ownedGarageId);
         
         // Update the profile with this garage_id
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({ garage_id: ownedGarageId })
           .eq('id', userId);
+          
+        if (updateError) {
+          console.error("Error updating profile with garage_id:", updateError);
+        }
           
         setLoading(false);
         setHasFetchedGarage(true);
@@ -90,10 +94,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setGarageId(memberGarageId);
         
         // Update the profile with this garage_id
-        await supabase
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({ garage_id: memberGarageId })
           .eq('id', userId);
+          
+        if (updateError) {
+          console.error("Error updating profile with garage_id:", updateError);
+        }
           
         setLoading(false);
         setHasFetchedGarage(true);
@@ -117,17 +125,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setGarageId(defaultGarageId);
           
           // Add user as a member of this default garage
-          await supabase
+          const { error: memberError } = await supabase
             .from('garage_members')
             .upsert([
               { user_id: userId, garage_id: defaultGarageId, role: 'front_desk' }
             ]);
             
+          if (memberError) {
+            console.error("Error adding user to default garage:", memberError);
+          }
+            
           // Update profile with this garage_id
-          await supabase
+          const { error: updateError } = await supabase
             .from('profiles')
             .update({ garage_id: defaultGarageId })
             .eq('id', userId);
+            
+          if (updateError) {
+            console.error("Error updating profile with garage_id:", updateError);
+          }
             
           setHasFetchedGarage(true);
         } else {
@@ -180,6 +196,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Reset garage fetch flag when auth state changes
           setHasFetchedGarage(false);
           fetchUserGarage(session.user.id);
         } else {

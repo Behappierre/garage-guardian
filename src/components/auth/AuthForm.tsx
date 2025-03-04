@@ -142,13 +142,24 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               .eq('id', signUpData.user.id);
             if (profileError) throw profileError;
             
-            uiToast({
-              title: "Success!",
-              description: "Please check your email to confirm your account.",
+            // Sign in the user after successful signup
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password
             });
+            
+            if (signInError) throw signInError;
+            
+            // Redirect based on role
+            if (role === 'technician') {
+              navigate("/dashboard/job-tickets");
+            } else {
+              navigate("/dashboard/appointments");
+            }
           }
         }
       } else {
+        // SIGN IN FLOW
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -184,6 +195,31 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             }
             
             if (roleData?.role) {
+              // Ensure we have a garage_id for the user
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('garage_id')
+                .eq('id', signInData.user.id)
+                .single();
+                
+              if (!profileData?.garage_id) {
+                // If profile doesn't have a garage_id, check memberships
+                const { data: memberData } = await supabase
+                  .from('garage_members')
+                  .select('garage_id')
+                  .eq('user_id', signInData.user.id)
+                  .limit(1);
+                  
+                if (memberData && memberData.length > 0) {
+                  // Update profile with the found garage_id
+                  await supabase
+                    .from('profiles')
+                    .update({ garage_id: memberData[0].garage_id })
+                    .eq('id', signInData.user.id);
+                }
+              }
+              
+              // Now redirect based on role
               switch (roleData.role) {
                 case 'technician':
                   navigate("/dashboard/job-tickets");

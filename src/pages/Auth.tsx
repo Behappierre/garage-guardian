@@ -89,27 +89,66 @@ const Auth = () => {
               setIsChecking(false);
               return;
             } else if (roleData?.role) {
-              // Check garage membership for non-administrator staff
-              const { data: memberData, error: memberError } = await supabase
-                .from('garage_members')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .limit(1);
+              // Ensure the user has a garage assigned before redirecting
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('garage_id')
+                .eq('id', session.user.id)
+                .single();
                 
-              if (memberError) {
-                console.error("Error checking garage membership:", memberError.message);
-                setIsChecking(false);
-                return;
+              if (!profileData?.garage_id) {
+                // If no garage_id in profile, check memberships
+                const { data: memberData, error: memberError } = await supabase
+                  .from('garage_members')
+                  .select('garage_id')
+                  .eq('user_id', session.user.id)
+                  .limit(1);
+                  
+                if (memberError) {
+                  console.error("Error checking garage membership:", memberError.message);
+                  setIsChecking(false);
+                  return;
+                }
+                
+                if (memberData && memberData.length > 0) {
+                  // Update profile with found garage_id
+                  await supabase
+                    .from('profiles')
+                    .update({ garage_id: memberData[0].garage_id })
+                    .eq('id', session.user.id);
+                } else {
+                  // Try to use default Tractic garage
+                  const { data: defaultGarage } = await supabase
+                    .from('garages')
+                    .select('id')
+                    .eq('slug', 'tractic')
+                    .limit(1);
+                    
+                  if (defaultGarage && defaultGarage.length > 0) {
+                    const defaultGarageId = defaultGarage[0].id;
+                    
+                    // Add user as member
+                    await supabase
+                      .from('garage_members')
+                      .upsert([
+                        { user_id: session.user.id, garage_id: defaultGarageId, role: roleData.role }
+                      ]);
+                      
+                    // Update profile
+                    await supabase
+                      .from('profiles')
+                      .update({ garage_id: defaultGarageId })
+                      .eq('id', session.user.id);
+                  } else {
+                    toast.error("You don't have access to any garage. Please contact an administrator.");
+                    await supabase.auth.signOut();
+                    setIsChecking(false);
+                    return;
+                  }
+                }
               }
               
-              if (!memberData || memberData.length === 0) {
-                toast.error("You don't have access to any garage. Please contact an administrator.");
-                await supabase.auth.signOut();
-                setIsChecking(false);
-                return;
-              }
-              
-              // Regular staff role with garage access, redirect to appropriate page
+              // Redirect based on role
               switch (roleData.role) {
                 case 'technician':
                   navigate("/dashboard/job-tickets");
