@@ -11,6 +11,7 @@ const Auth = () => {
   const [userType, setUserType] = useState<"owner" | "staff">("staff");
   const [isChecking, setIsChecking] = useState(true);
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if we should show owner or staff sign-up/in
@@ -21,98 +22,120 @@ const Auth = () => {
     } else {
       setUserType("staff");
     }
+
+    // Check for error messages in the URL params
+    const error = params.get("error");
+    if (error) {
+      setAuthError(decodeURIComponent(error));
+    }
   }, [location.search]);
 
   // Separate useEffect for auth checking to avoid conflicts
   useEffect(() => {
-    // Only check auth once
+    // Only check auth once per render
     if (hasCheckedAuth) return;
     
     // Check if user is already authenticated
     const checkAuthAndRole = async () => {
       setIsChecking(true);
+      setHasCheckedAuth(true); // Set this early to prevent multiple checks
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          console.log("User already authenticated:", session.user.id);
-          
-          try {
-            // Fetch user role
-            const { data: roleData, error: roleError } = await supabase
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', session.user.id)
-              .maybeSingle();
+        if (!session?.user) {
+          setIsChecking(false);
+          return;
+        }
+        
+        console.log("User already authenticated:", session.user.id);
+        
+        try {
+          // Fetch user role
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
 
-            if (roleError) {
-              console.error("Error fetching role:", roleError.message);
+          if (roleError) {
+            console.error("Error fetching role:", roleError.message);
+            setIsChecking(false);
+            return;
+          }
+
+          console.log("User role:", roleData?.role);
+          console.log("User type page:", userType);
+
+          // For owner login page, only allow administrators
+          if (userType === "owner") {
+            if (roleData?.role === 'administrator') {
+              // Redirect administrators to garage management
+              navigate("/garage-management");
+              return;
+            } else {
+              // Non-administrator on owner login page
+              toast.error("Only administrators can access the garage owner area");
+              await supabase.auth.signOut();
               setIsChecking(false);
-              setHasCheckedAuth(true);
               return;
             }
-
-            console.log("User role:", roleData?.role);
-            console.log("User type page:", userType);
-
-            // For owner login page, only allow administrators
-            if (userType === "owner") {
-              if (roleData?.role === 'administrator') {
-                // Redirect administrators to garage management
-                navigate("/garage-management");
-                return;
-              } else {
-                // Non-administrator on owner login page
-                toast.error("Only administrators can access the garage owner area");
-                await supabase.auth.signOut();
+          } else {
+            // On staff login page
+            if (roleData?.role === 'administrator') {
+              // Administrator on staff login page
+              toast.error("Administrators should use the garage owner login");
+              // Sign out the user if they're on the wrong login page
+              await supabase.auth.signOut();
+              setIsChecking(false);
+              return;
+            } else if (roleData?.role) {
+              // Check garage membership for non-administrator staff
+              const { data: memberData, error: memberError } = await supabase
+                .from('garage_members')
+                .select('id')
+                .eq('user_id', session.user.id)
+                .limit(1);
+                
+              if (memberError) {
+                console.error("Error checking garage membership:", memberError.message);
                 setIsChecking(false);
-                setHasCheckedAuth(true);
                 return;
               }
-            } else {
-              // On staff login page
-              if (roleData?.role === 'administrator') {
-                // Administrator on staff login page
-                toast.error("Administrators should use the garage owner login");
-                // Sign out the user if they're on the wrong login page
+              
+              if (!memberData || memberData.length === 0) {
+                toast.error("You don't have access to any garage. Please contact an administrator.");
                 await supabase.auth.signOut();
                 setIsChecking(false);
-                setHasCheckedAuth(true);
-                return;
-              } else if (roleData?.role) {
-                // Regular staff role, redirect to appropriate page
-                switch (roleData.role) {
-                  case 'technician':
-                    navigate("/dashboard/job-tickets");
-                    break;
-                  case 'front_desk':
-                    navigate("/dashboard/appointments");
-                    break;
-                  default:
-                    navigate("/dashboard");
-                }
                 return;
               }
+              
+              // Regular staff role with garage access, redirect to appropriate page
+              switch (roleData.role) {
+                case 'technician':
+                  navigate("/dashboard/job-tickets");
+                  break;
+                case 'front_desk':
+                  navigate("/dashboard/appointments");
+                  break;
+                default:
+                  navigate("/dashboard");
+              }
+              return;
             }
-            
-            // If no role is set yet, stay on the auth page
-            setIsChecking(false);
-            setHasCheckedAuth(true);
-          } catch (error: any) {
-            console.error("Error verifying role:", error.message);
-            toast.error("Error verifying role: " + error.message);
-            // Sign out to allow a clean authentication
-            await supabase.auth.signOut();
-            setIsChecking(false);
-            setHasCheckedAuth(true);
           }
-        } else {
+          
+          // If no role is set yet, stay on the auth page
           setIsChecking(false);
-          setHasCheckedAuth(true);
+        } catch (error: any) {
+          console.error("Error verifying role:", error.message);
+          toast.error("Error verifying role: " + error.message);
+          // Sign out to allow a clean authentication
+          await supabase.auth.signOut();
+          setIsChecking(false);
         }
       } catch (error) {
         console.error("Error checking session:", error);
         setIsChecking(false);
-        setHasCheckedAuth(true);
       }
     };
 
@@ -138,6 +161,11 @@ const Auth = () => {
         <h1 className="text-center text-3xl font-bold text-gray-900 mb-8">
           GarageWizz
         </h1>
+        {authError && (
+          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
+            {authError}
+          </div>
+        )}
         <AuthForm userType={userType} />
       </div>
     </div>

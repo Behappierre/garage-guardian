@@ -23,11 +23,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [garageId, setGarageId] = useState<string | null>(null);
   const [fetchingGarage, setFetchingGarage] = useState(false);
+  const [hasFetchedGarage, setHasFetchedGarage] = useState(false);
 
   // Use useCallback to memoize the fetchUserGarage function
   const fetchUserGarage = useCallback(async (userId: string) => {
-    // Avoid multiple simultaneous fetches
-    if (fetchingGarage) return;
+    // Avoid multiple simultaneous fetches and refetches
+    if (fetchingGarage || hasFetchedGarage) return;
     
     try {
       setFetchingGarage(true);
@@ -42,6 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!profileError && profileData?.garage_id) {
         setGarageId(profileData.garage_id);
         setLoading(false);
+        setHasFetchedGarage(true);
         return;
       }
       
@@ -63,6 +65,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .eq('id', userId);
           
         setLoading(false);
+        setHasFetchedGarage(true);
         return;
       }
       
@@ -84,6 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .eq('id', userId);
           
         setLoading(false);
+        setHasFetchedGarage(true);
         return;
       }
       
@@ -98,6 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (defaultGarage && defaultGarage.length > 0) {
           const defaultGarageId = defaultGarage[0].id;
           setGarageId(defaultGarageId);
+          setHasFetchedGarage(true);
         }
       }
     } catch (error) {
@@ -106,7 +111,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(false);
       setLoading(false);
     }
-  }, [garageId, fetchingGarage]);
+  }, [garageId, fetchingGarage, hasFetchedGarage]);
 
   useEffect(() => {
     let mounted = true;
@@ -143,8 +148,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // If we have a user, fetch their garage
         if (session?.user) {
+          // Reset this flag when auth state changes
+          setHasFetchedGarage(false);
           fetchUserGarage(session.user.id);
         } else {
           setGarageId(null);
