@@ -2,41 +2,59 @@
 import { Wrench, Calendar, CheckCircle, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const DashboardMetrics = () => {
-  const { data: metricsData } = useQuery({
-    queryKey: ['dashboardMetrics'],
+  const { garageId } = useAuth();
+
+  const { data: metricsData, isLoading } = useQuery({
+    queryKey: ['dashboardMetrics', garageId],
     queryFn: async () => {
+      if (!garageId) {
+        console.log('No garage ID available for metrics');
+        return {
+          activeRepairs: 0,
+          todayAppointments: 0,
+          completedToday: 0,
+          bookedRatio: 0
+        };
+      }
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Get active repairs (open job tickets)
+      // Get active repairs (open job tickets) for this garage
       const { count: activeRepairs } = await supabase
         .from('job_tickets')
         .select('*', { count: 'exact', head: true })
+        .eq('garage_id', garageId)
         .not('status', 'in', ['completed', 'cancelled']);
 
-      // Get today's appointments
+      // Get today's appointments for this garage
       const { count: todayAppointments } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
+        .eq('garage_id', garageId)
         .gte('start_time', today.toISOString())
         .lt('start_time', tomorrow.toISOString());
 
-      // Get job tickets completed today
+      // Get job tickets completed today for this garage
       const { count: completedToday } = await supabase
         .from('job_tickets')
         .select('*', { count: 'exact', head: true })
+        .eq('garage_id', garageId)
         .eq('status', 'completed')
         .gte('updated_at', today.toISOString())
         .lt('updated_at', tomorrow.toISOString());
 
-      // Calculate booked hours ratio
+      // Calculate booked hours ratio for this garage
       const { data: appointments } = await supabase
         .from('appointments')
         .select('start_time, end_time')
+        .eq('garage_id', garageId)
         .gte('start_time', today.toISOString())
         .lt('start_time', tomorrow.toISOString());
 
@@ -57,13 +75,14 @@ export const DashboardMetrics = () => {
         completedToday: completedToday || 0,
         bookedRatio: Math.round(bookedRatio * 100)
       };
-    }
+    },
+    enabled: !!garageId // Only run query when garageId is available
   });
 
   const metrics = [
     {
       title: "Active Repairs",
-      value: metricsData?.activeRepairs.toString() || "0",
+      value: isLoading ? "..." : (metricsData?.activeRepairs.toString() || "0"),
       icon: Wrench,
       color: "text-blue-600",
       bgColor: "bg-cyan-100",
@@ -71,7 +90,7 @@ export const DashboardMetrics = () => {
     },
     {
       title: "Today's Appointments",
-      value: metricsData?.todayAppointments.toString() || "0",
+      value: isLoading ? "..." : (metricsData?.todayAppointments.toString() || "0"),
       icon: Calendar,
       color: "text-amber-600",
       bgColor: "bg-amber-100",
@@ -79,7 +98,7 @@ export const DashboardMetrics = () => {
     },
     {
       title: "Completed Today",
-      value: metricsData?.completedToday.toString() || "0",
+      value: isLoading ? "..." : (metricsData?.completedToday.toString() || "0"),
       icon: CheckCircle,
       color: "text-emerald-600",
       bgColor: "bg-emerald-100",
@@ -87,7 +106,7 @@ export const DashboardMetrics = () => {
     },
     {
       title: "Booked Hours Ratio",
-      value: `${metricsData?.bookedRatio || 0}%`,
+      value: isLoading ? "..." : `${metricsData?.bookedRatio || 0}%`,
       icon: Clock,
       color: "text-purple-600",
       bgColor: "bg-purple-100",

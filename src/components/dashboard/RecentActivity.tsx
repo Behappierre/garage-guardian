@@ -6,6 +6,8 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { LucideIcon } from "lucide-react";
 
 type ActivityBase = {
@@ -42,6 +44,7 @@ type Activity = AppointmentActivity | OtherActivity;
 export const RecentActivity = () => {
   const navigate = useNavigate();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const { garageId } = useAuth();
 
   const toggleItem = (id: string) => {
     setExpandedItems(prev => {
@@ -55,9 +58,14 @@ export const RecentActivity = () => {
     });
   };
 
-  const { data: recentActivityData, refetch } = useQuery({
-    queryKey: ['recentActivity'],
+  const { data: recentActivityData, refetch, isLoading } = useQuery({
+    queryKey: ['recentActivity', garageId],
     queryFn: async () => {
+      if (!garageId) {
+        console.log('No garage ID available for recent activity');
+        return [];
+      }
+
       const [
         { data: recentAppointments },
         { data: recentTickets },
@@ -74,12 +82,14 @@ export const RecentActivity = () => {
             client:clients(first_name, last_name),
             vehicle:vehicles(make, model, year, license_plate)
           `)
+          .eq('garage_id', garageId)
           .order('created_at', { ascending: false })
           .limit(2),
         
         supabase
           .from('job_tickets')
           .select('id, description, created_at')
+          .eq('garage_id', garageId)
           .not('status', 'in', ['completed'])
           .order('created_at', { ascending: false })
           .limit(2),
@@ -87,12 +97,14 @@ export const RecentActivity = () => {
         supabase
           .from('clients')
           .select('id, first_name, last_name, created_at')
+          .eq('garage_id', garageId)
           .order('created_at', { ascending: false })
           .limit(1),
 
         supabase
           .from('job_tickets')
           .select('id, description, updated_at')
+          .eq('garage_id', garageId)
           .eq('status', 'completed')
           .order('updated_at', { ascending: false })
           .limit(2)
@@ -142,22 +154,25 @@ export const RecentActivity = () => {
        .slice(0, 4);
 
       return activity;
-    }
+    },
+    enabled: !!garageId // Only run query when garageId is available
   });
 
   // Setup real-time subscriptions
   useEffect(() => {
+    if (!garageId) return;
+
     const channel = supabase
-      .channel('dashboard-activity')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, () => refetch())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_tickets' }, () => refetch())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, () => refetch())
+      .channel(`dashboard-activity-${garageId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments', filter: `garage_id=eq.${garageId}` }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'job_tickets', filter: `garage_id=eq.${garageId}` }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients', filter: `garage_id=eq.${garageId}` }, () => refetch())
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [refetch, garageId]);
 
   // Define activity type colors
   const getActivityStyles = (type: Activity['type']) => {
@@ -190,6 +205,22 @@ export const RecentActivity = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="rounded-lg shadow-sm p-6 text-left bg-white">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-5 w-5 rounded-full" />
+        </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-lg shadow-sm p-6 text-left bg-white">
       <div className="flex items-center justify-between mb-6">
@@ -197,75 +228,81 @@ export const RecentActivity = () => {
         <ActivitySquare className="h-5 w-5 text-gray-400" />
       </div>
       <div className="space-y-4">
-        {recentActivityData?.map((activity) => {
-          const isExpanded = expandedItems.has(activity.id);
-          const ActivityIcon = activity.icon;
-          const styles = getActivityStyles(activity.type);
-          
-          return (
-            <div
-              key={`${activity.type}-${activity.id}`}
-              className={`${styles.bg} hover:shadow-md rounded-lg border border-gray-100 p-4 transition-all cursor-pointer`}
-              onClick={activity.onClick}
-            >
-              <div className="flex items-start space-x-4">
-                <div className={`${styles.icon} p-2 rounded-lg shrink-0`}>
-                  <ActivityIcon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleItem(activity.id);
-                      }}
-                    >
-                      {isExpanded ? (
-                        <ChevronUp className="h-4 w-4" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4" />
-                      )}
-                    </Button>
+        {recentActivityData && recentActivityData.length > 0 ? (
+          recentActivityData.map((activity) => {
+            const isExpanded = expandedItems.has(activity.id);
+            const ActivityIcon = activity.icon;
+            const styles = getActivityStyles(activity.type);
+            
+            return (
+              <div
+                key={`${activity.type}-${activity.id}`}
+                className={`${styles.bg} hover:shadow-md rounded-lg border border-gray-100 p-4 transition-all cursor-pointer`}
+                onClick={activity.onClick}
+              >
+                <div className="flex items-start space-x-4">
+                  <div className={`${styles.icon} p-2 rounded-lg shrink-0`}>
+                    <ActivityIcon className="h-5 w-5" />
                   </div>
-                  <p className="text-xs text-gray-400">
-                    {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
-                  </p>
-                  <div
-                    className={`mt-2 space-y-2 text-sm text-gray-600 transition-all duration-200 ${
-                      isExpanded ? 'block' : 'hidden'
-                    }`}
-                  >
-                    {activity.type === 'appointment' ? (
-                      <>
-                        {activity.client && (
-                          <p>Client: {activity.client.first_name} {activity.client.last_name}</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleItem(activity.id);
+                        }}
+                      >
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
                         )}
-                        {activity.vehicle && (
-                          <>
-                            <p>Vehicle: {activity.vehicle.year} {activity.vehicle.make} {activity.vehicle.model}</p>
-                            {activity.vehicle.license_plate && (
-                              <p>Registration: {activity.vehicle.license_plate}</p>
-                            )}
-                          </>
-                        )}
-                        {activity.appointmentTime && (
-                          <p>Appointment: {format(new Date(activity.appointmentTime), 'PPP p')}</p>
-                        )}
-                        <p>Service: {activity.description}</p>
-                      </>
-                    ) : (
-                      <p>{activity.description}</p>
-                    )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {formatDistanceToNow(new Date(activity.time), { addSuffix: true })}
+                    </p>
+                    <div
+                      className={`mt-2 space-y-2 text-sm text-gray-600 transition-all duration-200 ${
+                        isExpanded ? 'block' : 'hidden'
+                      }`}
+                    >
+                      {activity.type === 'appointment' ? (
+                        <>
+                          {activity.client && (
+                            <p>Client: {activity.client.first_name} {activity.client.last_name}</p>
+                          )}
+                          {activity.vehicle && (
+                            <>
+                              <p>Vehicle: {activity.vehicle.year} {activity.vehicle.make} {activity.vehicle.model}</p>
+                              {activity.vehicle.license_plate && (
+                                <p>Registration: {activity.vehicle.license_plate}</p>
+                              )}
+                            </>
+                          )}
+                          {activity.appointmentTime && (
+                            <p>Appointment: {format(new Date(activity.appointmentTime), 'PPP p')}</p>
+                          )}
+                          <p>Service: {activity.description}</p>
+                        </>
+                      ) : (
+                        <p>{activity.description}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            <p>No recent activity for this garage</p>
+          </div>
+        )}
       </div>
     </div>
   );
