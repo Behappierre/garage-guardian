@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +11,7 @@ import { ServiceForm } from "@/components/forms/ServiceForm";
 import { useToast } from "@/components/ui/use-toast";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface Client {
   id: string;
@@ -48,36 +48,53 @@ const Clients = () => {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+  const { garageId } = useAuth();
 
   const { data: clients, isLoading } = useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", garageId],
     queryFn: async () => {
+      console.log("Fetching clients for garage ID:", garageId);
+      
+      if (!garageId) {
+        console.error("No garage ID available for filtering clients");
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from("clients")
         .select("id, first_name, last_name, email, phone, address, notes, created_at")
+        .eq("garage_id", garageId)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching clients:", error.message);
+        throw error;
+      }
+      
+      console.log(`Retrieved ${data?.length || 0} clients for garage ${garageId}`);
       return data as Client[];
     },
-    staleTime: 10000
+    staleTime: 10000,
+    enabled: !!garageId
   });
 
   const selectedClient = clients?.find(c => c.id === selectedClientId) || null;
 
   const { data: clientVehicles } = useQuery({
-    queryKey: ["vehicles", selectedClientId],
+    queryKey: ["vehicles", selectedClientId, garageId],
     queryFn: async () => {
       if (!selectedClientId) return [];
+      
       const { data, error } = await supabase
         .from("vehicles")
         .select("*")
-        .eq("client_id", selectedClientId);
+        .eq("client_id", selectedClientId)
+        .eq("garage_id", garageId);
 
       if (error) throw error;
       return data as Vehicle[];
     },
-    enabled: !!selectedClientId,
+    enabled: !!selectedClientId && !!garageId,
   });
 
   const handleAddClient = () => {
@@ -109,7 +126,6 @@ const Clients = () => {
     setShowServiceDialog(false);
   };
 
-  // Auto-select first client when the page loads if none is selected
   useEffect(() => {
     if (!selectedClientId && clients && clients.length > 0) {
       setSelectedClientId(clients[0].id);

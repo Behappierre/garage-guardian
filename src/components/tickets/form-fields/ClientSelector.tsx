@@ -1,4 +1,5 @@
 
+import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -8,6 +9,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface ClientSelectorProps {
   clientId: string | null;
@@ -17,9 +21,46 @@ interface ClientSelectorProps {
 
 export const ClientSelector = ({
   clientId,
-  clients,
+  clients: providedClients,
   onClientChange,
 }: ClientSelectorProps) => {
+  const { garageId } = useAuth();
+
+  // If clients are not provided, fetch them by garage ID
+  const { data: fetchedClients, isLoading } = useQuery({
+    queryKey: ["clients-select", garageId],
+    queryFn: async () => {
+      if (!garageId) return [];
+
+      const { data, error } = await supabase
+        .from("clients")
+        .select("id, first_name, last_name")
+        .eq("garage_id", garageId)
+        .order("last_name", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching clients:", error);
+        throw error;
+      }
+
+      return data || [];
+    },
+    enabled: !providedClients && !!garageId,
+  });
+
+  // Use provided clients or fetched clients
+  const clients = providedClients || fetchedClients;
+
+  // Reset clientId if it's not in the available clients
+  useEffect(() => {
+    if (clientId && clients && clients.length > 0) {
+      const clientExists = clients.some(client => client.id === clientId);
+      if (!clientExists) {
+        onClientChange("");
+      }
+    }
+  }, [clients, clientId, onClientChange]);
+
   return (
     <div>
       <Label>Client</Label>
@@ -28,7 +69,7 @@ export const ClientSelector = ({
         onValueChange={(value) => onClientChange(value)}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select client" />
+          <SelectValue placeholder={isLoading ? "Loading clients..." : "Select client"} />
         </SelectTrigger>
         <SelectContent>
           <ScrollArea className="h-[200px]">
