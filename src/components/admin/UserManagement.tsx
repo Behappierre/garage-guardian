@@ -3,11 +3,16 @@ import { useState } from "react";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { UserManagementTable } from "@/components/admin/UserManagementTable";
 import { useUserManagement } from "@/hooks/admin/useUserManagement";
-import { PageHeader, PageActionButton } from "@/components/ui/page-header";
-import { UserPlus } from "lucide-react";
 
-export function UserManagement() {
-  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+interface UserManagementProps {
+  isCreateUserDialogOpen: boolean;
+  setIsCreateUserDialogOpen: (open: boolean) => void;
+}
+
+export function UserManagement({ 
+  isCreateUserDialogOpen, 
+  setIsCreateUserDialogOpen 
+}: UserManagementProps) {
   const { users, isLoading, error, deleteUser } = useUserManagement();
 
   if (error) {
