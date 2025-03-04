@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Garage } from "@/types/garage";
@@ -16,7 +16,7 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOwnerGarages = async () => {
+  const fetchOwnerGarages = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -34,7 +34,7 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         return;
       }
 
-      // Fix: Use a different approach with aliases to avoid type issues
+      // Query properly using the exact field names that match the Garage interface
       const { data, error: garagesError } = await supabase
         .from("garages")
         .select("id, name, slug, address, email, phone, created_at, owner_id")
@@ -52,12 +52,12 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  // Fetch garages on component mount
+  // Fetch garages on component mount only
   useEffect(() => {
     fetchOwnerGarages();
-  }, []);
+  }, [fetchOwnerGarages]);
 
   return {
     garages,

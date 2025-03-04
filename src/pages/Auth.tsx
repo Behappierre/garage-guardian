@@ -10,6 +10,7 @@ const Auth = () => {
   const location = useLocation();
   const [userType, setUserType] = useState<"owner" | "staff">("staff");
   const [isChecking, setIsChecking] = useState(true);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
   useEffect(() => {
     // Check if we should show owner or staff sign-up/in
@@ -20,7 +21,13 @@ const Auth = () => {
     } else {
       setUserType("staff");
     }
+  }, [location.search]);
 
+  // Separate useEffect for auth checking to avoid conflicts
+  useEffect(() => {
+    // Only check auth once
+    if (hasCheckedAuth) return;
+    
     // Check if user is already authenticated
     const checkAuthAndRole = async () => {
       setIsChecking(true);
@@ -40,14 +47,15 @@ const Auth = () => {
             if (roleError) {
               console.error("Error fetching role:", roleError.message);
               setIsChecking(false);
+              setHasCheckedAuth(true);
               return;
             }
 
             console.log("User role:", roleData?.role);
-            console.log("User type page:", type);
+            console.log("User type page:", userType);
 
             // For owner login page, only allow administrators
-            if (type === "owner") {
+            if (userType === "owner") {
               if (roleData?.role === 'administrator') {
                 // Redirect administrators to garage management
                 navigate("/garage-management");
@@ -57,6 +65,7 @@ const Auth = () => {
                 toast.error("Only administrators can access the garage owner area");
                 await supabase.auth.signOut();
                 setIsChecking(false);
+                setHasCheckedAuth(true);
                 return;
               }
             } else {
@@ -67,6 +76,7 @@ const Auth = () => {
                 // Sign out the user if they're on the wrong login page
                 await supabase.auth.signOut();
                 setIsChecking(false);
+                setHasCheckedAuth(true);
                 return;
               } else if (roleData?.role) {
                 // Regular staff role, redirect to appropriate page
@@ -86,24 +96,28 @@ const Auth = () => {
             
             // If no role is set yet, stay on the auth page
             setIsChecking(false);
+            setHasCheckedAuth(true);
           } catch (error: any) {
             console.error("Error verifying role:", error.message);
             toast.error("Error verifying role: " + error.message);
             // Sign out to allow a clean authentication
             await supabase.auth.signOut();
             setIsChecking(false);
+            setHasCheckedAuth(true);
           }
         } else {
           setIsChecking(false);
+          setHasCheckedAuth(true);
         }
       } catch (error) {
         console.error("Error checking session:", error);
         setIsChecking(false);
+        setHasCheckedAuth(true);
       }
     };
 
     checkAuthAndRole();
-  }, [navigate, location.search]);
+  }, [navigate, userType, hasCheckedAuth]);
 
   if (isChecking) {
     return (

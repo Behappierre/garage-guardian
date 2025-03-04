@@ -11,12 +11,17 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isVerifyingRole, setIsVerifyingRole] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [hasAttemptedVerification, setHasAttemptedVerification] = useState(false);
 
   useEffect(() => {
+    // Only verify access once per render and when user is loaded
+    if (hasAttemptedVerification || loading) return;
+    
     const verifyAccess = async () => {
       if (user) {
         try {
           console.log("Verifying access for user:", user.id);
+          setIsVerifyingRole(true);
           
           // Check user role
           const { data: roleData, error: roleError } = await supabase
@@ -30,6 +35,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
             toast.error("Could not verify your account role");
             setIsVerifyingRole(false);
             setHasAccess(false);
+            setHasAttemptedVerification(true);
             return;
           }
 
@@ -43,6 +49,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
               toast.error("You don't have permission to access garage management");
               setHasAccess(false);
               setIsVerifyingRole(false);
+              setHasAttemptedVerification(true);
               return;
             }
           }
@@ -54,6 +61,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
               toast.error("You don't have permission to access this area");
               setHasAccess(false);
               setIsVerifyingRole(false);
+              setHasAttemptedVerification(true);
               return;
             }
             
@@ -70,6 +78,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                 toast.error("Error verifying your garage access");
                 setHasAccess(false);
                 setIsVerifyingRole(false);
+                setHasAttemptedVerification(true);
                 return;
               }
               
@@ -78,12 +87,14 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
                 toast.error("You don't have access to any garage. Please contact an administrator.");
                 setHasAccess(false);
                 setIsVerifyingRole(false);
+                setHasAttemptedVerification(true);
                 return;
               }
             } catch (err) {
               console.error("Exception checking garage membership:", err);
               setHasAccess(false);
               setIsVerifyingRole(false);
+              setHasAttemptedVerification(true);
               return;
             }
           }
@@ -91,25 +102,30 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
           // If we reach this point, the user has proper access
           setHasAccess(true);
           setIsVerifyingRole(false);
+          setHasAttemptedVerification(true);
         } catch (error: any) {
           console.error("Error verifying access:", error.message);
           toast.error("Error verifying your access permissions");
           setHasAccess(false);
           setIsVerifyingRole(false);
+          setHasAttemptedVerification(true);
         }
       } else {
         setIsVerifyingRole(false);
         setHasAccess(false);
+        setHasAttemptedVerification(true);
       }
     };
 
-    if (!loading && user) {
+    if (!loading) {
       verifyAccess();
-    } else if (!loading) {
-      setIsVerifyingRole(false);
-      setHasAccess(false);
     }
-  }, [user, loading, location.pathname]);
+  }, [user, loading, location.pathname, hasAttemptedVerification]);
+
+  // Reset verification state when location changes
+  useEffect(() => {
+    setHasAttemptedVerification(false);
+  }, [location.pathname]);
 
   if (loading || isVerifyingRole) {
     return <div>Loading...</div>;

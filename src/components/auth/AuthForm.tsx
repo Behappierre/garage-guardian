@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast as useUIToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 import { GarageForm } from "./GarageForm";
 import { Garage } from "@/types/garage";
 
@@ -21,6 +21,7 @@ interface AuthFormProps {
 
 export const AuthForm = ({ userType }: AuthFormProps) => {
   const navigate = useNavigate();
+  const { toast: uiToast } = useUIToast();
   const [mode, setMode] = useState<AuthMode>("signin");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -33,7 +34,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   const [fetchingGarages, setFetchingGarages] = useState(true);
   const [showGarageForm, setShowGarageForm] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (userType === "owner") {
@@ -117,7 +117,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           setGarages(fallbackGarages);
           setSelectedGarageId(fallbackGarages[0].id);
           
-          toast({
+          uiToast({
             variant: "destructive",
             title: "Warning",
             description: "Could not load garages. Using default garage.",
@@ -139,7 +139,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
     e.preventDefault();
     
     if (userType === "staff" && !selectedGarageId) {
-      toast({
+      uiToast({
         variant: "destructive",
         title: "Error",
         description: "Please select a garage.",
@@ -187,7 +187,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               password
             });
             
-            toast({
+            uiToast({
               title: "Account created!",
               description: "Now let's set up your garage.",
             });
@@ -209,7 +209,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               .eq('id', signUpData.user.id);
             if (profileError) throw profileError;
             
-            toast({
+            uiToast({
               title: "Success!",
               description: "Please check your email to confirm your account.",
             });
@@ -266,7 +266,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             }
           } catch (error: any) {
             console.error("Error during sign-in flow:", error.message);
-            toast({
+            uiToast({
               variant: "destructive",
               title: "Access Denied",
               description: error.message,
@@ -279,7 +279,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
       }
     } catch (error: any) {
       console.error("Authentication error:", error.message);
-      toast({
+      uiToast({
         variant: "destructive",
         title: "Error",
         description: error.message,

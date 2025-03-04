@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -22,40 +22,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [garageId, setGarageId] = useState<string | null>(null);
+  const [fetchingGarage, setFetchingGarage] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // If we have a user, fetch their garage
-      if (session?.user) {
-        fetchUserGarage(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      // If we have a user, fetch their garage
-      if (session?.user) {
-        fetchUserGarage(session.user.id);
-      } else {
-        setGarageId(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserGarage = async (userId: string) => {
+  // Use useCallback to memoize the fetchUserGarage function
+  const fetchUserGarage = useCallback(async (userId: string) => {
+    // Avoid multiple simultaneous fetches
+    if (fetchingGarage) return;
+    
     try {
+      setFetchingGarage(true);
+      
       // Try to get from profile first
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -127,9 +103,61 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error("Error fetching user garage:", error);
     } finally {
+      setFetchingGarage(false);
       setLoading(false);
     }
-  };
+  }, [garageId, fetchingGarage]);
+
+  useEffect(() => {
+    let mounted = true;
+    
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // If we have a user, fetch their garage
+          if (session?.user) {
+            await fetchUserGarage(session.user.id);
+          } else {
+            setLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error during auth initialization:", error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // If we have a user, fetch their garage
+        if (session?.user) {
+          fetchUserGarage(session.user.id);
+        } else {
+          setGarageId(null);
+          setLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserGarage]);
 
   return (
     <AuthContext.Provider value={{ session, user, loading, garageId }}>
