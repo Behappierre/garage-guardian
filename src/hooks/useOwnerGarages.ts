@@ -44,10 +44,10 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         return;
       }
 
-      // Explicitly select columns to avoid ambiguity
+      // Explicitly select columns with table prefix to avoid ambiguity
       const { data, error: garagesError } = await supabase
         .from("garages")
-        .select("id, name, slug, address, email, phone, created_at, owner_id")
+        .select("garages.id, garages.name, garages.slug, garages.address, garages.email, garages.phone, garages.created_at, garages.owner_id")
         .eq("owner_id", userData.user.id);
 
       if (garagesError) {
