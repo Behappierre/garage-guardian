@@ -5,7 +5,7 @@ import { Garage } from "./types";
 import { 
   findTracticGarage, 
   createTracticGarage, 
-  addUserToGarage 
+  addUserToTracticGarage 
 } from "./utils";
 
 export const useTracticGarageHandling = () => {
@@ -30,7 +30,7 @@ export const useTracticGarageHandling = () => {
       console.log("Found or created Tractic garage:", tracticGarage);
       
       // Try to add user as member of the Tractic garage
-      const memberAdded = await addUserToGarage(user.id, tracticGarage.id);
+      const memberAdded = await addUserToTracticGarage(user.id, tracticGarage.id);
       if (!memberAdded) {
         console.warn(`Failed to add user ${user.id} to Tractic garage ${tracticGarage.id}`);
       }

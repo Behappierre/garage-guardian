@@ -1,4 +1,3 @@
-
 // Import necessary dependencies
 import { supabase } from "@/integrations/supabase/client";
 import { Garage } from "../types";
@@ -78,12 +77,31 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
   }
 };
 
-// Re-export utility functions from other files
-export * from './membershipHelpers';
+// Re-export utility functions from other files, avoiding naming conflicts
 export * from './userHelpers';
-export * from './tracticHelpers';
+// Import and re-export from tracticHelpers with explicit naming to avoid conflicts
+import { 
+  isTracticUser,
+  findTracticGarage,
+  createTracticGarage,
+  addUserToGarage as addUserToTracticGarage
+} from './tracticHelpers';
 
-// Implement any missing functions that were imported but not defined
+export {
+  isTracticUser,
+  findTracticGarage,
+  createTracticGarage,
+  addUserToTracticGarage
+};
+
+// Import but don't re-export the conflicting function
+import * as membershipHelpers from './membershipHelpers';
+// Re-export everything except the conflicting function
+export const {
+  getUserGarages
+} = membershipHelpers;
+// Re-export the original addUserToGarage with the correct signature
+export const addUserToGarage = membershipHelpers.addUserToGarage;
 
 // Simple function to check if a user has a specific role
 export const getUserRole = async (userId: string): Promise<string | null> => {
