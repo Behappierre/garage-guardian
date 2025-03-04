@@ -89,38 +89,8 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw memberError;
       }
       
-      // Use direct SQL update with CTE to avoid ambiguity
-      console.log("Updating profile with garage_id:", garageId);
-      
-      // Diagnose the issue first using the read-only query
-      const { data: diagData, error: diagError } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          WITH profile_target AS (SELECT '${userId}' AS uid, '${garageId}' AS gid)
-          SELECT * FROM profile_target;
-        `
-      });
-      
-      if (diagError) {
-        console.error("Diagnostic query error:", diagError);
-      } else {
-        console.log("Diagnostic query result:", diagData);
-      }
-      
-      // Now use the RPC function that handles the update
-      const { error: profileError } = await supabase.rpc(
-        'update_profile_garage',
-        { 
-          p_user_id: userId,
-          p_garage_id: garageId
-        }
-      );
-      
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-        console.warn("Non-critical error updating profile:", profileError.message);
-      } else {
-        console.log("Profile updated successfully with garage ID");
-      }
+      // Skip updating the profile with garage_id - relying on garage_members instead
+      console.log("Skipping profile update, using garage_members as source of truth");
       
       toast({
         title: "Success!",

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -48,7 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const isAdmin = roleData?.role === 'administrator';
       console.log("Is user admin:", isAdmin);
       
-      // For administrators, check garages they own first
+      // For administrators, check garages they own first 
       if (isAdmin) {
         const { data: ownedGarages, error: ownedError } = await supabase
           .from('garages')
@@ -63,19 +64,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Update the profile with this garage_id using direct update
-          console.log("Updating profile with owned garage_id:", ownedGarageId);
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ garage_id: ownedGarageId })
-            .eq('id', userId);
-            
-          if (updateError) {
-            console.error("Error updating profile with garage_id:", updateError);
-          } else {
-            console.log("Profile updated successfully with owned garage ID");
-          }
-            
+          // Make sure user is a member of the garage
+          await supabase
+            .from('garage_members')
+            .upsert([{
+              user_id: userId,
+              garage_id: ownedGarageId,
+              role: 'owner'
+            }]);
+          
           setLoading(false);
           setHasFetchedGarage(true);
           setFetchingGarage(false);
@@ -83,84 +80,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
       
-      // First try to get garage_id from profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, garage_id')
-        .eq('id', userId)
-        .single();
-      
-      console.log("Profile data:", profileData, "Error:", profileError);
-      
-      if (!profileError && profileData?.garage_id) {
-        console.log("Found garage_id in profile:", profileData.garage_id);
-        setGarageId(profileData.garage_id);
-        setLoading(false);
-        setHasFetchedGarage(true);
-        setFetchingGarage(false);
-        return;
-      }
-      
-      // If no garage_id in profile, check if user owns any garages
-      const { data: ownedGarages, error: ownedError } = await supabase
-        .from('garages')
-        .select('id')
-        .eq('owner_id', userId)
-        .limit(1);
-      
-      console.log("Owned garages:", ownedGarages, "Error:", ownedError);  
-        
-      if (!ownedError && ownedGarages && ownedGarages.length > 0) {
-        const ownedGarageId = ownedGarages[0].id;
-        console.log("Found owned garage:", ownedGarageId);
-        setGarageId(ownedGarageId);
-        
-        // Update the profile with this garage_id using direct update
-        console.log("Updating profile with owned garage_id:", ownedGarageId);
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: ownedGarageId })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error("Error updating profile with garage_id:", updateError);
-        } else {
-          console.log("Profile updated successfully with owned garage ID");
-        }
-          
-        setLoading(false);
-        setHasFetchedGarage(true);
-        setFetchingGarage(false);
-        return;
-      }
-      
-      // If not an owner, check if user is a member of any garage
+      // Check if user is a member of any garage
       const { data: memberships, error: membershipError } = await supabase
         .from('garage_members')
-        .select('garage_id')
+        .select('garage_id, role')
         .eq('user_id', userId)
+        .order('created_at', { ascending: false })
         .limit(1);
       
-      console.log("Memberships:", memberships, "Error:", membershipError);
+      console.log("Garage memberships:", memberships, "Error:", membershipError);
         
       if (!membershipError && memberships && memberships.length > 0) {
         const memberGarageId = memberships[0].garage_id;
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
-        
-        // Update the profile with this garage_id using direct update
-        console.log("Updating profile with member garage_id:", memberGarageId);
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: memberGarageId })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error("Error updating profile with garage_id:", updateError);
-        } else {
-          console.log("Profile updated successfully with member garage ID");
-        }
-          
         setLoading(false);
         setHasFetchedGarage(true);
         setFetchingGarage(false);
@@ -192,19 +125,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         if (memberError) {
           console.error("Error adding user to default garage:", memberError);
-        }
-          
-        // Update profile with this garage_id using direct update
-        console.log("Updating profile with default garage_id:", defaultGarageId);
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: defaultGarageId })
-          .eq('id', userId);
-          
-        if (updateError) {
-          console.error("Error updating profile with garage_id:", updateError);
-        } else {
-          console.log("Profile updated successfully with default garage ID");
         }
       } else {
         // No default garage found

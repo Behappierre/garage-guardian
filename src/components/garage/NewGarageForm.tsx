@@ -88,34 +88,8 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Diagnose the issue first using the read-only query
-      const { data: diagData, error: diagError } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          WITH profile_target AS (SELECT '${userData.user.id}' AS uid, '${newGarage[0].id}' AS gid)
-          SELECT * FROM profile_target;
-        `
-      });
-      
-      if (diagError) {
-        console.error("Diagnostic query error:", diagError);
-      } else {
-        console.log("Diagnostic query result:", diagData);
-      }
-      
-      // Use the update_profile_garage function to avoid column ambiguity
-      const { error: profileError } = await supabase.rpc(
-        'update_profile_garage',
-        { 
-          p_user_id: userData.user.id,
-          p_garage_id: newGarage[0].id
-        }
-      );
-      
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-      } else {
-        console.log("Profile updated successfully with garage ID");
-      }
+      // Skip updating the profile with garage_id - relying on garage_members instead
+      console.log("Skipping profile update, using garage_members as source of truth");
       
       toast.success("Garage created successfully");
       onComplete(newGarage[0].id);

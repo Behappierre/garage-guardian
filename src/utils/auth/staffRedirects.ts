@@ -7,14 +7,14 @@ import { ensureUserHasGarage } from "./garageAssignment";
  * Handles admin user on staff login page
  */
 export async function handleAdminOnStaffLogin(userId: string) {
-  // Administrator on staff login page - check if they have a garage
-  const { data: profileData } = await supabase
-    .from('profiles')
+  // Administrator on staff login page - check if they have a garage membership
+  const { data: memberData } = await supabase
+    .from('garage_members')
     .select('garage_id')
-    .eq('id', userId)
-    .single();
+    .eq('user_id', userId)
+    .limit(1);
     
-  if (profileData?.garage_id) {
+  if (memberData && memberData.length > 0) {
     return { shouldRedirect: true, path: "/dashboard" };
   } 
   
@@ -26,11 +26,14 @@ export async function handleAdminOnStaffLogin(userId: string) {
     .limit(1);
     
   if (ownedGarages && ownedGarages.length > 0) {
-    // Update profile with owned garage using explicit column reference
+    // Add user as owner member if not already a member
     await supabase
-      .from('profiles')
-      .update({ garage_id: ownedGarages[0].id })
-      .eq('id', userId);
+      .from('garage_members')
+      .upsert([{
+        user_id: userId,
+        garage_id: ownedGarages[0].id,
+        role: 'owner'
+      }]);
       
     return { shouldRedirect: true, path: "/dashboard" };
   } 
@@ -46,7 +49,12 @@ export async function handleAdminOnStaffLogin(userId: string) {
  */
 export async function handleStaffLogin(userId: string, userRole: string) {
   // Staff member - ensure they have a garage
-  await ensureUserHasGarage(userId, userRole);
+  const hasGarage = await ensureUserHasGarage(userId, userRole);
+  
+  if (!hasGarage) {
+    toast.error("No garage found for your account. Please contact an administrator.");
+    return { shouldRedirect: false, path: null };
+  }
   
   // Redirect based on role
   switch (userRole) {
