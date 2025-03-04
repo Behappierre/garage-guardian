@@ -58,7 +58,7 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         phone: data.phone
       });
       
-      // Create the garage
+      // Create the garage with a clear insert operation
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert([{

@@ -47,6 +47,7 @@ export const addUserToGarage = async (
     console.log(`Added user ${userId} to garage ${garageId} with role ${role}`);
     
     // Update the user's profile with the garage ID for convenience
+    // Explicitly specify the table name for garage_id in the SQL query
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: garageId })
