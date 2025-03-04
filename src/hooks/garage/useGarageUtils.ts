@@ -15,10 +15,16 @@ export const findTracticGarage = async (): Promise<Garage | null> => {
   try {
     console.log("Searching for existing Tractic garage");
     
-    const { data, error } = await supabase
-      .from('garages')
-      .select('*')
-      .or('name.ilike.%tractic%,slug.ilike.%tractic%');
+    const { data, error } = await supabase.rpc(
+      'execute_read_only_query',
+      { 
+        query_text: `
+          SELECT *
+          FROM garages
+          WHERE name ILIKE '%tractic%' OR slug ILIKE '%tractic%'
+        `
+      }
+    );
       
     if (error) {
       console.error("Error finding Tractic garage:", error.message);
@@ -27,7 +33,7 @@ export const findTracticGarage = async (): Promise<Garage | null> => {
     
     console.log("Tractic garage search result:", data);
     
-    if (data && data.length > 0) {
+    if (data && Array.isArray(data) && data.length > 0) {
       console.log("Found Tractic garage:", data[0]);
       return data[0] as unknown as Garage;
     }
@@ -82,22 +88,27 @@ export const addUserToGarage = async (
     console.log(`Attempting to add user ${userId} to garage ${garageId} with role ${role}`);
     
     // First check if the membership already exists
-    const { data: existingMembership, error: checkError } = await supabase
-      .from('garage_members')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('garage_id', garageId)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc(
+      'execute_read_only_query',
+      { 
+        query_text: `
+          SELECT * 
+          FROM garage_members 
+          WHERE user_id = '${userId}' AND garage_id = '${garageId}'
+          LIMIT 1
+        `
+      }
+    );
       
-    if (checkError) {
-      console.error("Error checking existing membership:", checkError.message);
-    } else if (existingMembership) {
+    if (error) {
+      console.error("Error checking existing membership:", error.message);
+    } else if (data && Array.isArray(data) && data.length > 0) {
       console.log(`User ${userId} is already a member of garage ${garageId}`);
       return true;
     }
     
     // If no existing membership found, create one
-    const { error } = await supabase
+    const { error: insertError } = await supabase
       .from('garage_members')
       .insert({
         user_id: userId,
@@ -105,8 +116,8 @@ export const addUserToGarage = async (
         role: role
       });
       
-    if (error) {
-      console.error("Error adding user to garage:", error.message);
+    if (insertError) {
+      console.error("Error adding user to garage:", insertError.message);
       return false;
     }
     
@@ -140,7 +151,7 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
       return [];
     }
     
-    if (!data || data.length === 0) {
+    if (!data || !Array.isArray(data) || data.length === 0) {
       console.log("No garage memberships found for user");
       return [];
     }
@@ -182,7 +193,12 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
     }
     
     console.log("Fetched garages:", data);
-    return (data || []) as unknown as Garage[];
+    
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+    
+    return data as unknown as Garage[];
   } catch (err) {
     console.error("Exception when getting garages by IDs:", err);
     return [];
@@ -210,7 +226,7 @@ export const getUserRole = async (userId: string): Promise<string | null> => {
       return null;
     }
     
-    if (!data || data.length === 0) {
+    if (!data || !Array.isArray(data) || data.length === 0) {
       console.error("No role found for user");
       return null;
     }
