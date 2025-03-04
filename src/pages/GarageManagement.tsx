@@ -38,12 +38,12 @@ const GarageManagement = () => {
         return;
       }
       
-      // Fetch garages where user is an administrator - using direct query instead of RPC
+      // Fetch garages where user is an administrator or owner
       const { data: memberData, error: memberError } = await supabase
         .from('garage_members')
         .select('garage_id')
         .eq('user_id', user.id)
-        .eq('role', 'administrator');
+        .or('role.eq.administrator,role.eq.owner');
       
       if (memberError) {
         console.error("Error fetching garage memberships:", memberError.message);
