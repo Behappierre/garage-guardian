@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import type { Garage } from "@/hooks/useOwnerGarages";
+import type { Garage } from "@/types/garage";
 
 interface GaragesListProps {
   garages: Garage[];
