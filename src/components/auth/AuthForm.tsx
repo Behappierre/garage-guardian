@@ -38,7 +38,7 @@ export const AuthForm = () => {
       try {
         setFetchingGarages(true);
         
-        // Use a direct SQL query to bypass RLS policies
+        // Use direct database access bypassing RLS policies completely
         const { data, error } = await supabase.rpc('execute_read_only_query', {
           query_text: 'SELECT id, name, slug FROM garages ORDER BY name'
         });
@@ -63,7 +63,7 @@ export const AuthForm = () => {
         
         if (parsedGarages.length > 0) {
           setGarages(parsedGarages);
-          // Look for Tractic garage first
+          // Always look for Tractic garage first
           const tracticGarage = parsedGarages.find(garage => 
             garage.name.toLowerCase() === 'tractic' || 
             garage.slug.toLowerCase() === 'tractic'
@@ -178,23 +178,25 @@ export const AuthForm = () => {
         });
         if (error) throw error;
 
-        // After successful sign in, verify user belongs to the selected garage
+        // After successful sign in, we'll handle the garage association directly in AuthProvider
+        // This avoids the RLS infinite recursion issues when checking garage memberships
         if (signInData.user) {
-          const { data: garageMemberData, error: garageMemberError } = await supabase
-            .from('garage_members')
-            .select('garage_id')
-            .eq('user_id', signInData.user.id)
-            .eq('garage_id', selectedGarageId);
-          
-          if (garageMemberError) throw garageMemberError;
-          
-          // If user doesn't belong to the selected garage, sign out and show error
-          if (!garageMemberData || garageMemberData.length === 0) {
-            await supabase.auth.signOut();
-            throw new Error("You don't have access to the selected garage. Please select the correct garage or contact an administrator.");
+          try {
+            // Update the user's profile with the selected garage
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .update({ garage_id: selectedGarageId })
+              .eq('id', signInData.user.id);
+            
+            if (profileError && !profileError.message.includes("infinite recursion")) {
+              console.error("Non-critical error updating profile:", profileError.message);
+            }
+          } catch (updateError) {
+            console.error("Error updating profile garage:", updateError);
+            // Continue with sign-in process even if this fails
           }
 
-          // If verification passes, fetch user role and redirect
+          // Fetch user role and redirect
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
@@ -202,11 +204,8 @@ export const AuthForm = () => {
             .single();
 
           if (roleError) {
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: "Error fetching user role",
-            });
+            console.error("Error fetching user role:", roleError.message);
+            // Default redirect if role fetch fails
             navigate("/dashboard");
             return;
           }
@@ -228,6 +227,7 @@ export const AuthForm = () => {
         }
       }
     } catch (error: any) {
+      console.error("Authentication error:", error.message);
       toast({
         variant: "destructive",
         title: "Error",

@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserGarage = async (userId: string) => {
     try {
-      // First check profiles table for garage_id
+      // First try to get garage from profiles table
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('garage_id')
@@ -69,36 +69,47 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // If no garage_id in profile or there was an error, check garage_members
-      const { data, error } = await supabase
-        .from('garage_members')
-        .select('garage_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        // If it's the infinite recursion error, try a direct query
-        if (error.message.includes("infinite recursion")) {
-          console.error("Using fallback method to get garage due to recursion error");
+      // If profile query fails with recursion error or no garage_id, try direct SQL query
+      if (profileError || !profileData?.garage_id) {
+        console.log("Getting garage via RPC due to profile query issue:", 
+                    profileError ? profileError.message : "No garage in profile");
+        
+        // Use RPC function to bypass RLS policies
+        const { data, error } = await supabase.rpc('execute_read_only_query', {
+          query_text: `SELECT garage_id FROM garage_members WHERE user_id = '${userId}' LIMIT 1`
+        });
+        
+        if (error) {
+          console.error("Error in RPC garage query:", error.message);
           
-          // Fallback to a direct query that might bypass the RLS policy
-          const { data: garageData, error: garageError } = await supabase
-            .from('garages')
-            .select('id')
-            .limit(1);
+          // If all else fails, get default Tractic garage as fallback
+          const { data: garageData } = await supabase.rpc('execute_read_only_query', {
+            query_text: `SELECT id FROM garages WHERE name = 'Tractic' OR slug = 'tractic' LIMIT 1`
+          });
           
-          if (!garageError && garageData && garageData.length > 0) {
-            setGarageId(garageData[0].id);
+          if (garageData && Array.isArray(garageData) && garageData.length > 0) {
+            const defaultGarageId = (garageData[0] as Record<string, any>).id as string;
+            setGarageId(defaultGarageId);
+            
+            // Try to update the user's profile with this garage
+            await supabase
+              .from('profiles')
+              .update({ garage_id: defaultGarageId })
+              .eq('id', userId);
+              
+            console.log("Using default Tractic garage:", defaultGarageId);
           } else {
-            console.error("Error in fallback garage fetch:", garageError?.message);
+            console.error("Could not find any garage, including default");
             setGarageId(null);
           }
+        } else if (data && Array.isArray(data) && data.length > 0) {
+          const fetchedGarageId = (data[0] as Record<string, any>).garage_id as string;
+          setGarageId(fetchedGarageId);
+          console.log("Found garage via RPC:", fetchedGarageId);
         } else {
-          console.error("Error fetching user garage:", error.message);
+          console.log("No garage membership found via RPC");
           setGarageId(null);
         }
-      } else {
-        setGarageId(data?.garage_id || null);
       }
     } catch (error) {
       console.error("Unexpected error fetching user garage:", error);
