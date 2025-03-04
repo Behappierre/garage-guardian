@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -87,13 +88,18 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Update the user's profile with the garage ID using direct update
+      // Update the user's profile with the garage ID - FIX: Using direct SQL update to avoid ambiguity
       console.log("Updating profile with garage_id:", newGarage[0].id);
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ garage_id: newGarage[0].id })
-        .eq('id', userData.user.id);
-        
+      
+      // Use the update_profile_garage function to avoid column ambiguity
+      const { error: profileError } = await supabase.rpc(
+        'update_profile_garage',
+        { 
+          p_user_id: userData.user.id,
+          p_garage_id: newGarage[0].id
+        }
+      );
+      
       if (profileError) {
         console.error("Error updating profile:", profileError);
       } else {

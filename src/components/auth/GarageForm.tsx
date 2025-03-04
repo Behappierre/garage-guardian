@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -88,12 +89,15 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw memberError;
       }
       
-      // Update the user's profile with the garage ID using direct update
+      // Update the user's profile with the garage ID using RPC function
       console.log("Updating profile with garage_id:", garageId);
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userId);
+      const { error: profileError } = await supabase.rpc(
+        'update_profile_garage',
+        { 
+          p_user_id: userId,
+          p_garage_id: garageId
+        }
+      );
       
       if (profileError) {
         console.error("Error updating profile:", profileError);
