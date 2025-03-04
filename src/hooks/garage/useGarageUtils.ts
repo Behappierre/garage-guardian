@@ -6,15 +6,18 @@ import { Garage } from "./types";
 // Check if user is a Tractic user (email contains 'tractic' or is a specific email)
 export const isTracticUser = (email?: string): boolean => {
   if (!email) return false;
-  return email.toLowerCase().includes("tractic") || 
-         email === "olivier@andre.org.uk";
+  const lowerEmail = email.toLowerCase();
+  console.log("Checking if user is Tractic user:", lowerEmail);
+  return lowerEmail.includes("tractic") || 
+         lowerEmail === "olivier@andre.org.uk";
 };
 
-// Search for existing Tractic garage - fixed to use a valid SELECT query
+// Search for existing Tractic garage - using a valid SELECT query
 export const findTracticGarage = async (): Promise<Garage | null> => {
   try {
     console.log("Searching for existing Tractic garage");
     
+    // Use a simple select query with ilike for pattern matching
     const { data, error } = await supabase
       .from('garages')
       .select('*')
@@ -45,14 +48,16 @@ export const createTracticGarage = async (userEmail?: string): Promise<Garage | 
   try {
     console.log("Creating new Tractic garage for user:", userEmail);
     
+    const garageData = {
+      name: 'Tractic Garage',
+      slug: 'tractic-garage',
+      address: '123 Tractic Street',
+      email: userEmail || 'tractic@example.com'
+    };
+    
     const { data: newGarage, error: createError } = await supabase
       .from('garages')
-      .insert({
-        name: 'Tractic Garage',
-        slug: 'tractic-garage',
-        address: '123 Tractic Street',
-        email: userEmail
-      })
+      .insert(garageData)
       .select();
       
     if (createError) {
@@ -73,7 +78,7 @@ export const createTracticGarage = async (userEmail?: string): Promise<Garage | 
   }
 };
 
-// Add user as a member of a garage - fixed to use proper SELECT and INSERT queries
+// Add user as a member of a garage - using proper SELECT and INSERT queries
 export const addUserToGarage = async (
   userId: string, 
   garageId: string, 
@@ -98,13 +103,15 @@ export const addUserToGarage = async (
     }
     
     // If no existing membership found, create one
+    const memberData = {
+      user_id: userId,
+      garage_id: garageId,
+      role: role
+    };
+    
     const { error: insertError } = await supabase
       .from('garage_members')
-      .insert({
-        user_id: userId,
-        garage_id: garageId,
-        role: role
-      });
+      .insert(memberData);
       
     if (insertError) {
       console.error("Error adding user to garage:", insertError.message);
@@ -119,7 +126,7 @@ export const addUserToGarage = async (
   }
 };
 
-// Get user's garage memberships - fixed to use proper SQL SELECT
+// Get user's garage memberships - using proper SQL SELECT
 export const getUserGarageMemberships = async (userId: string): Promise<string[]> => {
   try {
     console.log(`Fetching garage memberships for user ${userId}`);
@@ -150,9 +157,10 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
   }
 };
 
-// Get garages by IDs - fixed to use proper SQL SELECT
+// Get garages by IDs - using proper SQL SELECT
 export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> => {
   if (garageIds.length === 0) {
+    console.log("No garage IDs provided");
     return [];
   }
   
@@ -173,6 +181,7 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
     console.log("Fetched garages:", data);
     
     if (!data || data.length === 0) {
+      console.log("No garages found for the provided IDs");
       return [];
     }
     
@@ -183,9 +192,11 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
   }
 };
 
-// Get user's role - fixed to use a proper SELECT query
+// Get user's role - using a proper SELECT query
 export const getUserRole = async (userId: string): Promise<string | null> => {
   try {
+    console.log(`Fetching role for user ${userId}`);
+    
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
@@ -197,6 +208,7 @@ export const getUserRole = async (userId: string): Promise<string | null> => {
       return null;
     }
     
+    console.log("User role:", data?.role);
     return data?.role || null;
   } catch (err) {
     console.error("Exception when getting user role:", err);

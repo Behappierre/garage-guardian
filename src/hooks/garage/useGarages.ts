@@ -17,38 +17,62 @@ export const useGarages = (): GarageHookReturn => {
   const [garages, setGarages] = useState<Garage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fetchAttempts, setFetchAttempts] = useState(0);
+  const MAX_ATTEMPTS = 3;
 
   const handleTracticUserGarages = async (user: any): Promise<Garage[]> => {
     console.log("Handling garages for Tractic user:", user.email);
     
-    // Try to find the Tractic garage
-    let tracticGarage = await findTracticGarage();
-    
-    // If no Tractic garage found, create one
-    if (!tracticGarage) {
-      tracticGarage = await createTracticGarage(user.email);
+    try {
+      // Try to find the Tractic garage
+      let tracticGarage = await findTracticGarage();
+      
+      // If no Tractic garage found, create one
       if (!tracticGarage) {
-        toast.error("Could not create Tractic garage");
-        return [];
+        console.log("No Tractic garage found, creating one");
+        tracticGarage = await createTracticGarage(user.email);
+        if (!tracticGarage) {
+          console.error("Failed to create Tractic garage");
+          toast.error("Could not create Tractic garage");
+          return [];
+        }
       }
+      
+      console.log("Found or created Tractic garage:", tracticGarage);
+      
+      // Try to add user as member of the Tractic garage
+      const memberAdded = await addUserToGarage(user.id, tracticGarage.id);
+      if (!memberAdded) {
+        console.warn(`Failed to add user ${user.id} to Tractic garage ${tracticGarage.id}`);
+      }
+      
+      return [tracticGarage];
+    } catch (err) {
+      console.error("Error in handleTracticUserGarages:", err);
+      return [];
     }
-    
-    // Try to add user as member of the Tractic garage
-    const memberAdded = await addUserToGarage(user.id, tracticGarage.id);
-    if (!memberAdded) {
-      console.warn(`Failed to add user ${user.id} to Tractic garage ${tracticGarage.id}`);
-    }
-    
-    return [tracticGarage];
   };
 
   const fetchUserGarages = async () => {
+    if (fetchAttempts >= MAX_ATTEMPTS) {
+      console.error("Max fetch attempts reached, stopping");
+      setError("Too many fetch attempts. Please refresh the page.");
+      setLoading(false);
+      return null;
+    }
+
     try {
+      console.log(`Fetching garages (attempt ${fetchAttempts + 1}/${MAX_ATTEMPTS})`);
       setLoading(true);
       setError(null);
       
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error fetching user:", userError.message);
+        throw userError;
+      }
       
       if (!user) {
         console.log("No authenticated user found");
@@ -83,6 +107,7 @@ export const useGarages = (): GarageHookReturn => {
           
           if (userGarages.length === 0) {
             // If memberships exist but no garages found, handle as default case
+            console.log("Membership exists but no garages found, creating default garage");
             setError("Could not load garages. Creating default garage.");
             const tracticGarages = await handleTracticUserGarages(user);
             setGarages(tracticGarages);
@@ -95,6 +120,7 @@ export const useGarages = (): GarageHookReturn => {
         } catch (err) {
           console.error("Error fetching Tractic user garages:", err);
           // Always fall back to default Tractic garage
+          console.log("Falling back to default Tractic garage");
           const tracticGarages = await handleTracticUserGarages(user);
           setGarages(tracticGarages);
           setLoading(false);
@@ -106,6 +132,7 @@ export const useGarages = (): GarageHookReturn => {
       try {
         // Get the user's role
         const role = await getUserRole(user.id);
+        console.log("User role:", role);
         
         if (!role) {
           console.error("No role found for user");
@@ -115,10 +142,9 @@ export const useGarages = (): GarageHookReturn => {
           return user;
         }
         
-        console.log("User role:", role);
-        
         // If the user is not an administrator, they shouldn't be accessing garages management
         if (role !== 'administrator') {
+          console.log("User is not an administrator, signing out");
           toast.error("You don't have permission to access garage management");
           await supabase.auth.signOut();
           setGarages([]);
@@ -137,6 +163,7 @@ export const useGarages = (): GarageHookReturn => {
           console.log("User garages:", userGarages);
           
           if (userGarages.length === 0) {
+            console.log("No garages found for IDs");
             setError("Could not load garages. Using default garage.");
           } else {
             setGarages(userGarages);
@@ -150,6 +177,7 @@ export const useGarages = (): GarageHookReturn => {
         console.error("Error processing user role:", error.message);
         // For Tractic users, handle specially even if role check fails
         if (isTracticUser(user.email)) {
+          console.log("Handling Tractic user specially after role check failure");
           const tracticGarages = await handleTracticUserGarages(user);
           setGarages(tracticGarages);
         } else {
@@ -165,6 +193,9 @@ export const useGarages = (): GarageHookReturn => {
       setError("Failed to load your garages. Please try again later.");
       toast.error("Failed to load your garages");
       setGarages([]);
+      
+      // Increment fetch attempts
+      setFetchAttempts(prev => prev + 1);
       return null;
     } finally {
       setLoading(false);
@@ -172,6 +203,7 @@ export const useGarages = (): GarageHookReturn => {
   };
 
   useEffect(() => {
+    console.log("useGarages hook initialized");
     fetchUserGarages();
   }, []);
 

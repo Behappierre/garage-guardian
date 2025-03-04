@@ -9,25 +9,38 @@ import { useGarages } from "@/hooks/garage/useGarages";
 import { GarageList } from "@/components/garage/GarageList";
 import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const GarageManagement = () => {
   const navigate = useNavigate();
   const { garages, loading, error, refreshGarages } = useGarages();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Check if the user is an administrator or Tractic user
   useEffect(() => {
     const checkAdminAccess = async () => {
       try {
+        console.log("Starting authentication check...");
         setCheckingAccess(true);
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error("Error getting user:", userError.message);
+          setDebugInfo(`Auth error: ${userError.message}`);
+          throw userError;
+        }
         
         if (!user) {
+          console.log("No authenticated user found");
           toast.error("You must be logged in to access this page");
           navigate("/auth?type=owner");
           return;
         }
+        
+        console.log("Authenticated user:", user.email);
         
         // Detect Tractic users by email
         const isTracticUser = user.email?.toLowerCase().includes("tractic") || 
@@ -42,6 +55,7 @@ const GarageManagement = () => {
         
         // For non-Tractic users, check if they have administrator role
         try {
+          console.log("Checking administrator role for non-Tractic user");
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
@@ -50,16 +64,22 @@ const GarageManagement = () => {
             
           if (roleError) {
             console.error("Error checking admin access:", roleError.message);
+            setDebugInfo(`Role check error: ${roleError.message}`);
             throw roleError;
           }
           
           if (roleData?.role !== 'administrator') {
+            console.log("User is not an administrator:", roleData?.role);
             toast.error("Only administrators can access garage management");
             navigate("/auth?type=owner");
             return;
           }
+          
+          console.log("User is an administrator, access granted");
         } catch (error: any) {
           console.error("Error checking admin role:", error.message);
+          setDebugInfo(`Role check exception: ${error.message}`);
+          
           // If we cannot check the role, and it's a Tractic user, proceed anyway
           if (!isTracticUser) {
             toast.error("Authentication error");
@@ -68,52 +88,88 @@ const GarageManagement = () => {
           }
         }
       } catch (error: any) {
-        console.error("Error checking admin access:", error.message);
+        console.error("Error in overall access check:", error.message);
+        setDebugInfo(`Access check error: ${error.message}`);
         toast.error("Authentication error");
         navigate("/auth?type=owner");
       } finally {
+        console.log("Completed authentication check");
         setCheckingAccess(false);
       }
     };
     
     checkAdminAccess();
-  }, [navigate, refreshGarages]);
+  }, [navigate]);
 
   const handleSelectGarage = async (garageId: string) => {
     try {
+      console.log("Selecting garage:", garageId);
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error getting user for garage selection:", userError.message);
+        throw userError;
+      }
       
       if (!user) {
+        console.log("No authenticated user found for garage selection");
         navigate("/auth?type=owner");
         return;
       }
       
+      console.log("Updating user profile with selected garage");
       // Update user's profile with selected garage
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: garageId })
         .eq('id', user.id);
         
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error updating profile with garage:", profileError.message);
+        throw profileError;
+      }
       
+      console.log("Successfully selected garage");
       toast.success("Garage selected successfully");
       
       // Navigate to dashboard
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Error selecting garage:", error.message);
+      setDebugInfo(`Garage selection error: ${error.message}`);
       toast.error("Failed to select garage");
     }
   };
 
   const handleGarageCreated = (garageId: string) => {
+    console.log("Garage created, refreshing list:", garageId);
     refreshGarages();
     setShowCreateForm(false);
     toast.success("Garage created successfully");
   };
 
-  if (checkingAccess || loading) {
+  if (checkingAccess) {
+    console.log("Rendering loading state while checking access");
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold">Checking Access</h2>
+            <p className="text-gray-500">Please wait while we verify your permissions</p>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    console.log("Rendering loading state while fetching garages");
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-md">
@@ -139,10 +195,19 @@ const GarageManagement = () => {
           description="Select a garage to manage or create a new one"
         />
         
+        {debugInfo && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Debug information: {debugInfo}
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
             <p className="text-red-700">
-              {error} 
+              Error: {error} 
             </p>
           </div>
         )}
