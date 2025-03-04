@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 interface CreateGarageFormProps {
   onBack: () => void;
   onComplete: (garageId: string) => void;
-  userId?: string;
 }
 
 interface GarageFormValues {
@@ -26,7 +25,7 @@ interface GarageFormValues {
   phone?: string;
 }
 
-export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFormProps) => {
+export const CreateGarageForm = ({ onBack, onComplete }: CreateGarageFormProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,18 +58,14 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         phone: data.phone
       });
       
-      // Get the current user if not provided
-      let currentUserId = userId;
-      if (!currentUserId) {
-        const { data: userData } = await supabase.auth.getUser();
-        currentUserId = userData.user?.id;
-        
-        if (!currentUserId) {
-          throw new Error("Could not determine current user");
-        }
+      // Get the current user
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData.user) {
+        throw new Error("Could not determine current user");
       }
       
-      // Create the garage with owner_id directly set - simplifying to just create the garage
+      // Create the garage - bare minimum required fields
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert({
@@ -79,15 +74,13 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
           address: data.address,
           email: data.email,
           phone: data.phone,
-          owner_id: currentUserId
+          owner_id: userData.user.id
         })
         .select();
       
       if (garageError) {
         console.error("Garage creation error:", garageError);
         setError(garageError.message);
-        toast.error(`Failed to create garage: ${garageError.message}`);
-        setLoading(false);
         return;
       }
       
@@ -95,26 +88,13 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
         throw new Error("No garage data returned after creation");
       }
       
-      const newGarageId = garageData[0].id;
-      console.log("Created garage:", newGarageId);
-      
       toast.success("Garage created successfully");
-      onComplete(newGarageId);
+      onComplete(garageData[0].id);
     } catch (error: any) {
       console.error("Error creating garage:", error);
       setError(error.message || "Failed to create garage");
-      toast.error(`Failed to create garage: ${error.message}`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    console.log("Back button clicked");
-    if (typeof onBack === 'function') {
-      onBack();
-    } else {
-      navigate("/garage-management");
     }
   };
 
@@ -199,7 +179,7 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
             <Button
               type="button"
               variant="outline"
-              onClick={handleBack}
+              onClick={onBack}
             >
               Back
             </Button>
