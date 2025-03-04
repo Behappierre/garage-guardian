@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Json } from "@/integrations/supabase/types";
 
 interface Garage {
   id: string;
@@ -75,9 +76,9 @@ export const useGarages = () => {
               query_text: `SELECT * FROM garages WHERE LOWER(name) = 'tractic' OR LOWER(slug) = 'tractic' LIMIT 1`
             });
             
-          if (!tracticError && tracticData && tracticData.length > 0) {
+          if (!tracticError && tracticData && Array.isArray(tracticData) && tracticData.length > 0) {
             console.log("Found Tractic garage for user:", tracticData[0]);
-            setGarages(tracticData);
+            setGarages(tracticData as Garage[]);
             setLoading(false);
             return user;
           }
@@ -88,7 +89,7 @@ export const useGarages = () => {
         return user;
       }
       
-      if (!memberData || memberData.length === 0) {
+      if (!memberData || !Array.isArray(memberData) || memberData.length === 0) {
         // No garage memberships found, check for Tractic garage for specific emails
         const isTracticUser = user.email?.toLowerCase().includes("tractic") || 
                              user.email === "olivier@andre.org.uk";
@@ -100,7 +101,7 @@ export const useGarages = () => {
               query_text: `SELECT * FROM garages WHERE LOWER(name) = 'tractic' OR LOWER(slug) = 'tractic' LIMIT 1`
             });
             
-          if (!tracticError && tracticData && tracticData.length > 0) {
+          if (!tracticError && tracticData && Array.isArray(tracticData) && tracticData.length > 0) {
             console.log("Found Tractic garage for user with no memberships:", tracticData[0]);
             
             // Try to add user as garage member using a direct query
@@ -124,7 +125,7 @@ export const useGarages = () => {
               console.error("Exception when adding user as garage member:", err);
             }
             
-            setGarages(tracticData);
+            setGarages(tracticData as Garage[]);
             setLoading(false);
             return user;
           }
@@ -138,6 +139,14 @@ export const useGarages = () => {
       }
       
       // Get array of garage IDs from the result
+      // Add type checking to ensure memberData is an array
+      if (!Array.isArray(memberData)) {
+        console.error("memberData is not an array:", memberData);
+        setGarages([]);
+        setLoading(false);
+        return user;
+      }
+      
       const garageIds = memberData.map(item => item.garage_id);
       
       // Direct query to get garage details
@@ -154,7 +163,15 @@ export const useGarages = () => {
       }
       
       console.log("Fetched garages:", garageData);
-      setGarages(garageData || []);
+      
+      // Ensure garageData is an array before setting state
+      if (garageData && Array.isArray(garageData)) {
+        setGarages(garageData as Garage[]);
+      } else {
+        console.error("Garage data is not an array:", garageData);
+        setGarages([]);
+      }
+      
       return user;
       
     } catch (error: any) {
