@@ -16,7 +16,7 @@ const GarageManagement = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
 
-  // Check if the user is an administrator
+  // Check if the user is an administrator or Tractic user
   useEffect(() => {
     const checkAdminAccess = async () => {
       try {
@@ -29,53 +29,19 @@ const GarageManagement = () => {
           return;
         }
         
-        // Development fallback - detect Tractic emails
+        // Detect Tractic users by email
         const isTracticUser = user.email?.toLowerCase().includes("tractic") || 
                              user.email === "olivier@andre.org.uk";
                              
-        // For Tractic users, bypass the strict role checking
+        // For Tractic users, bypass the strict role checking and proceed directly
         if (isTracticUser) {
-          console.log("Detected Tractic user, bypassing strict role check");
+          console.log("Detected Tractic user, bypassing strict role check for page access");
           setCheckingAccess(false);
-          
-          // Look for Tractic garage
-          const { data: tracticData, error: tracticError } = await supabase
-            .from('garages')
-            .select('id')
-            .or('name.ilike.%tractic%,slug.ilike.%tractic%')
-            .limit(1);
-            
-          if (!tracticError && tracticData && tracticData.length > 0) {
-            console.log("Found Tractic garage:", tracticData[0].id);
-            // Try to add user as a member of the Tractic garage if not already
-            const { data: memberExists, error: memberCheckError } = await supabase
-              .from('garage_members')
-              .select('id')
-              .eq('user_id', user.id)
-              .eq('garage_id', tracticData[0].id)
-              .limit(1);
-              
-            if (!memberCheckError && (!memberExists || memberExists.length === 0)) {
-              console.log("Adding user to Tractic garage membership");
-              // Add the user as an owner of the Tractic garage
-              await supabase
-                .from('garage_members')
-                .upsert({
-                  user_id: user.id,
-                  garage_id: tracticData[0].id,
-                  role: 'owner'
-                });
-                
-              // Refresh garages after adding membership
-              refreshGarages();
-            }
-          }
           return;
         }
         
-        // For non-Tractic users, check roles
+        // For non-Tractic users, check if they have administrator role
         try {
-          // Fetch user role
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
@@ -195,6 +161,13 @@ const GarageManagement = () => {
           onSelectGarage={handleSelectGarage}
           onCreateGarage={() => setShowCreateForm(true)}
         />
+        
+        {showCreateForm && (
+          <CreateGarageForm 
+            onCancel={() => setShowCreateForm(false)}
+            onGarageCreated={handleGarageCreated}
+          />
+        )}
         
         <div className="text-center mt-8">
           <Button variant="ghost" onClick={() => supabase.auth.signOut()}>

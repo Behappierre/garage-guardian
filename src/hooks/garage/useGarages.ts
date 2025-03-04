@@ -59,36 +59,47 @@ export const useGarages = (): GarageHookReturn => {
       
       console.log("Current user:", user.email);
       
-      // Special handling for Tractic users - skip role check
+      // Special handling for Tractic users
       if (isTracticUser(user.email)) {
         console.log("Detected Tractic user, bypassing role check");
         
-        // Get garage memberships first
-        const garageIds = await getUserGarageMemberships(user.id);
-        console.log("Fetched garage IDs for Tractic user:", garageIds);
-        
-        if (garageIds.length === 0) {
-          console.log("No garages found for Tractic user, setting up default garage");
+        try {
+          // First try to get memberships directly
+          const garageIds = await getUserGarageMemberships(user.id);
+          console.log("Fetched garage IDs for Tractic user:", garageIds);
+          
+          if (garageIds.length === 0) {
+            // No memberships found, set up default garage
+            console.log("No garages found for Tractic user, setting up default garage");
+            const tracticGarages = await handleTracticUserGarages(user);
+            setGarages(tracticGarages);
+            setLoading(false);
+            return user;
+          }
+          
+          // Fetch garages for the found memberships
+          const userGarages = await getGaragesByIds(garageIds);
+          console.log("User garages:", userGarages);
+          
+          if (userGarages.length === 0) {
+            // If memberships exist but no garages found, handle as default case
+            setError("Could not load garages. Creating default garage.");
+            const tracticGarages = await handleTracticUserGarages(user);
+            setGarages(tracticGarages);
+          } else {
+            setGarages(userGarages);
+          }
+          
+          setLoading(false);
+          return user;
+        } catch (err) {
+          console.error("Error fetching Tractic user garages:", err);
+          // Always fall back to default Tractic garage
           const tracticGarages = await handleTracticUserGarages(user);
           setGarages(tracticGarages);
           setLoading(false);
           return user;
         }
-        
-        // If user has memberships, fetch the garages
-        const userGarages = await getGaragesByIds(garageIds);
-        console.log("User garages:", userGarages);
-        
-        if (userGarages.length === 0) {
-          setError("Could not load garages. Creating default garage.");
-          const tracticGarages = await handleTracticUserGarages(user);
-          setGarages(tracticGarages);
-        } else {
-          setGarages(userGarages);
-        }
-        
-        setLoading(false);
-        return user;
       }
       
       // For non-Tractic users, proceed with role checking
