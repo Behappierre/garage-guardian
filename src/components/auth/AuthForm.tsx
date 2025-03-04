@@ -40,7 +40,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   const [newUserId, setNewUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Set default role based on user type
   useEffect(() => {
     if (userType === "owner") {
       setRole("administrator");
@@ -50,13 +49,11 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   }, [userType]);
 
   useEffect(() => {
-    // Only fetch garages for staff members, not for garage owners
     if (userType === "staff") {
       const fetchGarages = async () => {
         try {
           setFetchingGarages(true);
           
-          // Simple query to get all garages
           const { data, error } = await supabase
             .from('garages')
             .select('id, name, slug')
@@ -68,7 +65,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           
           if (data && data.length > 0) {
             setGarages(data);
-            // Always look for Tractic garage first
             const tracticGarage = data.find(garage => 
               garage.name.toLowerCase() === 'tractic' || 
               garage.slug.toLowerCase() === 'tractic'
@@ -77,11 +73,13 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             if (tracticGarage) {
               setSelectedGarageId(tracticGarage.id);
             } else {
-              // Otherwise use the first garage in the list
-              setSelectedGarageId(data[0].id);
+              const fallbackGarages: Garage[] = [
+                { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
+              ];
+              setGarages(fallbackGarages);
+              setSelectedGarageId(fallbackGarages[0].id);
             }
           } else {
-            // Fallback option if no garages are found
             const fallbackGarages: Garage[] = [
               { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
             ];
@@ -91,7 +89,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         } catch (error: any) {
           console.error("Error fetching garages:", error.message);
           
-          // Fallback to hardcoded Tractic garage in case of any errors
           const fallbackGarages: Garage[] = [
             { id: "00000000-0000-0000-0000-000000000000", name: "Tractic", slug: "tractic" }
           ];
@@ -113,7 +110,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   }, [userType]);
 
   const handleGarageCreationComplete = (garageId: string) => {
-    // After garage creation, proceed to garage management page
     navigate("/garage-management");
   };
 
@@ -133,10 +129,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
 
     try {
       if (mode === "signup") {
-        // For garage owners, always set role to administrator
         const userRole = userType === "owner" ? "administrator" : role;
         
-        // First, sign up the user
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -149,9 +143,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         });
         if (signUpError) throw signUpError;
 
-        // If we have the user data, insert the role
         if (signUpData.user) {
-          // Explicitly set the role as administrator for garage owners
           const { error: roleError } = await supabase
             .from('user_roles')
             .insert([
@@ -163,30 +155,19 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           if (roleError) throw roleError;
           
           if (userType === "owner") {
-            // For garage owners, show the garage creation form
             setNewUserId(signUpData.user.id);
             setShowGarageForm(true);
             
-            // Now keep the session active for garage creation
-            const { data: session } = await supabase.auth.getSession();
-            console.log("Current session:", session);
-            
-            if (!session.session) {
-              // If no session, sign in the user
-              console.log("No active session, signing in the user");
-              await supabase.auth.signInWithPassword({
-                email,
-                password
-              });
-            }
+            await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
             
             toast({
               title: "Account created!",
               description: "Now let's set up your garage.",
             });
           } else {
-            // For staff, add them to an existing garage
-            // Add user to garage_members table
             const { error: garageMemberError } = await supabase
               .from('garage_members')
               .insert([
@@ -198,7 +179,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               ]);
             if (garageMemberError) throw garageMemberError;
             
-            // Update user's profile with garage_id
             const { error: profileError } = await supabase
               .from('profiles')
               .update({ garage_id: selectedGarageId })
@@ -212,22 +192,19 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           }
         }
       } else {
-        // Sign in logic
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
 
-        // After successful sign in, handle redirection based on role
         if (signInData.user) {
           try {
-            // Get user role first
             const { data: roleData, error: roleError } = await supabase
               .from('user_roles')
               .select('role')
               .eq('user_id', signInData.user.id)
-              .single();
+              .maybeSingle();
 
             if (roleError) {
               console.error("Error fetching user role:", roleError.message);
@@ -236,63 +213,17 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
 
             console.log("User role check for access:", roleData?.role, "Trying to access as:", userType);
 
-            // If trying to sign in as owner but not an administrator, show error
             if (userType === "owner" && roleData?.role !== 'administrator') {
               throw new Error("You don't have permission to access the garage owner area");
             }
 
-            // If trying to sign in as staff but is an administrator, show error
             if (userType === "staff" && roleData?.role === 'administrator') {
               throw new Error("Administrators should use the garage owner login");
             }
 
-            // Update the user's profile with the selected garage for staff
-            if (userType === "staff" && selectedGarageId) {
-              // Check if the user is a member of the selected garage
-              const { data: memberData, error: memberError } = await supabase
-                .from('garage_members')
-                .select('id')
-                .eq('user_id', signInData.user.id)
-                .eq('garage_id', selectedGarageId)
-                .single();
-                
-              if (memberError && !memberError.message.includes("No rows found")) {
-                throw new Error("Error verifying your garage access: " + memberError.message);
-              }
-              
-              if (!memberData) {
-                // Add the user as a member if not already
-                const { error: addMemberError } = await supabase
-                  .from('garage_members')
-                  .insert([
-                    {
-                      user_id: signInData.user.id,
-                      garage_id: selectedGarageId,
-                      role: roleData?.role || 'front_desk'
-                    }
-                  ]);
-                  
-                if (addMemberError) {
-                  throw new Error("Could not associate you with the selected garage");
-                }
-              }
-            
-              const { error: profileError } = await supabase
-                .from('profiles')
-                .update({ garage_id: selectedGarageId })
-                .eq('id', signInData.user.id);
-              
-              if (profileError && !profileError.message.includes("infinite recursion")) {
-                console.error("Non-critical error updating profile:", profileError.message);
-              }
-            }
-
-            // Redirect based on role
             if (roleData?.role === 'administrator' && userType === "owner") {
-              // For administrators (garage owners), go to garage management
               navigate("/garage-management");
             } else {
-              // For staff roles or direct dashboard access
               switch (roleData?.role) {
                 case 'technician':
                   navigate("/dashboard/job-tickets");
@@ -311,7 +242,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               title: "Access Denied",
               description: error.message,
             });
-            // Sign out on error
             await supabase.auth.signOut();
             setLoading(false);
             return;
@@ -348,7 +278,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
       </div>
 
       <form onSubmit={handleAuth} className="mt-8 space-y-6">
-        {/* Garage Selection - Only shown for staff */}
         {userType === "staff" && (
           <div className="space-y-2">
             <Label htmlFor="garage">Select Garage</Label>
@@ -468,7 +397,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           </button>
         </div>
 
-        {/* Link to switch between owner and staff forms */}
         <div className="text-center text-sm pt-4 border-t border-gray-200">
           <button
             type="button"

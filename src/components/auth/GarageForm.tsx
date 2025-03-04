@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface GarageFormProps {
   userId: string;
@@ -23,6 +24,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm<GarageFormValues>();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const onSubmit = async (data: GarageFormValues) => {
     setLoading(true);
@@ -91,7 +93,11 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         description: "Your garage has been created successfully.",
       });
       
-      onComplete(garageId);
+      // Force refresh auth session to update user claims
+      await supabase.auth.refreshSession();
+      
+      // Redirect to garage management
+      navigate("/garage-management");
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
       toast({

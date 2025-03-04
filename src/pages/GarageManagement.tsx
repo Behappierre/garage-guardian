@@ -31,11 +31,13 @@ const GarageManagement = () => {
 
   // Check if user has any garages right after access check completes
   useEffect(() => {
-    if (!checkingAccess && garages.length === 0 && !loading) {
-      console.log("User has no garages, showing create form");
-      setShowCreateForm(true);
+    if (!checkingAccess && !loading && accessGranted) {
+      if (garages.length === 0) {
+        console.log("User has no garages, showing create form");
+        setShowCreateForm(true);
+      }
     }
-  }, [checkingAccess, garages.length, loading]);
+  }, [checkingAccess, loading, garages.length, accessGranted]);
 
   // Handle garage creation completion
   const handleGarageCreated = (garageId: string) => {
@@ -49,32 +51,27 @@ const GarageManagement = () => {
     return <CheckingAccessLoader />;
   }
 
+  if (!accessGranted) {
+    console.log("Access not granted, user should be redirected");
+    return <CheckingAccessLoader />;
+  }
+
   if (loading) {
     console.log("Rendering loading state while fetching garages");
     return <GarageLoadingState />;
   }
 
-  // If no garages exist, show the create form automatically
-  if (garages.length === 0 && !showCreateForm) {
-    console.log("No garages found, showing create form");
+  // Show the create form if explicitly requested or if user has no garages
+  if (showCreateForm || garages.length === 0) {
+    console.log("Showing create form");
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <CreateGarageForm 
-          onBack={() => {}} // Empty function since there's no back state
+          onBack={() => garages.length > 0 ? setShowCreateForm(false) : {}} 
           onComplete={handleGarageCreated}
           userId={userData?.id}
         />
       </div>
-    );
-  }
-
-  if (showCreateForm) {
-    return (
-      <CreateGarageForm 
-        onBack={() => setShowCreateForm(false)}
-        onComplete={handleGarageCreated}
-        userId={userData?.id}
-      />
     );
   }
 

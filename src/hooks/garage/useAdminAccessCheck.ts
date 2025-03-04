@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { hasGarageOwnerPermission } from "./utils";
 
 export const useAdminAccessCheck = () => {
   const [checkingAccess, setCheckingAccess] = useState(true);
@@ -30,7 +29,7 @@ export const useAdminAccessCheck = () => {
           .eq('user_id', user.id)
           .single();
 
-        if (roleError || !roleData) {
+        if (roleError) {
           console.error("Error fetching user role:", roleError?.message);
           setDebugInfo("Error fetching user role");
           toast.error("You don't have permission to access the garage management area");

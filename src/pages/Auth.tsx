@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { hasAnyGarageMembership } from "@/hooks/garage/utils/userHelpers";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -34,11 +33,12 @@ const Auth = () => {
               .from('user_roles')
               .select('role')
               .eq('user_id', session.user.id)
-              .single();
+              .maybeSingle();
 
             if (roleError) {
               console.error("Error fetching role:", roleError.message);
-              throw roleError;
+              setIsChecking(false);
+              return;
             }
 
             console.log("User role:", roleData?.role);
@@ -53,11 +53,7 @@ const Auth = () => {
                 return;
               }
               
-              // Check if the administrator has any garage memberships
-              const hasMembership = await hasAnyGarageMembership(session.user.id);
-              
-              // If the user is an administrator and is on the owner login page, 
-              // redirect to garage management
+              // If the user is an administrator, redirect to garage management
               navigate("/garage-management");
               return;
             }
@@ -69,15 +65,6 @@ const Auth = () => {
               return;
             }
             
-            // For staff roles, check garage membership
-            const hasMembership = await hasAnyGarageMembership(session.user.id);
-            if (!hasMembership) {
-              toast.error("You don't have access to any garage. Please contact an administrator.");
-              await supabase.auth.signOut();
-              setIsChecking(false);
-              return;
-            }
-
             // For staff roles, handle based on role
             switch (roleData?.role) {
               case 'technician':

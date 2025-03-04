@@ -10,7 +10,7 @@ export const getUserRole = async (userId: string): Promise<string | null> => {
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
       
     if (error) {
       console.error("Error fetching user role:", error.message);
@@ -37,7 +37,7 @@ export const isAdministrator = async (userId: string): Promise<boolean> => {
   }
 };
 
-// Check if user has garage owner permission by checking if they have at least one garage
+// Check if user has garage owner permission
 export const hasGarageOwnerPermission = async (userId: string): Promise<boolean> => {
   try {
     // First, ensure the user is an administrator
@@ -49,21 +49,7 @@ export const hasGarageOwnerPermission = async (userId: string): Promise<boolean>
     
     console.log(`User ${userId} is administrator: ${isAdmin}`);
     
-    // Check if the administrator has at least one garage or is in a garage
-    const { data: memberData, error: memberError } = await supabase
-      .from('garage_members')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1);
-      
-    if (memberError) {
-      console.error("Error checking garage membership:", memberError.message);
-      // If there's an error, allow access so they can create a garage
-      return true;
-    }
-    
-    // Administrator with no garage should still have access to create one
-    console.log(`User ${userId} garage membership data:`, memberData);
+    // All administrators have garage owner permission
     return true;
   } catch (err) {
     console.error("Error checking garage owner permission:", err);

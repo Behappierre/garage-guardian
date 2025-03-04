@@ -2,8 +2,8 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Garage, GarageHookReturn } from "./types";
-import { useTracticGarageHandling } from "./useTracticGarageHandling";
-import { useUserGarageAccess } from "./useUserGarageAccess";
+import { supabase } from "@/integrations/supabase/client";
+import { getUserGarageMemberships, getGaragesByIds } from "./utils";
 
 export const useGarages = (): GarageHookReturn => {
   const [garages, setGarages] = useState<Garage[]>([]);
@@ -12,9 +12,6 @@ export const useGarages = (): GarageHookReturn => {
   const [fetchAttempts, setFetchAttempts] = useState(0);
   
   const MAX_ATTEMPTS = 3;
-  
-  const { handleTracticUserGarages } = useTracticGarageHandling();
-  const { checkUserAccess } = useUserGarageAccess(setError, setGarages);
 
   const fetchUserGarages = async () => {
     if (fetchAttempts >= MAX_ATTEMPTS) {
@@ -29,13 +26,64 @@ export const useGarages = (): GarageHookReturn => {
       setLoading(true);
       setError(null);
       
-      const user = await checkUserAccess();
+      // Check if user is logged in
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Error fetching user:", userError.message);
+        throw userError;
+      }
       
       if (!user) {
-        console.log("No authenticated user found or access check failed");
+        console.log("No authenticated user found");
         setGarages([]);
         setLoading(false);
         return null;
+      }
+      
+      // Get user role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+        
+      if (roleError) {
+        console.error("Error fetching user role:", roleError.message);
+        throw new Error("Could not verify your account role");
+      }
+      
+      console.log("User role:", roleData?.role);
+      
+      // If the user is not an administrator, they shouldn't be accessing garages management
+      if (roleData?.role !== 'administrator') {
+        console.log("User is not an administrator, blocking access");
+        setError("You don't have permission to access garage management");
+        setGarages([]);
+        setLoading(false);
+        return null;
+      }
+      
+      // Get garage memberships
+      const garageIds = await getUserGarageMemberships(user.id);
+      console.log("Fetched garage IDs:", garageIds);
+      
+      // If user has memberships, fetch the garages
+      if (garageIds.length > 0) {
+        console.log("Fetching garages for IDs:", garageIds);
+        const userGarages = await getGaragesByIds(garageIds);
+        console.log("User garages:", userGarages);
+        
+        if (userGarages.length === 0) {
+          console.log("No garages found for IDs");
+          setError("Could not load garages. Please create a new garage.");
+        } else {
+          setGarages(userGarages);
+        }
+      } else {
+        console.log("No garages found for user");
+        setError(null); // Clear error since it's expected for new administrators
+        setGarages([]);
       }
       
       // Return the successful user for other operations
@@ -43,19 +91,13 @@ export const useGarages = (): GarageHookReturn => {
     } catch (error: any) {
       console.error("Error fetching garages:", error.message);
       
-      // Don't show error for administrators with no garages
-      if (error.message === "No garages found for your account.") {
-        console.log("Administrator has no garages yet - this is expected for new users");
-        setError(null);
-        setGarages([]);
-      } else {
-        setError("Failed to load your garages. Please try again later.");
-        toast.error("Failed to load your garages");
-        setGarages([]);
-      }
-      
       // Increment fetch attempts
       setFetchAttempts(prev => prev + 1);
+      
+      setError("Failed to load your garages. Please try again later.");
+      toast.error("Failed to load your garages");
+      setGarages([]);
+      
       return null;
     } finally {
       setLoading(false);
