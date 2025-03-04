@@ -36,19 +36,71 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
 
       console.log("Fetching garages for user:", userData.user.id);
 
-      // Fix: Use column names without table prefixes and ensure owner_id filter
-      const { data, error: garagesError } = await supabase
+      // First, fetch garages that the user owns directly
+      const { data: ownedGarages, error: ownedError } = await supabase
         .from("garages")
         .select("id, name, slug, address, email, phone, created_at, owner_id")
         .eq("owner_id", userData.user.id);
       
-      if (garagesError) {
-        console.error("Garage query error:", garagesError);
-        throw new Error("Failed to fetch garages: " + garagesError.message);
+      if (ownedError) {
+        console.error("Error fetching owned garages:", ownedError);
+        throw new Error("Failed to fetch owned garages: " + ownedError.message);
       }
 
-      console.log("Garages fetched:", data);
-      setGarages(data || []);
+      // Second, fetch garages the user is a member of via garage_members table
+      const { data: memberGarages, error: memberError } = await supabase
+        .from("garage_members")
+        .select(`
+          garage_id,
+          garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)
+        `)
+        .eq("user_id", userData.user.id);
+      
+      if (memberError) {
+        console.error("Error fetching member garages:", memberError);
+        throw new Error("Failed to fetch member garages: " + memberError.message);
+      }
+
+      // Third, check if the user has a garage_id in their profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("garage_id")
+        .eq("id", userData.user.id)
+        .single();
+        
+      if (profileError && !profileError.message.includes("No rows found")) {
+        console.error("Error fetching profile:", profileError);
+      }
+
+      // Combine all garages, removing duplicates
+      const allGarages: Garage[] = [...(ownedGarages || [])];
+
+      // Add member garages if any (transform the nested structure)
+      if (memberGarages && memberGarages.length > 0) {
+        memberGarages.forEach(membership => {
+          if (membership.garages && !allGarages.some(g => g.id === membership.garages.id)) {
+            allGarages.push(membership.garages as Garage);
+          }
+        });
+      }
+
+      // Add profile garage if it exists and is not already included
+      if (profileData?.garage_id && !allGarages.some(g => g.id === profileData.garage_id)) {
+        const { data: profileGarage, error: profileGarageError } = await supabase
+          .from("garages")
+          .select("id, name, slug, address, email, phone, created_at, owner_id")
+          .eq("id", profileData.garage_id)
+          .single();
+          
+        if (!profileGarageError && profileGarage) {
+          allGarages.push(profileGarage);
+        } else if (profileGarageError && !profileGarageError.message.includes("No rows found")) {
+          console.error("Error fetching profile garage:", profileGarageError);
+        }
+      }
+
+      console.log("All garages fetched:", allGarages);
+      setGarages(allGarages);
     } catch (error: any) {
       console.error("Error in useOwnerGarages:", error);
       setError(error.message);
