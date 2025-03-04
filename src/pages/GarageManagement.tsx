@@ -164,8 +164,8 @@ const GarageManagement = () => {
         
         {showCreateForm && (
           <CreateGarageForm 
-            onCancel={() => setShowCreateForm(false)}
-            onGarageCreated={handleGarageCreated}
+            onBack={() => setShowCreateForm(false)}
+            onComplete={handleGarageCreated}
           />
         )}
         
