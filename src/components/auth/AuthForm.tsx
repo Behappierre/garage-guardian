@@ -51,7 +51,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           
           const { data, error } = await supabase
             .from('garages')
-            .select('garages.id, garages.name, garages.slug, garages.address, garages.email, garages.phone, garages.created_at, garages.owner_id')
+            .select('id, name, slug, address, email, phone, created_at, owner_id')
             .order('name');
           
           if (error) {

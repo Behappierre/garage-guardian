@@ -36,10 +36,11 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
 
       console.log("Fetching garages for user:", userData.user.id);
 
-      // Use explicit table prefix for each column to avoid ambiguity
+      // Fix: Use column names without table prefixes
       const { data, error: garagesError } = await supabase
         .from("garages")
-        .select("garages.id, garages.name, garages.slug, garages.address, garages.email, garages.phone, garages.created_at, garages.owner_id");
+        .select("id, name, slug, address, email, phone, created_at, owner_id")
+        .eq("owner_id", userData.user.id);
       
       if (garagesError) {
         console.error("Garage query error:", garagesError);

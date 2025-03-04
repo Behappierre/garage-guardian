@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // First, create the garage - fix includes adding a comma after phone field
+      // First, create the garage - fix includes adding a comma after phone field and explicitly setting owner_id
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert([

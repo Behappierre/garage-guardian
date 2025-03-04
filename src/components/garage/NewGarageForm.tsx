@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Garage } from "@/types/garage";
 
 interface NewGarageFormProps {
   onBack: () => void;
@@ -30,7 +30,6 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm<GarageFormValues>();
   const garageName = watch("name") || "";
 
-  // Generate a slug from the garage name
   const generateSlug = (name: string) => {
     return name
       .toLowerCase()
@@ -45,17 +44,14 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
       setIsSubmitting(true);
       setError(null);
       
-      // Auto-generate slug if not provided
       const slug = data.slug || generateSlug(data.name);
       
-      // Get the current authenticated user
       const { data: userData, error: userError } = await supabase.auth.getUser();
       
       if (userError || !userData.user) {
         throw new Error("Authentication required to create a garage");
       }
       
-      // Create the garage with explicitly named columns to avoid ambiguity
       const { data: newGarage, error: garageError } = await supabase
         .from('garages')
         .insert({

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -31,9 +32,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
+      // Fix: Remove table prefixes in select statements
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('profiles.id, profiles.garage_id')
+        .select('id, garage_id')
         .eq('id', userId)
         .single();
       
@@ -49,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const { data: ownedGarages, error: ownedError } = await supabase
         .from('garages')
-        .select('garages.id')
+        .select('id')
         .eq('owner_id', userId)
         .limit(1);
       
@@ -72,7 +74,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const { data: memberships, error: membershipError } = await supabase
         .from('garage_members')
-        .select('garage_members.garage_id')
+        .select('garage_id')
         .eq('user_id', userId)
         .limit(1);
       
@@ -97,7 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Attempting to use default Tractic garage");
         const { data: defaultGarage, error: defaultError } = await supabase
           .from('garages')
-          .select('garages.id')
+          .select('id')
           .eq('slug', 'tractic')
           .limit(1);
           
