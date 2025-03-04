@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -168,7 +167,18 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             setNewUserId(signUpData.user.id);
             setShowGarageForm(true);
             
-            // No need to create a garage entry yet - we'll do that in GarageForm
+            // Now keep the session active for garage creation
+            const { data: session } = await supabase.auth.getSession();
+            console.log("Current session:", session);
+            
+            if (!session.session) {
+              // If no session, sign in the user
+              console.log("No active session, signing in the user");
+              await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+            }
             
             toast({
               title: "Account created!",
@@ -209,7 +219,7 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         });
         if (error) throw error;
 
-        // After successful sign in, we'll handle the garage association
+        // After successful sign in, handle redirection based on role
         if (signInData.user) {
           try {
             // Get user role first
@@ -224,13 +234,49 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               throw new Error("Could not verify your account role");
             }
 
+            console.log("User role check for access:", roleData?.role, "Trying to access as:", userType);
+
             // If trying to sign in as owner but not an administrator, show error
             if (userType === "owner" && roleData?.role !== 'administrator') {
               throw new Error("You don't have permission to access the garage owner area");
             }
 
+            // If trying to sign in as staff but is an administrator, show error
+            if (userType === "staff" && roleData?.role === 'administrator') {
+              throw new Error("Administrators should use the garage owner login");
+            }
+
             // Update the user's profile with the selected garage for staff
             if (userType === "staff" && selectedGarageId) {
+              // Check if the user is a member of the selected garage
+              const { data: memberData, error: memberError } = await supabase
+                .from('garage_members')
+                .select('id')
+                .eq('user_id', signInData.user.id)
+                .eq('garage_id', selectedGarageId)
+                .single();
+                
+              if (memberError && !memberError.message.includes("No rows found")) {
+                throw new Error("Error verifying your garage access: " + memberError.message);
+              }
+              
+              if (!memberData) {
+                // Add the user as a member if not already
+                const { error: addMemberError } = await supabase
+                  .from('garage_members')
+                  .insert([
+                    {
+                      user_id: signInData.user.id,
+                      garage_id: selectedGarageId,
+                      role: roleData?.role || 'front_desk'
+                    }
+                  ]);
+                  
+                if (addMemberError) {
+                  throw new Error("Could not associate you with the selected garage");
+                }
+              }
+            
               const { error: profileError } = await supabase
                 .from('profiles')
                 .update({ garage_id: selectedGarageId })
@@ -248,9 +294,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             } else {
               // For staff roles or direct dashboard access
               switch (roleData?.role) {
-                case 'administrator':
-                  navigate("/dashboard");
-                  break;
                 case 'technician':
                   navigate("/dashboard/job-tickets");
                   break;

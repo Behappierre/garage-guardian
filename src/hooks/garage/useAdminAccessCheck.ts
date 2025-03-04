@@ -23,18 +23,29 @@ export const useAdminAccessCheck = () => {
           return;
         }
 
-        // Check if user has administrator/owner permission
-        const hasPermission = await hasGarageOwnerPermission(user.id);
-        console.log("User has garage owner permission:", hasPermission);
-        
-        if (!hasPermission) {
+        // Check if user has administrator role
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+
+        if (roleError || !roleData) {
+          console.error("Error fetching user role:", roleError?.message);
+          setDebugInfo("Error fetching user role");
+          toast.error("You don't have permission to access the garage management area");
+          navigate("/auth?type=owner");
+          return;
+        }
+
+        if (roleData.role !== 'administrator') {
           setDebugInfo("User does not have administrator role");
           toast.error("You don't have permission to access the garage management area");
-          // Don't sign out automatically, just redirect
           navigate("/auth?type=owner");
           return;
         }
         
+        // At this point we know the user is an administrator
         setAccessGranted(true);
         setDebugInfo("Administrator access granted");
       } catch (error) {

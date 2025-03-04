@@ -8,85 +8,98 @@ import { toast } from "sonner";
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, garageId } = useAuth();
   const location = useLocation();
-  const [isVerifyingGarage, setIsVerifyingGarage] = useState(true);
-  const [hasGarageAccess, setHasGarageAccess] = useState(false);
+  const [isVerifyingRole, setIsVerifyingRole] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    const verifyGarageAccess = async () => {
+    const verifyAccess = async () => {
       if (user) {
         try {
-          // First check if we already have a garageId from AuthProvider
-          if (garageId) {
-            setHasGarageAccess(true);
-            setIsVerifyingGarage(false);
+          // Check user role
+          const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (roleError) {
+            console.error("Error fetching user role:", roleError.message);
+            toast.error("Could not verify your account role");
+            await supabase.auth.signOut();
+            setIsVerifyingRole(false);
             return;
           }
+
+          setUserRole(roleData?.role || null);
           
-          // Try to use the RPC function to bypass RLS issues completely
-          const { data, error } = await supabase.rpc('execute_read_only_query', {
-            query_text: `SELECT COUNT(*) FROM garage_members WHERE user_id = '${user.id}'`
-          });
+          // For garage management, only allow administrators
+          if (location.pathname.includes('/garage-management')) {
+            if (roleData?.role !== 'administrator') {
+              console.log("User is not an administrator, blocking access to garage management");
+              toast.error("You don't have permission to access garage management");
+              setHasAccess(false);
+              setIsVerifyingRole(false);
+              return;
+            }
+          }
           
-          if (error) {
-            console.error("Error using RPC for garage verification:", error.message);
-            // If we get an error, check profiles table as backup
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('garage_id')
-              .eq('id', user.id)
-              .single();
+          // For dashboard, check if role is valid
+          if (location.pathname.includes('/dashboard')) {
+            if (!['administrator', 'technician', 'front_desk'].includes(roleData?.role || '')) {
+              console.log("User has invalid role for dashboard:", roleData?.role);
+              toast.error("You don't have permission to access this area");
+              setHasAccess(false);
+              setIsVerifyingRole(false);
+              return;
+            }
+            
+            // Check if user has a garage membership
+            const { data: memberData, error: memberError } = await supabase
+              .from('garage_members')
+              .select('id')
+              .eq('user_id', user.id)
+              .limit(1);
               
-            if (!profileError && profileData?.garage_id) {
-              setHasGarageAccess(true);
-              setIsVerifyingGarage(false);
+            if (memberError) {
+              console.error("Error checking garage membership:", memberError.message);
+              toast.error("Error verifying your garage access");
+              setHasAccess(false);
+              setIsVerifyingRole(false);
               return;
             }
             
-            // If RPC fails and we have a recursion issue, assume access for now
-            // This is a temporary workaround for the infinite recursion issue
-            if (error.message.includes("infinite recursion")) {
-              console.log("Bypassing RLS recursion issue, assuming garage access");
-              setHasGarageAccess(true);
-              setIsVerifyingGarage(false);
+            if (!memberData || memberData.length === 0) {
+              console.log("User has no garage memberships");
+              toast.error("You don't have access to any garage. Please contact an administrator.");
+              setHasAccess(false);
+              setIsVerifyingRole(false);
               return;
             }
-            
-            throw error;
           }
           
-          // Parse the jsonb result to check if user has any garage membership
-          const hasAccess = data && Array.isArray(data) && 
-            data.length > 0 && 
-            parseInt((data[0] as Record<string, any>).count as string, 10) > 0;
-            
-          setHasGarageAccess(hasAccess);
-          
-          if (!hasAccess) {
-            toast.error("You don't have access to any garage. Please contact an administrator.");
-            // Sign out the user
-            await supabase.auth.signOut();
-          }
+          // If we reach this point, the user has proper access
+          setHasAccess(true);
         } catch (error: any) {
-          console.error("Error verifying garage access:", error.message);
-          // On error, we'll assume temporary access to avoid login loops
-          // This is a defensive measure while we debug RLS issues
-          setHasGarageAccess(true);
+          console.error("Error verifying access:", error.message);
+          toast.error("Error verifying your access permissions");
+          setHasAccess(false);
         } finally {
-          setIsVerifyingGarage(false);
+          setIsVerifyingRole(false);
         }
       } else {
-        setIsVerifyingGarage(false);
+        setIsVerifyingRole(false);
       }
     };
 
     if (!loading && user) {
-      verifyGarageAccess();
+      verifyAccess();
     } else {
-      setIsVerifyingGarage(false);
+      setIsVerifyingRole(false);
     }
-  }, [user, loading, garageId]);
+  }, [user, loading, location.pathname]);
 
-  if (loading || isVerifyingGarage) {
+  if (loading || isVerifyingRole) {
     return <div>Loading...</div>;
   }
 
@@ -94,9 +107,13 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  if (!hasGarageAccess && user) {
-    // This case should be handled by the useEffect, but just in case
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+  if (!hasAccess && user) {
+    // Based on the role, redirect to the appropriate page
+    if (userRole === 'administrator') {
+      return <Navigate to="/garage-management" replace />;
+    } else {
+      return <Navigate to="/auth" state={{ from: location }} replace />;
+    }
   }
 
   return <>{children}</>;

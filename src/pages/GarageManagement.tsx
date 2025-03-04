@@ -14,9 +14,20 @@ const GarageManagement = () => {
   const { selectGarage, debugInfo: selectionDebugInfo } = useGarageSelection();
   const { checkingAccess, accessGranted, debugInfo: accessDebugInfo } = useAdminAccessCheck();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
   
   // Combine debug info from different sources
   const debugInfo = selectionDebugInfo || accessDebugInfo;
+
+  // Get current user data
+  useEffect(() => {
+    const getUserData = async () => {
+      const { data } = await supabase.auth.getUser();
+      setUserData(data.user);
+    };
+    
+    getUserData();
+  }, []);
 
   // Check if user has any garages right after access check completes
   useEffect(() => {
@@ -51,6 +62,7 @@ const GarageManagement = () => {
         <CreateGarageForm 
           onBack={() => {}} // Empty function since there's no back state
           onComplete={handleGarageCreated}
+          userId={userData?.id}
         />
       </div>
     );
@@ -61,6 +73,7 @@ const GarageManagement = () => {
       <CreateGarageForm 
         onBack={() => setShowCreateForm(false)}
         onComplete={handleGarageCreated}
+        userId={userData?.id}
       />
     );
   }
