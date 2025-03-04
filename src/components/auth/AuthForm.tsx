@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -50,10 +49,9 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         try {
           setFetchingGarages(true);
           
-          // Fix: Use explicit column selections to avoid ambiguity
           const { data, error } = await supabase
             .from('garages')
-            .select('id, name, slug, address, email, phone, created_at, owner_id')
+            .select('garages.id, garages.name, garages.slug, garages.address, garages.email, garages.phone, garages.created_at, garages.owner_id')
             .order('name');
           
           if (error) {

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -25,19 +24,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [fetchingGarage, setFetchingGarage] = useState(false);
   const [hasFetchedGarage, setHasFetchedGarage] = useState(false);
 
-  // Use useCallback to memoize the fetchUserGarage function
   const fetchUserGarage = useCallback(async (userId: string) => {
-    // Avoid multiple simultaneous fetches and refetches
     if (fetchingGarage || hasFetchedGarage) return;
     
     try {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
-      // Try to get from profile first - explicitly specify table and column
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, garage_id')
+        .select('profiles.id, profiles.garage_id')
         .eq('id', userId)
         .single();
       
@@ -51,10 +47,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // Check if user owns any garages
       const { data: ownedGarages, error: ownedError } = await supabase
         .from('garages')
-        .select('id')
+        .select('garages.id')
         .eq('owner_id', userId)
         .limit(1);
       
@@ -65,7 +60,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
-        // Try to update profile with this garage for future use
         await supabase
           .from('profiles')
           .update({ garage_id: ownedGarageId })
@@ -76,10 +70,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // As a fallback, check garage memberships
       const { data: memberships, error: membershipError } = await supabase
         .from('garage_members')
-        .select('garage_id')
+        .select('garage_members.garage_id')
         .eq('user_id', userId)
         .limit(1);
       
@@ -90,7 +83,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
-        // Try to update profile with this garage
         await supabase
           .from('profiles')
           .update({ garage_id: memberGarageId })
@@ -101,12 +93,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // If all else fails, use default garage as fallback
       if (!garageId) {
         console.log("Attempting to use default Tractic garage");
         const { data: defaultGarage, error: defaultError } = await supabase
           .from('garages')
-          .select('id')
+          .select('garages.id')
           .eq('slug', 'tractic')
           .limit(1);
           
@@ -140,7 +131,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(session);
           setUser(session?.user ?? null);
           
-          // If we have a user, fetch their garage
           if (session?.user) {
             await fetchUserGarage(session.user.id);
           } else {
@@ -165,7 +155,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Reset this flag when auth state changes
           setHasFetchedGarage(false);
           fetchUserGarage(session.user.id);
         } else {
