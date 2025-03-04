@@ -38,20 +38,23 @@ const GarageManagement = () => {
         return;
       }
       
-      // Fetch garages where user is an administrator or owner
+      console.log("Current user:", user.email);
+      
+      // First check if there's a direct entry for this user in the garage_members table
       const { data: memberData, error: memberError } = await supabase
         .from('garage_members')
-        .select('garage_id')
-        .eq('user_id', user.id)
-        .or('role.eq.administrator,role.eq.owner');
+        .select('garage_id, role')
+        .eq('user_id', user.id);
       
       if (memberError) {
         console.error("Error fetching garage memberships:", memberError.message);
         throw memberError;
       }
       
+      console.log("Garage memberships found:", memberData);
+      
       if (!memberData || memberData.length === 0) {
-        // Check if there's a default Tractic garage
+        // No memberships found, check for Tractic garage
         const { data: tracticData, error: tracticError } = await supabase
           .from('garages')
           .select('*')
@@ -59,10 +62,29 @@ const GarageManagement = () => {
           .limit(1);
           
         if (!tracticError && tracticData && tracticData.length > 0) {
-          console.log("Found Tractic garage:", tracticData[0]);
+          console.log("Found Tractic garage for user with no memberships:", tracticData[0]);
+          
+          // Add this user as a member of the Tractic garage
+          if (user.email?.includes("tractic.co.uk") || user.email === "olivier@andre.org.uk") {
+            const { error: addMemberError } = await supabase
+              .from('garage_members')
+              .upsert({ 
+                user_id: user.id, 
+                garage_id: tracticData[0].id, 
+                role: 'owner' 
+              });
+              
+            if (addMemberError) {
+              console.error("Error adding user as Tractic garage member:", addMemberError.message);
+            } else {
+              console.log("Added user as Tractic garage member");
+            }
+          }
+          
           setGarages(tracticData);
         } else {
           // No garages found for this user
+          console.log("No garages found for user");
           setGarages([]);
         }
         setLoading(false);
@@ -81,6 +103,45 @@ const GarageManagement = () => {
       if (garageError) {
         console.error("Error fetching garages:", garageError.message);
         throw garageError;
+      }
+      
+      // Check specifically for the Tractic garage if the user is olivier@andre.org.uk
+      if (user.email === "olivier@andre.org.uk") {
+        const tracticGarage = garageData?.find(g => g.name === "Tractic" || g.slug === "tractic");
+        if (!tracticGarage) {
+          // Try to fetch it directly
+          const { data: tracticData, error: tracticError } = await supabase
+            .from('garages')
+            .select('*')
+            .or('name.eq.Tractic,slug.eq.tractic')
+            .limit(1);
+            
+          if (!tracticError && tracticData && tracticData.length > 0) {
+            console.log("Found Tractic garage but user wasn't a member, adding manually:", tracticData[0]);
+            
+            // Add this user as a member of the Tractic garage
+            const { error: addMemberError } = await supabase
+              .from('garage_members')
+              .upsert({ 
+                user_id: user.id, 
+                garage_id: tracticData[0].id, 
+                role: 'owner' 
+              });
+              
+            if (addMemberError) {
+              console.error("Error adding user as Tractic garage member:", addMemberError.message);
+            } else {
+              console.log("Added user as Tractic garage member");
+              
+              // Add the Tractic garage to our list
+              if (garageData) {
+                garageData.push(tracticData[0]);
+              } else {
+                garageData = tracticData;
+              }
+            }
+          }
+        }
       }
       
       console.log("Fetched garages:", garageData);
