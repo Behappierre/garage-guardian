@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechnicianCosts } from "@/components/admin/TechnicianCosts";
@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const Admin = () => {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
-  const { garageId, loading } = useAuth();
+  const { user, garageId, loading } = useAuth();
 
   // If auth is still loading, show a loading state
   if (loading) {
@@ -27,21 +27,31 @@ const Admin = () => {
     );
   }
 
-  // If auth has loaded but we don't have a garageId, show an error
-  if (!garageId) {
+  // If no user is logged in, show an error
+  if (!user) {
     return (
       <div className="container mx-auto py-6">
         <Alert variant="destructive">
           <AlertDescription>
-            Unable to load admin dashboard. Please make sure you are associated with a garage.
+            You must be logged in to access the admin dashboard.
           </AlertDescription>
         </Alert>
       </div>
     );
   }
 
+  // Always render the dashboard, even if garageId is null
+  // Our updated UserManagement hook will handle displaying at least the current user
   return (
     <div className="container mx-auto py-6">
+      {!garageId && (
+        <Alert className="mb-6">
+          <AlertDescription>
+            No garage association detected. Limited functionality available.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <PageHeader 
         title="Admin Dashboard"
       >
