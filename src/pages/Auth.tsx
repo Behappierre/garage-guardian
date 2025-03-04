@@ -48,7 +48,6 @@ const Auth = () => {
             if (type === "owner") {
               if (roleData?.role !== 'administrator') {
                 toast.error("You don't have permission to access the garage owner area");
-                // Don't sign out, just don't redirect
                 setIsChecking(false);
                 return;
               }
@@ -59,23 +58,28 @@ const Auth = () => {
             }
 
             // Staff login: Block administrators from logging in as staff
-            if (roleData?.role === 'administrator') {
+            if (type !== "owner" && roleData?.role === 'administrator') {
               toast.error("Administrators should use the garage owner login");
               setIsChecking(false);
               return;
             }
             
             // For staff roles, handle based on role
-            switch (roleData?.role) {
-              case 'technician':
-                navigate("/dashboard/job-tickets");
-                break;
-              case 'front_desk':
-                navigate("/dashboard/appointments");
-                break;
-              default:
-                // If no matching role is found, redirect to dashboard
-                navigate("/dashboard");
+            if (roleData?.role) {
+              switch (roleData.role) {
+                case 'technician':
+                  navigate("/dashboard/job-tickets");
+                  break;
+                case 'front_desk':
+                  navigate("/dashboard/appointments");
+                  break;
+                default:
+                  // If no matching role is found, redirect to dashboard
+                  navigate("/dashboard");
+              }
+            } else {
+              // If no role is set yet, stay on the auth page
+              setIsChecking(false);
             }
           } catch (error: any) {
             console.error("Error verifying role:", error.message);

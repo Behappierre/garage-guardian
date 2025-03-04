@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // Get user's role - using a proper SELECT query
 export const getUserRole = async (userId: string): Promise<string | null> => {
@@ -33,6 +34,38 @@ export const isAdministrator = async (userId: string): Promise<boolean> => {
     return role === 'administrator';
   } catch (err) {
     console.error("Error checking administrator role:", err);
+    return false;
+  }
+};
+
+// Update a user's role to administrator
+export const upgradeToAdministrator = async (userId: string): Promise<boolean> => {
+  try {
+    // First, delete any existing role
+    const { error: deleteError } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId);
+      
+    if (deleteError) {
+      console.error("Error deleting existing role:", deleteError.message);
+      return false;
+    }
+    
+    // Then insert administrator role
+    const { error: insertError } = await supabase
+      .from('user_roles')
+      .insert({ user_id: userId, role: 'administrator' });
+      
+    if (insertError) {
+      console.error("Error setting administrator role:", insertError.message);
+      return false;
+    }
+    
+    console.log(`User ${userId} upgraded to administrator`);
+    return true;
+  } catch (err) {
+    console.error("Error upgrading to administrator:", err);
     return false;
   }
 };

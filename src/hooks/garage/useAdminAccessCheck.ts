@@ -3,11 +3,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { isAdministrator } from "./utils/userHelpers";
 
 export const useAdminAccessCheck = () => {
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [accessGranted, setAccessGranted] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,9 +33,20 @@ export const useAdminAccessCheck = () => {
 
         if (roleError) {
           console.error("Error fetching user role:", roleError?.message);
-          setDebugInfo("Error fetching user role");
-          toast.error("You don't have permission to access the garage management area");
-          navigate("/auth?type=owner");
+          setDebugInfo(`Error fetching user role: ${roleError?.message}`);
+          
+          // If we've retried too many times, give up
+          if (retryCount >= 3) {
+            toast.error("You don't have permission to access the garage management area");
+            navigate("/auth?type=owner");
+            return;
+          }
+          
+          // Increment retry count and try again after a delay
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => {
+            checkAccess();
+          }, 1000);
           return;
         }
 
