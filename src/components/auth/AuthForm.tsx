@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast as sonnerToast } from "sonner";
 import { GarageForm } from "./GarageForm";
-import { Garage } from "@/types/garage";
 
 type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
@@ -91,7 +89,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               description: "Now let's set up your garage.",
             });
           } else {
-            // For staff users, find a default garage to assign
             const { data: defaultGarage, error: defaultGarageError } = await supabase
               .from('garages')
               .select('id')
@@ -107,7 +104,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             if (defaultGarage && defaultGarage.length > 0) {
               garageId = defaultGarage[0].id;
             } else {
-              // If no default garage exists, find any available garage
               const { data: anyGarage, error: anyGarageError } = await supabase
                 .from('garages')
                 .select('id')
@@ -124,7 +120,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               }
             }
             
-            // Assign the user to the garage
             const { error: garageMemberError } = await supabase
               .from('garage_members')
               .insert([
@@ -142,7 +137,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
               .eq('id', signUpData.user.id);
             if (profileError) throw profileError;
             
-            // Sign in the user after successful signup
             const { error: signInError } = await supabase.auth.signInWithPassword({
               email,
               password
@@ -150,7 +144,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             
             if (signInError) throw signInError;
             
-            // Redirect based on role
             if (role === 'technician') {
               navigate("/dashboard/job-tickets");
             } else {
@@ -159,7 +152,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           }
         }
       } else {
-        // SIGN IN FLOW
+        console.log(`Signing in user ${email} as ${userType} type`);
+        
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -186,16 +180,60 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
                 throw new Error("You don't have permission to access the garage owner area");
               }
               
+              const { data: ownedGarages, error: ownedError } = await supabase
+                .from('garages')
+                .select('id')
+                .eq('owner_id', signInData.user.id)
+                .limit(1);
+                
+              if (ownedError) {
+                console.error("Error checking owned garages:", ownedError);
+              }
+              
+              if (ownedGarages && ownedGarages.length > 0) {
+                await supabase
+                  .from('profiles')
+                  .update({ garage_id: ownedGarages[0].id })
+                  .eq('id', signInData.user.id);
+              }
+              
               navigate("/garage-management");
               return;
             }
 
             if (userType === "staff" && roleData?.role === 'administrator') {
-              throw new Error("Administrators should use the garage owner login");
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('garage_id')
+                .eq('id', signInData.user.id)
+                .single();
+                
+              if (profileData?.garage_id) {
+                console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
+                navigate("/dashboard");
+                return;
+              } else {
+                const { data: ownedGarages } = await supabase
+                  .from('garages')
+                  .select('id')
+                  .eq('owner_id', signInData.user.id)
+                  .limit(1);
+                  
+                if (ownedGarages && ownedGarages.length > 0) {
+                  await supabase
+                    .from('profiles')
+                    .update({ garage_id: ownedGarages[0].id })
+                    .eq('id', signInData.user.id);
+                    
+                  navigate("/dashboard");
+                  return;
+                } else {
+                  throw new Error("Administrators should use the garage owner login");
+                }
+              }
             }
             
             if (roleData?.role) {
-              // Ensure we have a garage_id for the user
               const { data: profileData } = await supabase
                 .from('profiles')
                 .select('garage_id')
@@ -203,7 +241,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
                 .single();
                 
               if (!profileData?.garage_id) {
-                // If profile doesn't have a garage_id, check memberships
                 const { data: memberData } = await supabase
                   .from('garage_members')
                   .select('garage_id')
@@ -211,15 +248,56 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
                   .limit(1);
                   
                 if (memberData && memberData.length > 0) {
-                  // Update profile with the found garage_id
                   await supabase
                     .from('profiles')
                     .update({ garage_id: memberData[0].garage_id })
                     .eq('id', signInData.user.id);
+                } else {
+                  const { data: defaultGarage } = await supabase
+                    .from('garages')
+                    .select('id')
+                    .eq('slug', 'tractic')
+                    .limit(1);
+                    
+                  if (defaultGarage && defaultGarage.length > 0) {
+                    const defaultGarageId = defaultGarage[0].id;
+                    
+                    await supabase
+                      .from('garage_members')
+                      .upsert([
+                        { user_id: signInData.user.id, garage_id: defaultGarageId, role: roleData.role }
+                      ]);
+                      
+                    await supabase
+                      .from('profiles')
+                      .update({ garage_id: defaultGarageId })
+                      .eq('id', signInData.user.id);
+                  } else {
+                    const { data: anyGarage } = await supabase
+                      .from('garages')
+                      .select('id')
+                      .limit(1);
+                      
+                    if (anyGarage && anyGarage.length > 0) {
+                      await supabase
+                        .from('garage_members')
+                        .upsert([
+                          { user_id: signInData.user.id, garage_id: anyGarage[0].id, role: roleData.role }
+                        ]);
+                        
+                      await supabase
+                        .from('profiles')
+                        .update({ garage_id: anyGarage[0].id })
+                        .eq('id', signInData.user.id);
+                    } else {
+                      throw new Error("No garages found in the system. Please contact an administrator.");
+                    }
+                  }
                 }
               }
               
-              // Now redirect based on role
+              console.log(`Redirecting ${roleData.role} to appropriate dashboard`);
+              
               switch (roleData.role) {
                 case 'technician':
                   navigate("/dashboard/job-tickets");
@@ -258,10 +336,6 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
     }
   };
 
-  if (showGarageForm && newUserId) {
-    return <GarageForm userId={newUserId} onComplete={handleGarageCreationComplete} />;
-  }
-
   return (
     <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-lg">
       <div className="text-center">
@@ -275,108 +349,112 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         </p>
       </div>
 
-      <form onSubmit={handleAuth} className="mt-8 space-y-6">
-        {mode === "signup" && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                />
+      {showGarageForm && newUserId ? (
+        <GarageForm userId={newUserId} onComplete={handleGarageCreationComplete} />
+      ) : (
+        <form onSubmit={handleAuth} className="mt-8 space-y-6">
+          {mode === "signup" && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
 
-            {userType === "staff" && (
-              <div className="space-y-2">
-                <Label>Select Your Role</Label>
-                <RadioGroup value={role} onValueChange={(value) => setRole(value as Role)} className="grid grid-cols-1 gap-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="administrator" id="admin" />
-                    <Label htmlFor="admin">Administrator</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="technician" id="technician" />
-                    <Label htmlFor="technician">Technician</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="front_desk" id="front_desk" />
-                    <Label htmlFor="front_desk">Front Desk</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-          </>
-        )}
+              {userType === "staff" && (
+                <div className="space-y-2">
+                  <Label>Select Your Role</Label>
+                  <RadioGroup value={role} onValueChange={(value) => setRole(value as Role)} className="grid grid-cols-1 gap-2">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="administrator" id="admin" />
+                      <Label htmlFor="admin">Administrator</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="technician" id="technician" />
+                      <Label htmlFor="technician">Technician</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="front_desk" id="front_desk" />
+                      <Label htmlFor="front_desk">Front Desk</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+              )}
+            </>
+          )}
 
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-        <Button 
-          type="submit" 
-          className="w-full" 
-          disabled={loading}
-        >
-          {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
-        </Button>
-
-        <div className="text-center text-sm">
-          <button
-            type="button"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="text-primary hover:underline"
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading}
           >
-            {mode === "signin"
-              ? "Don't have an account? Sign up"
-              : "Already have an account? Sign in"}
-          </button>
-        </div>
+            {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
+          </Button>
 
-        <div className="text-center text-sm pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={() => navigate(userType === "owner" ? "/auth?type=staff" : "/")}
-            className="text-gray-600 hover:underline"
-          >
-            {userType === "owner" 
-              ? "Sign in as Staff Member instead" 
-              : "Return to Home Page"}
-          </button>
-        </div>
-      </form>
+          <div className="text-center text-sm">
+            <button
+              type="button"
+              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              className="text-primary hover:underline"
+            >
+              {mode === "signin"
+                ? "Don't have an account? Sign up"
+                : "Already have an account? Sign in"}
+            </button>
+          </div>
+
+          <div className="text-center text-sm pt-4 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={() => navigate(userType === "owner" ? "/auth?type=staff" : "/")}
+              className="text-gray-600 hover:underline"
+            >
+              {userType === "owner" 
+                ? "Sign in as Staff Member instead" 
+                : "Return to Home Page"}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 };

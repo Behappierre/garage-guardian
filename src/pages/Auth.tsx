@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { AuthForm } from "@/components/auth/AuthForm";
@@ -69,9 +68,49 @@ const Auth = () => {
           // For owner login page, only allow administrators
           if (userType === "owner") {
             if (roleData?.role === 'administrator') {
-              // Redirect administrators to garage management
-              navigate("/garage-management");
-              return;
+              // Check if admin owns any garages
+              const { data: ownedGarages, error: ownedError } = await supabase
+                .from('garages')
+                .select('id')
+                .eq('owner_id', session.user.id)
+                .limit(1);
+                
+              if (ownedError) {
+                console.error("Error checking owned garages:", ownedError);
+              }
+                
+              if (ownedGarages && ownedGarages.length > 0) {
+                // Admin has garages, redirect to management
+                navigate("/garage-management");
+                return;
+              } else {
+                // Admin doesn't own garages yet, ensure they have a garage assigned
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('garage_id')
+                  .eq('id', session.user.id)
+                  .single();
+                  
+                if (!profileData?.garage_id) {
+                  // Try to find any garage
+                  const { data: anyGarage } = await supabase
+                    .from('garages')
+                    .select('id')
+                    .limit(1);
+                    
+                  if (anyGarage && anyGarage.length > 0) {
+                    // Assign the first garage
+                    await supabase
+                      .from('profiles')
+                      .update({ garage_id: anyGarage[0].id })
+                      .eq('id', session.user.id);
+                  }
+                }
+                
+                // Redirect to garage management to create a garage
+                navigate("/garage-management");
+                return;
+              }
             } else {
               // Non-administrator on owner login page
               toast.error("Only administrators can access the garage owner area");
@@ -82,71 +121,44 @@ const Auth = () => {
           } else {
             // On staff login page
             if (roleData?.role === 'administrator') {
-              // Administrator on staff login page
-              toast.error("Administrators should use the garage owner login");
-              // Sign out the user if they're on the wrong login page
-              await supabase.auth.signOut();
-              setIsChecking(false);
-              return;
-            } else if (roleData?.role) {
-              // Ensure the user has a garage assigned before redirecting
+              // Administrator on staff login page - check if they have a garage
               const { data: profileData } = await supabase
                 .from('profiles')
                 .select('garage_id')
                 .eq('id', session.user.id)
                 .single();
                 
-              if (!profileData?.garage_id) {
-                // If no garage_id in profile, check memberships
-                const { data: memberData, error: memberError } = await supabase
-                  .from('garage_members')
-                  .select('garage_id')
-                  .eq('user_id', session.user.id)
+              if (profileData?.garage_id) {
+                navigate("/dashboard");
+                return;
+              } else {
+                // Try to find owned garages
+                const { data: ownedGarages } = await supabase
+                  .from('garages')
+                  .select('id')
+                  .eq('owner_id', session.user.id)
                   .limit(1);
                   
-                if (memberError) {
-                  console.error("Error checking garage membership:", memberError.message);
+                if (ownedGarages && ownedGarages.length > 0) {
+                  // Update profile with owned garage
+                  await supabase
+                    .from('profiles')
+                    .update({ garage_id: ownedGarages[0].id })
+                    .eq('id', session.user.id);
+                    
+                  navigate("/dashboard");
+                  return;
+                } else {
+                  // Sign out and show error
+                  toast.error("Administrators should use the garage owner login");
+                  await supabase.auth.signOut();
                   setIsChecking(false);
                   return;
                 }
-                
-                if (memberData && memberData.length > 0) {
-                  // Update profile with found garage_id
-                  await supabase
-                    .from('profiles')
-                    .update({ garage_id: memberData[0].garage_id })
-                    .eq('id', session.user.id);
-                } else {
-                  // Try to use default Tractic garage
-                  const { data: defaultGarage } = await supabase
-                    .from('garages')
-                    .select('id')
-                    .eq('slug', 'tractic')
-                    .limit(1);
-                    
-                  if (defaultGarage && defaultGarage.length > 0) {
-                    const defaultGarageId = defaultGarage[0].id;
-                    
-                    // Add user as member
-                    await supabase
-                      .from('garage_members')
-                      .upsert([
-                        { user_id: session.user.id, garage_id: defaultGarageId, role: roleData.role }
-                      ]);
-                      
-                    // Update profile
-                    await supabase
-                      .from('profiles')
-                      .update({ garage_id: defaultGarageId })
-                      .eq('id', session.user.id);
-                  } else {
-                    toast.error("You don't have access to any garage. Please contact an administrator.");
-                    await supabase.auth.signOut();
-                    setIsChecking(false);
-                    return;
-                  }
-                }
               }
+            } else if (roleData?.role) {
+              // Staff member - ensure they have a garage
+              await ensureUserHasGarage(session.user.id, roleData.role);
               
               // Redirect based on role
               switch (roleData.role) {
@@ -178,6 +190,80 @@ const Auth = () => {
       }
     };
 
+    // Helper function to ensure a user has a garage assigned
+    const ensureUserHasGarage = async (userId: string, userRole: string) => {
+      // First check profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .single();
+        
+      if (!profileData?.garage_id) {
+        // If no garage_id in profile, check memberships
+        const { data: memberData } = await supabase
+          .from('garage_members')
+          .select('garage_id')
+          .eq('user_id', userId)
+          .limit(1);
+          
+        if (memberData && memberData.length > 0) {
+          // Update profile with found garage_id
+          await supabase
+            .from('profiles')
+            .update({ garage_id: memberData[0].garage_id })
+            .eq('id', userId);
+        } else {
+          // Try to use default Tractic garage
+          const { data: defaultGarage } = await supabase
+            .from('garages')
+            .select('id')
+            .eq('slug', 'tractic')
+            .limit(1);
+            
+          if (defaultGarage && defaultGarage.length > 0) {
+            const defaultGarageId = defaultGarage[0].id;
+            
+            // Add user as member
+            await supabase
+              .from('garage_members')
+              .upsert([
+                { user_id: userId, garage_id: defaultGarageId, role: userRole }
+              ]);
+              
+            // Update profile
+            await supabase
+              .from('profiles')
+              .update({ garage_id: defaultGarageId })
+              .eq('id', userId);
+          } else {
+            // If no default garage, find any available garage
+            const { data: anyGarage } = await supabase
+              .from('garages')
+              .select('id')
+              .limit(1);
+              
+            if (anyGarage && anyGarage.length > 0) {
+              const garageId = anyGarage[0].id;
+              
+              // Add user as member
+              await supabase
+                .from('garage_members')
+                .upsert([
+                  { user_id: userId, garage_id: garageId, role: userRole }
+                ]);
+                
+              // Update profile
+              await supabase
+                .from('profiles')
+                .update({ garage_id: garageId })
+                .eq('id', userId);
+            }
+          }
+        }
+      }
+    };
+
     checkAuthAndRole();
   }, [navigate, userType, hasCheckedAuth]);
 
@@ -188,7 +274,9 @@ const Auth = () => {
           <h1 className="text-center text-3xl font-bold text-gray-900 mb-8">
             GarageWizz
           </h1>
-          <p className="text-center">Checking authentication...</p>
+          <div className="text-center">
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
         </div>
       </div>
     );
@@ -205,7 +293,13 @@ const Auth = () => {
             {authError}
           </div>
         )}
-        <AuthForm userType={userType} />
+        {isChecking ? (
+          <div className="text-center">
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
+        ) : (
+          <AuthForm userType={userType} />
+        )}
       </div>
     </div>
   );

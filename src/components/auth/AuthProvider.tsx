@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -33,6 +32,54 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
+      // Check if user is an administrator first
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+        
+      console.log("User role data:", roleData);
+      
+      if (roleError) {
+        console.error("Error fetching user role:", roleError);
+      }
+      
+      const isAdmin = roleData?.role === 'administrator';
+      console.log("Is user admin:", isAdmin);
+      
+      // For administrators, check garages they own first
+      if (isAdmin) {
+        const { data: ownedGarages, error: ownedError } = await supabase
+          .from('garages')
+          .select('id')
+          .eq('owner_id', userId)
+          .limit(1);
+        
+        console.log("Owned garages for admin:", ownedGarages, "Error:", ownedError);  
+          
+        if (!ownedError && ownedGarages && ownedGarages.length > 0) {
+          const ownedGarageId = ownedGarages[0].id;
+          console.log("Found owned garage for admin:", ownedGarageId);
+          setGarageId(ownedGarageId);
+          
+          // Update the profile with this garage_id
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ garage_id: ownedGarageId })
+            .eq('id', userId);
+            
+          if (updateError) {
+            console.error("Error updating profile with garage_id:", updateError);
+          }
+            
+          setLoading(false);
+          setHasFetchedGarage(true);
+          setFetchingGarage(false);
+          return;
+        }
+      }
+      
       // First try to get garage_id from profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -47,6 +94,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setGarageId(profileData.garage_id);
         setLoading(false);
         setHasFetchedGarage(true);
+        setFetchingGarage(false);
         return;
       }
       
@@ -76,6 +124,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         setLoading(false);
         setHasFetchedGarage(true);
+        setFetchingGarage(false);
         return;
       }
       
@@ -105,52 +154,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         setLoading(false);
         setHasFetchedGarage(true);
+        setFetchingGarage(false);
         return;
       }
       
       // If no garage found yet, try to use default Tractic garage
-      if (!garageId) {
-        console.log("Attempting to use default Tractic garage");
-        const { data: defaultGarage, error: defaultError } = await supabase
-          .from('garages')
-          .select('id')
-          .eq('slug', 'tractic')
-          .limit(1);
+      console.log("Attempting to use default Tractic garage");
+      const { data: defaultGarage, error: defaultError } = await supabase
+        .from('garages')
+        .select('id')
+        .eq('slug', 'tractic')
+        .limit(1);
           
-        console.log("Default garage:", defaultGarage, "Error:", defaultError);
+      console.log("Default garage:", defaultGarage, "Error:", defaultError);
           
-        if (defaultGarage && defaultGarage.length > 0) {
-          const defaultGarageId = defaultGarage[0].id;
-          console.log("Using default garage:", defaultGarageId);
-          setGarageId(defaultGarageId);
+      if (defaultGarage && defaultGarage.length > 0) {
+        const defaultGarageId = defaultGarage[0].id;
+        console.log("Using default garage:", defaultGarageId);
+        setGarageId(defaultGarageId);
+        
+        // Add user as a member of this default garage
+        const { error: memberError } = await supabase
+          .from('garage_members')
+          .upsert([
+            { user_id: userId, garage_id: defaultGarageId, role: roleData?.role || 'front_desk' }
+          ]);
           
-          // Add user as a member of this default garage
-          const { error: memberError } = await supabase
-            .from('garage_members')
-            .upsert([
-              { user_id: userId, garage_id: defaultGarageId, role: 'front_desk' }
-            ]);
-            
-          if (memberError) {
-            console.error("Error adding user to default garage:", memberError);
-          }
-            
-          // Update profile with this garage_id
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ garage_id: defaultGarageId })
-            .eq('id', userId);
-            
-          if (updateError) {
-            console.error("Error updating profile with garage_id:", updateError);
-          }
-            
-          setHasFetchedGarage(true);
-        } else {
-          // No default garage found
-          console.error("Could not find default garage");
-          toast.error("No garage found for your account. Please contact an administrator.");
+        if (memberError) {
+          console.error("Error adding user to default garage:", memberError);
         }
+          
+        // Update profile with this garage_id
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ garage_id: defaultGarageId })
+          .eq('id', userId);
+          
+        if (updateError) {
+          console.error("Error updating profile with garage_id:", updateError);
+        }
+      } else {
+        // No default garage found
+        console.error("Could not find default garage");
+        toast.error("No garage found for your account. Please contact an administrator.");
       }
     } catch (error) {
       console.error("Error fetching user garage:", error);
@@ -158,8 +204,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setFetchingGarage(false);
       setLoading(false);
+      setHasFetchedGarage(true);
     }
-  }, [garageId, fetchingGarage, hasFetchedGarage]);
+  }, [fetchingGarage, hasFetchedGarage]);
 
   useEffect(() => {
     let mounted = true;
