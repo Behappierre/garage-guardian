@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { toast } from "sonner";
-import { useGarages } from "@/hooks/useGarages";
+import { useGarages } from "@/hooks/garage/useGarages";
 import { GarageList } from "@/components/garage/GarageList";
 import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
 
