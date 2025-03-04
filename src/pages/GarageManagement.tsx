@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,36 +38,54 @@ const GarageManagement = () => {
         return;
       }
       
-      // Fetch garages where user is an administrator
-      const { data, error } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT g.id, g.name, g.slug, g.address, g.created_at 
-          FROM garages g
-          JOIN garage_members gm ON g.id = gm.garage_id
-          WHERE gm.user_id = '${user.id}'
-          AND gm.role = 'administrator'
-          ORDER BY g.created_at DESC
-        `
-      });
+      // Fetch garages where user is an administrator - using direct query instead of RPC
+      const { data: memberData, error: memberError } = await supabase
+        .from('garage_members')
+        .select('garage_id')
+        .eq('user_id', user.id)
+        .eq('role', 'administrator');
       
-      if (error) throw error;
-      
-      // Parse the result
-      let userGarages: Garage[] = [];
-      if (data && Array.isArray(data)) {
-        userGarages = data.map(row => {
-          const jsonRow = row as Record<string, any>;
-          return {
-            id: jsonRow.id as string,
-            name: jsonRow.name as string,
-            slug: jsonRow.slug as string,
-            address: jsonRow.address as string,
-            created_at: jsonRow.created_at as string
-          };
-        });
+      if (memberError) {
+        console.error("Error fetching garage memberships:", memberError.message);
+        throw memberError;
       }
       
-      setGarages(userGarages);
+      if (!memberData || memberData.length === 0) {
+        // Check if there's a default Tractic garage
+        const { data: tracticData, error: tracticError } = await supabase
+          .from('garages')
+          .select('*')
+          .or('name.eq.Tractic,slug.eq.tractic')
+          .limit(1);
+          
+        if (!tracticError && tracticData && tracticData.length > 0) {
+          console.log("Found Tractic garage:", tracticData[0]);
+          setGarages(tracticData);
+        } else {
+          // No garages found for this user
+          setGarages([]);
+        }
+        setLoading(false);
+        return;
+      }
+      
+      // Get the list of garage IDs
+      const garageIds = memberData.map(item => item.garage_id);
+      
+      // Fetch the full garage details
+      const { data: garageData, error: garageError } = await supabase
+        .from('garages')
+        .select('*')
+        .in('id', garageIds);
+        
+      if (garageError) {
+        console.error("Error fetching garages:", garageError.message);
+        throw garageError;
+      }
+      
+      console.log("Fetched garages:", garageData);
+      setGarages(garageData || []);
+      
     } catch (error: any) {
       console.error("Error fetching garages:", error.message);
       toast.error("Failed to load your garages");
