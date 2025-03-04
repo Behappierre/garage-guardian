@@ -32,15 +32,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     try {
       setFetchingGarage(true);
+      console.log("Fetching garage for user:", userId);
       
-      // Try to get from profile first - fix by removing the explicit table reference
+      // Try to get from profile first - explicitly specify table and column
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('garage_id')
+        .select('id, garage_id')
         .eq('id', userId)
         .single();
       
+      console.log("Profile data:", profileData, "Error:", profileError);
+      
       if (!profileError && profileData?.garage_id) {
+        console.log("Found garage_id in profile:", profileData.garage_id);
         setGarageId(profileData.garage_id);
         setLoading(false);
         setHasFetchedGarage(true);
@@ -53,9 +57,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select('id')
         .eq('owner_id', userId)
         .limit(1);
+      
+      console.log("Owned garages:", ownedGarages, "Error:", ownedError);  
         
       if (!ownedError && ownedGarages && ownedGarages.length > 0) {
         const ownedGarageId = ownedGarages[0].id;
+        console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
         // Try to update profile with this garage for future use
@@ -75,9 +82,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select('garage_id')
         .eq('user_id', userId)
         .limit(1);
+      
+      console.log("Memberships:", memberships, "Error:", membershipError);
         
       if (!membershipError && memberships && memberships.length > 0) {
         const memberGarageId = memberships[0].garage_id;
+        console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
         // Try to update profile with this garage
@@ -93,16 +103,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // If all else fails, use default garage as fallback
       if (!garageId) {
-        const { data: defaultGarage } = await supabase
+        console.log("Attempting to use default Tractic garage");
+        const { data: defaultGarage, error: defaultError } = await supabase
           .from('garages')
           .select('id')
           .eq('slug', 'tractic')
           .limit(1);
           
+        console.log("Default garage:", defaultGarage, "Error:", defaultError);
+          
         if (defaultGarage && defaultGarage.length > 0) {
           const defaultGarageId = defaultGarage[0].id;
+          console.log("Using default garage:", defaultGarageId);
           setGarageId(defaultGarageId);
           setHasFetchedGarage(true);
+        } else {
+          console.error("Could not find default garage");
         }
       }
     } catch (error) {

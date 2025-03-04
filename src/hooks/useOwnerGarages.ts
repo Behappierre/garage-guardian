@@ -34,16 +34,20 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         return;
       }
 
-      // Query properly using the exact field names that match the Garage interface
+      console.log("Fetching garages for user:", userData.user.id);
+
+      // Query with explicit column selection
       const { data, error: garagesError } = await supabase
         .from("garages")
         .select("id, name, slug, address, email, phone, created_at, owner_id")
         .eq("owner_id", userData.user.id);
 
       if (garagesError) {
+        console.error("Garage query error:", garagesError);
         throw new Error("Failed to fetch garages: " + garagesError.message);
       }
 
+      console.log("Garages fetched:", data);
       setGarages(data || []);
     } catch (error: any) {
       console.error("Error in useOwnerGarages:", error);

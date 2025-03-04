@@ -50,13 +50,16 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         try {
           setFetchingGarages(true);
           
-          // Fix: Be explicit with the column names to avoid ambiguity
+          // Fix: Use explicit column selections to avoid ambiguity
           const { data, error } = await supabase
             .from('garages')
             .select('id, name, slug, address, email, phone, created_at, owner_id')
             .order('name');
           
-          if (error) throw error;
+          if (error) {
+            console.error("Error fetching garages:", error);
+            throw error;
+          }
           
           console.log("Fetched garages:", data);
           
