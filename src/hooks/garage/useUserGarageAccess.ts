@@ -6,7 +6,7 @@ import {
   getUserGarageMemberships, 
   getGaragesByIds,
   getUserRole 
-} from "./useGarageUtils";
+} from "./utils";
 import { useTracticGarageHandling } from "./useTracticGarageHandling";
 
 export const useUserGarageAccess = (
