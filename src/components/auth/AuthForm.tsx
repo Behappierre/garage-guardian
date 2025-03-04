@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,9 +7,17 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 type AuthMode = "signin" | "signup";
 type Role = "administrator" | "technician" | "front_desk";
+
+interface Garage {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 export const AuthForm = () => {
   const navigate = useNavigate();
@@ -20,10 +28,51 @@ export const AuthForm = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<Role>("front_desk");
+  const [garages, setGarages] = useState<Garage[]>([]);
+  const [selectedGarageId, setSelectedGarageId] = useState<string>("");
+  const [fetchingGarages, setFetchingGarages] = useState(true);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchGarages = async () => {
+      try {
+        setFetchingGarages(true);
+        const { data, error } = await supabase
+          .from('garages')
+          .select('id, name, slug');
+        
+        if (error) throw error;
+        
+        setGarages(data || []);
+        // Set default garage if available (in this case, look for Tractic)
+        const tracticGarage = data?.find(garage => garage.name === 'Tractic');
+        if (tracticGarage) {
+          setSelectedGarageId(tracticGarage.id);
+        } else if (data && data.length > 0) {
+          setSelectedGarageId(data[0].id);
+        }
+      } catch (error: any) {
+        console.error("Error fetching garages:", error.message);
+      } finally {
+        setFetchingGarages(false);
+      }
+    };
+
+    fetchGarages();
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedGarageId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select a garage.",
+      });
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -52,6 +101,25 @@ export const AuthForm = () => {
               }
             ]);
           if (roleError) throw roleError;
+          
+          // Add user to garage_members table
+          const { error: garageMemberError } = await supabase
+            .from('garage_members')
+            .insert([
+              {
+                user_id: signUpData.user.id,
+                garage_id: selectedGarageId,
+                role: role
+              }
+            ]);
+          if (garageMemberError) throw garageMemberError;
+          
+          // Update user's profile with garage_id
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({ garage_id: selectedGarageId })
+            .eq('id', signUpData.user.id);
+          if (profileError) throw profileError;
         }
 
         toast({
@@ -65,8 +133,23 @@ export const AuthForm = () => {
         });
         if (error) throw error;
 
-        // After successful sign in, fetch user role and redirect
+        // After successful sign in, verify user belongs to the selected garage
         if (signInData.user) {
+          const { data: garageMemberData, error: garageMemberError } = await supabase
+            .from('garage_members')
+            .select('garage_id')
+            .eq('user_id', signInData.user.id)
+            .eq('garage_id', selectedGarageId);
+          
+          if (garageMemberError) throw garageMemberError;
+          
+          // If user doesn't belong to the selected garage, sign out and show error
+          if (!garageMemberData || garageMemberData.length === 0) {
+            await supabase.auth.signOut();
+            throw new Error("You don't have access to the selected garage. Please select the correct garage or contact an administrator.");
+          }
+
+          // If verification passes, fetch user role and redirect
           const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
             .select('role')
@@ -120,6 +203,27 @@ export const AuthForm = () => {
       </div>
 
       <form onSubmit={handleAuth} className="mt-8 space-y-6">
+        {/* Garage Selection - shown for both sign in and sign up */}
+        <div className="space-y-2">
+          <Label htmlFor="garage">Select Garage</Label>
+          <Select 
+            value={selectedGarageId} 
+            onValueChange={setSelectedGarageId}
+            disabled={fetchingGarages}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder={fetchingGarages ? "Loading garages..." : "Select a garage"} />
+            </SelectTrigger>
+            <SelectContent>
+              {garages.map((garage) => (
+                <SelectItem key={garage.id} value={garage.id}>
+                  {garage.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {mode === "signup" && (
           <>
             <div className="grid grid-cols-2 gap-4">
@@ -187,7 +291,7 @@ export const AuthForm = () => {
           />
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading || !selectedGarageId}>
           {loading ? "Loading..." : mode === "signin" ? "Sign In" : "Sign Up"}
         </Button>
 
