@@ -796,6 +796,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      update_profile_garage: {
+        Args: {
+          user_id_val: string
+          garage_id_val: string
+        }
+        Returns: undefined
+      }
       user_is_in_garage:
         | {
             Args: Record<PropertyKey, never>

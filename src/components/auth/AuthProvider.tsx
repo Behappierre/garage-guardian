@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -63,11 +64,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Update the profile with this garage_id using match instead of eq
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ garage_id: ownedGarageId })
-            .match({ id: userId });
+          // Update the profile with this garage_id using our new function
+          const { error: updateError } = await supabase.rpc(
+            'update_profile_garage', 
+            { 
+              user_id_val: userId, 
+              garage_id_val: ownedGarageId 
+            }
+          );
             
           if (updateError) {
             console.error("Error updating profile with garage_id:", updateError);
@@ -112,11 +116,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
-        // Update the profile with this garage_id using match instead of eq
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: ownedGarageId })
-          .match({ id: userId });
+        // Update the profile with this garage_id using our new function
+        const { error: updateError } = await supabase.rpc(
+          'update_profile_garage', 
+          { 
+            user_id_val: userId, 
+            garage_id_val: ownedGarageId 
+          }
+        );
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
@@ -142,11 +149,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
-        // Update the profile with this garage_id using match instead of eq
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: memberGarageId })
-          .match({ id: userId });
+        // Update the profile with this garage_id using our new function
+        const { error: updateError } = await supabase.rpc(
+          'update_profile_garage', 
+          { 
+            user_id_val: userId, 
+            garage_id_val: memberGarageId 
+          }
+        );
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);
@@ -185,11 +195,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error adding user to default garage:", memberError);
         }
           
-        // Update profile with this garage_id using match instead of eq
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: defaultGarageId })
-          .match({ id: userId });
+        // Update profile with this garage_id using our new function
+        const { error: updateError } = await supabase.rpc(
+          'update_profile_garage', 
+          { 
+            user_id_val: userId, 
+            garage_id_val: defaultGarageId 
+          }
+        );
           
         if (updateError) {
           console.error("Error updating profile with garage_id:", updateError);

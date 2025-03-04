@@ -89,11 +89,14 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw memberError;
       }
       
-      // Update the user's profile with the garage ID using match instead of eq
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .match({ id: userId });
+      // Update the user's profile with the garage ID using our new function
+      const { error: profileError } = await supabase.rpc(
+        'update_profile_garage', 
+        { 
+          user_id_val: userId, 
+          garage_id_val: garageId 
+        }
+      );
       
       if (profileError && !profileError.message.includes("infinite recursion")) {
         console.error("Non-critical error updating profile:", profileError.message);
