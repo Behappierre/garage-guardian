@@ -78,7 +78,9 @@ export const useGarages = () => {
             
           if (!tracticError && tracticData && Array.isArray(tracticData) && tracticData.length > 0) {
             console.log("Found Tractic garage for user:", tracticData[0]);
-            setGarages(tracticData as Garage[]);
+            // Properly cast the Json[] to Garage[]
+            const garageData = tracticData as unknown as Garage[];
+            setGarages(garageData);
             setLoading(false);
             return user;
           }
@@ -104,28 +106,34 @@ export const useGarages = () => {
           if (!tracticError && tracticData && Array.isArray(tracticData) && tracticData.length > 0) {
             console.log("Found Tractic garage for user with no memberships:", tracticData[0]);
             
-            // Try to add user as garage member using a direct query
-            try {
-              const { error: addMemberError } = await supabase
-                .rpc('execute_read_only_query', {
-                  query_text: `
-                    INSERT INTO garage_members (user_id, garage_id, role)
-                    VALUES ('${user.id}', '${tracticData[0].id}', 'owner')
-                    ON CONFLICT (user_id, garage_id) DO NOTHING
-                    RETURNING id
-                  `
-                });
-                
-              if (addMemberError) {
-                console.error("Error trying to add user as Tractic garage member:", addMemberError.message);
-              } else {
-                console.log("Added user as Tractic garage member");
+            // Safe type handling to access id property
+            const garageData = tracticData as unknown as Garage[];
+            const tracticGarageId = garageData[0]?.id;
+            
+            if (tracticGarageId) {
+              // Try to add user as garage member using a direct query
+              try {
+                const { error: addMemberError } = await supabase
+                  .rpc('execute_read_only_query', {
+                    query_text: `
+                      INSERT INTO garage_members (user_id, garage_id, role)
+                      VALUES ('${user.id}', '${tracticGarageId}', 'owner')
+                      ON CONFLICT (user_id, garage_id) DO NOTHING
+                      RETURNING id
+                    `
+                  });
+                  
+                if (addMemberError) {
+                  console.error("Error trying to add user as Tractic garage member:", addMemberError.message);
+                } else {
+                  console.log("Added user as Tractic garage member");
+                }
+              } catch (err) {
+                console.error("Exception when adding user as garage member:", err);
               }
-            } catch (err) {
-              console.error("Exception when adding user as garage member:", err);
             }
             
-            setGarages(tracticData as Garage[]);
+            setGarages(garageData);
             setLoading(false);
             return user;
           }
@@ -147,7 +155,18 @@ export const useGarages = () => {
         return user;
       }
       
-      const garageIds = memberData.map(item => item.garage_id);
+      // Properly handle property access with type safety
+      const garageIds = memberData.map(item => {
+        const typedItem = item as Record<string, any>;
+        return typedItem.garage_id;
+      });
+      
+      if (garageIds.length === 0) {
+        console.error("No garage IDs found in memberData");
+        setGarages([]);
+        setLoading(false);
+        return user;
+      }
       
       // Direct query to get garage details
       const { data: garageData, error: garageError } = await supabase
@@ -166,7 +185,9 @@ export const useGarages = () => {
       
       // Ensure garageData is an array before setting state
       if (garageData && Array.isArray(garageData)) {
-        setGarages(garageData as Garage[]);
+        // Properly cast the Json[] to Garage[]
+        const typedGarages = garageData as unknown as Garage[];
+        setGarages(typedGarages);
       } else {
         console.error("Garage data is not an array:", garageData);
         setGarages([]);
