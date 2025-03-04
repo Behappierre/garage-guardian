@@ -25,7 +25,22 @@ export function ChatAgent() {
   const [isLoading, setIsLoading] = useState(false);
   const [isWide, setIsWide] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [hasDisplayedWelcome, setHasDisplayedWelcome] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Welcome message to show when the chat is first opened
+  const welcomeMessage = {
+    role: "assistant" as const,
+    content: "👋 Welcome to GarageWizz AI Assistant! I'm here to help you with scheduling appointments, looking up vehicle information, managing clients, and answering automotive questions. How can I assist you today?"
+  };
+
+  // Display welcome message when chat is opened
+  useEffect(() => {
+    if (isOpen && !hasDisplayedWelcome && messages.length === 0) {
+      setMessages([welcomeMessage]);
+      setHasDisplayedWelcome(true);
+    }
+  }, [isOpen, hasDisplayedWelcome, messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -166,6 +181,7 @@ export function ChatAgent() {
 
   const handleClearChat = () => {
     setMessages([]);
+    setHasDisplayedWelcome(false);
     toast.success("Chat cleared");
   };
 
