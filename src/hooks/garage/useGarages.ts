@@ -16,6 +16,7 @@ import {
 export const useGarages = (): GarageHookReturn => {
   const [garages, setGarages] = useState<Garage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleTracticUserGarages = async (user: any): Promise<Garage[]> => {
     console.log("Handling garages for Tractic user:", user.email);
@@ -33,7 +34,10 @@ export const useGarages = (): GarageHookReturn => {
     }
     
     // Try to add user as member of the Tractic garage
-    await addUserToGarage(user.id, tracticGarage.id);
+    const memberAdded = await addUserToGarage(user.id, tracticGarage.id);
+    if (!memberAdded) {
+      console.warn(`Failed to add user ${user.id} to Tractic garage ${tracticGarage.id}`);
+    }
     
     return [tracticGarage];
   };
@@ -41,6 +45,7 @@ export const useGarages = (): GarageHookReturn => {
   const fetchUserGarages = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -59,6 +64,7 @@ export const useGarages = (): GarageHookReturn => {
       
       if (!role) {
         console.error("No role found for user");
+        setError("Your account doesn't have a role assigned. Please contact an administrator.");
         setGarages([]);
         setLoading(false);
         return user;
@@ -93,9 +99,15 @@ export const useGarages = (): GarageHookReturn => {
         console.log("Fetching garages for IDs:", garageIds);
         const userGarages = await getGaragesByIds(garageIds);
         console.log("User garages:", userGarages);
-        setGarages(userGarages);
+        
+        if (userGarages.length === 0) {
+          setError("Could not load garages. Using default garage.");
+        } else {
+          setGarages(userGarages);
+        }
       } else {
         console.log("No garages found for user");
+        setError("No garages found for your account.");
         setGarages([]);
       }
       
@@ -103,6 +115,7 @@ export const useGarages = (): GarageHookReturn => {
       
     } catch (error: any) {
       console.error("Error fetching garages:", error.message);
+      setError("Failed to load your garages. Please try again later.");
       toast.error("Failed to load your garages");
       setGarages([]);
       return null;
@@ -118,6 +131,7 @@ export const useGarages = (): GarageHookReturn => {
   return {
     garages,
     loading,
+    error,
     refreshGarages: fetchUserGarages
   };
 };

@@ -11,7 +11,7 @@ import { CreateGarageForm } from "@/components/garage/CreateGarageForm";
 
 const GarageManagement = () => {
   const navigate = useNavigate();
-  const { garages, loading, refreshGarages } = useGarages();
+  const { garages, loading, error, refreshGarages } = useGarages();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [checkingAccess, setCheckingAccess] = useState(true);
 
@@ -151,7 +151,15 @@ const GarageManagement = () => {
           description="Select a garage to manage or create a new one"
         />
         
-        {garages.length === 0 && (
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+            <p className="text-red-700">
+              {error} 
+            </p>
+          </div>
+        )}
+        
+        {garages.length === 0 && !error && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
             <p className="text-yellow-700">
               No garages found. You can create a new garage using the button below.

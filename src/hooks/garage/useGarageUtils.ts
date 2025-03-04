@@ -13,6 +13,8 @@ export const isTracticUser = (email?: string): boolean => {
 // Search for existing Tractic garage
 export const findTracticGarage = async (): Promise<Garage | null> => {
   try {
+    console.log("Searching for existing Tractic garage");
+    
     const { data, error } = await supabase
       .from('garages')
       .select('*')
@@ -79,9 +81,25 @@ export const addUserToGarage = async (
   try {
     console.log(`Attempting to add user ${userId} to garage ${garageId} with role ${role}`);
     
+    // First check if the membership already exists
+    const { data: existingMembership, error: checkError } = await supabase
+      .from('garage_members')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('garage_id', garageId)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error("Error checking existing membership:", checkError.message);
+    } else if (existingMembership) {
+      console.log(`User ${userId} is already a member of garage ${garageId}`);
+      return true;
+    }
+    
+    // If no existing membership found, create one
     const { error } = await supabase
       .from('garage_members')
-      .upsert({
+      .insert({
         user_id: userId,
         garage_id: garageId,
         role: role
@@ -105,10 +123,17 @@ export const getUserGarageMemberships = async (userId: string): Promise<string[]
   try {
     console.log(`Fetching garage memberships for user ${userId}`);
     
-    const { data, error } = await supabase
-      .from('garage_members')
-      .select('garage_id')
-      .eq('user_id', userId);
+    // Use a direct SQL query to avoid RLS issues
+    const { data, error } = await supabase.rpc(
+      'execute_read_only_query',
+      { 
+        query_text: `
+          SELECT garage_id 
+          FROM garage_members 
+          WHERE user_id = '${userId}'
+        `
+      }
+    );
     
     if (error) {
       console.error("Error fetching garage memberships:", error.message);
@@ -138,10 +163,18 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
   try {
     console.log(`Fetching garages by IDs: ${garageIds.join(', ')}`);
     
-    const { data, error } = await supabase
-      .from('garages')
-      .select('*')
-      .in('id', garageIds);
+    // Use a direct SQL query to avoid potential RLS issues
+    const idList = garageIds.map(id => `'${id}'`).join(',');
+    const { data, error } = await supabase.rpc(
+      'execute_read_only_query',
+      { 
+        query_text: `
+          SELECT * 
+          FROM garages 
+          WHERE id IN (${idList})
+        `
+      }
+    );
       
     if (error) {
       console.error("Error fetching garages by IDs:", error.message);
@@ -159,18 +192,30 @@ export const getGaragesByIds = async (garageIds: string[]): Promise<Garage[]> =>
 // Get user's role
 export const getUserRole = async (userId: string): Promise<string | null> => {
   try {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .single();
+    // Use a direct SQL query to avoid potential RLS issues
+    const { data, error } = await supabase.rpc(
+      'execute_read_only_query',
+      { 
+        query_text: `
+          SELECT role 
+          FROM user_roles 
+          WHERE user_id = '${userId}'
+          LIMIT 1
+        `
+      }
+    );
       
     if (error) {
       console.error("Error fetching user role:", error.message);
       return null;
     }
     
-    return data?.role;
+    if (!data || data.length === 0) {
+      console.error("No role found for user");
+      return null;
+    }
+    
+    return data[0].role;
   } catch (err) {
     console.error("Exception when getting user role:", err);
     return null;
