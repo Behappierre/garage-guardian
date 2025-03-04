@@ -53,7 +53,7 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         throw new Error("Authentication required to create a garage");
       }
       
-      // Insert the garage with all fields explicitly defined
+      // Step 1: Create the garage without owner_id
       const { data: newGarage, error: garageError } = await supabase
         .from('garages')
         .insert([{
@@ -61,8 +61,8 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
           slug: slug,
           address: data.address,
           email: data.email,
-          phone: data.phone,
-          owner_id: userData.user.id
+          phone: data.phone || null
+          // Don't set owner_id here
         }])
         .select();
       
@@ -75,7 +75,7 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         throw new Error("Failed to create garage: No data returned");
       }
       
-      // Add the user as a garage member
+      // Step 2: Add the user as a garage member in a separate call
       const { error: memberError } = await supabase
         .from('garage_members')
         .insert([{
@@ -86,6 +86,18 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         
       if (memberError) {
         console.error("Error adding member:", memberError);
+        throw new Error(memberError.message);
+      }
+      
+      // Step 3: Now update the owner_id field of the garage in a separate call
+      const { error: updateOwnerError } = await supabase
+        .from('garages')
+        .update({ owner_id: userData.user.id })
+        .eq('id', newGarage[0].id);
+        
+      if (updateOwnerError) {
+        console.error("Error updating garage owner:", updateOwnerError);
+        throw new Error(updateOwnerError.message);
       }
       
       // Skip updating the profile with garage_id - relying on garage_members instead

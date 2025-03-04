@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -46,7 +45,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // First, create the garage with explicit owner_id
+      // Step 1: Create the garage without owner_id
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .insert([
@@ -55,8 +54,8 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
             slug: slug,
             address: data.address,
             email: data.email,
-            phone: data.phone || null,
-            owner_id: userId
+            phone: data.phone || null
+            // Don't set owner_id here
           }
         ])
         .select();
@@ -73,7 +72,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       const garageId = garageData[0].id;
       console.log("Created garage with ID:", garageId);
       
-      // Then, add the user as a garage member with 'owner' role
+      // Step 2: Add the user as a garage member with 'owner' role in a separate call
       const { error: memberError } = await supabase
         .from('garage_members')
         .insert([
@@ -87,6 +86,17 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       if (memberError) {
         console.error("Error adding user as garage member:", memberError);
         throw memberError;
+      }
+      
+      // Step 3: Now update the owner_id field of the garage in a separate call
+      const { error: updateOwnerError } = await supabase
+        .from('garages')
+        .update({ owner_id: userId })
+        .eq('id', garageId);
+        
+      if (updateOwnerError) {
+        console.error("Error updating garage owner:", updateOwnerError);
+        throw updateOwnerError;
       }
       
       // Skip updating the profile with garage_id - relying on garage_members instead
