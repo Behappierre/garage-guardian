@@ -74,8 +74,7 @@ export const useGarages = () => {
           const { data: tracticGarageData, error: tracticGarageError } = await supabase
             .from('garages')
             .select('*')
-            .or('name.ilike.tractic,slug.ilike.tractic')
-            .limit(1);
+            .or('name.ilike.%tractic%,slug.ilike.%tractic%');
             
           if (tracticGarageError) {
             console.error("Error fetching Tractic garage:", tracticGarageError.message);
@@ -84,6 +83,8 @@ export const useGarages = () => {
             setLoading(false);
             return user;
           }
+          
+          console.log("Tractic garage search result:", tracticGarageData);
           
           if (tracticGarageData && tracticGarageData.length > 0) {
             console.log("Found Tractic garage for user:", tracticGarageData[0]);
@@ -104,14 +105,62 @@ export const useGarages = () => {
                 console.error("Error adding user to Tractic garage:", membershipInsertError.message);
               } else {
                 console.log("Added user to Tractic garage successfully");
+                
+                // Set the garages state with the found Tractic garage
+                setGarages(tracticGarageData as Garage[]);
+                setLoading(false);
+                return user;
               }
             } catch (err) {
               console.error("Exception when adding user as garage member:", err);
             }
             
-            setGarages(tracticGarageData);
+            // Even if adding as member fails, still display the garage
+            setGarages(tracticGarageData as Garage[]);
             setLoading(false);
             return user;
+          } else {
+            console.log("No Tractic garage found, creating one");
+            
+            // If no Tractic garage exists, create one
+            const { data: newGarage, error: createError } = await supabase
+              .from('garages')
+              .insert({
+                name: 'Tractic Garage',
+                slug: 'tractic-garage',
+                address: '123 Tractic Street',
+                email: user.email
+              })
+              .select();
+              
+            if (createError) {
+              console.error("Error creating Tractic garage:", createError.message);
+              toast.error("Could not create Tractic garage");
+              setGarages([]);
+              setLoading(false);
+              return user;
+            }
+            
+            if (newGarage && newGarage.length > 0) {
+              // Add user as member of the new garage
+              const { error: membershipInsertError } = await supabase
+                .from('garage_members')
+                .insert({
+                  user_id: user.id,
+                  garage_id: newGarage[0].id,
+                  role: 'owner'
+                });
+                
+              if (membershipInsertError) {
+                console.error("Error adding user to new Tractic garage:", membershipInsertError.message);
+              } else {
+                console.log("Added user to new Tractic garage successfully");
+              }
+              
+              setGarages(newGarage as Garage[]);
+              setLoading(false);
+              return user;
+            }
           }
         }
         
@@ -131,8 +180,7 @@ export const useGarages = () => {
           const { data: tracticGarageData, error: tracticGarageError } = await supabase
             .from('garages')
             .select('*')
-            .or('name.ilike.tractic,slug.ilike.tractic')
-            .limit(1);
+            .or('name.ilike.%tractic%,slug.ilike.%tractic%');
             
           if (tracticGarageError) {
             console.error("Error fetching Tractic garage:", tracticGarageError.message);
@@ -141,6 +189,8 @@ export const useGarages = () => {
             setLoading(false);
             return user;
           }
+          
+          console.log("Tractic garage search result for user with no memberships:", tracticGarageData);
           
           if (tracticGarageData && tracticGarageData.length > 0) {
             console.log("Found Tractic garage for user with no memberships:", tracticGarageData[0]);
@@ -166,9 +216,51 @@ export const useGarages = () => {
               console.error("Exception when adding user as garage member:", err);
             }
             
-            setGarages(tracticGarageData);
+            setGarages(tracticGarageData as Garage[]);
             setLoading(false);
             return user;
+          } else {
+            console.log("No Tractic garage found for user with no memberships, creating one");
+            
+            // If no Tractic garage exists, create one
+            const { data: newGarage, error: createError } = await supabase
+              .from('garages')
+              .insert({
+                name: 'Tractic Garage',
+                slug: 'tractic-garage',
+                address: '123 Tractic Street',
+                email: user.email
+              })
+              .select();
+              
+            if (createError) {
+              console.error("Error creating Tractic garage:", createError.message);
+              toast.error("Could not create Tractic garage");
+              setGarages([]);
+              setLoading(false);
+              return user;
+            }
+            
+            if (newGarage && newGarage.length > 0) {
+              // Add user as member of the new garage
+              const { error: membershipInsertError } = await supabase
+                .from('garage_members')
+                .insert({
+                  user_id: user.id,
+                  garage_id: newGarage[0].id,
+                  role: 'owner'
+                });
+                
+              if (membershipInsertError) {
+                console.error("Error adding user to new Tractic garage:", membershipInsertError.message);
+              } else {
+                console.log("Added user to new Tractic garage successfully");
+              }
+              
+              setGarages(newGarage as Garage[]);
+              setLoading(false);
+              return user;
+            }
           }
         }
         
@@ -206,7 +298,7 @@ export const useGarages = () => {
       console.log("Fetched garages:", garageData);
       
       if (garageData && Array.isArray(garageData)) {
-        setGarages(garageData);
+        setGarages(garageData as Garage[]);
       } else {
         console.error("Garage data is not an array:", garageData);
         toast.error("Could not load garages properly");

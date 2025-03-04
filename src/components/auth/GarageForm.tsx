@@ -39,43 +39,50 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
     
     try {
       // Create a new garage
-      const { data: garage, error: garageError } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          INSERT INTO garages (name, slug, address, phone, email)
-          VALUES ('${name}', '${slug}', '${address}', '${phone}', '${email}')
-          RETURNING id
-        `
-      });
+      const { data: garageData, error: garageError } = await supabase
+        .from('garages')
+        .insert({
+          name,
+          slug,
+          address,
+          phone,
+          email
+        })
+        .select();
       
       if (garageError) throw garageError;
       
       // Get the garage ID
-      const garageId = (garage && Array.isArray(garage) && garage.length > 0) 
-        ? (garage[0] as Record<string, any>).id 
+      const garageId = (garageData && Array.isArray(garageData) && garageData.length > 0) 
+        ? garageData[0].id 
         : null;
       
       if (!garageId) throw new Error("Failed to create garage");
       
-      // Add user as an administrator of the garage
-      const { error: memberError } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          INSERT INTO garage_members (user_id, garage_id, role)
-          VALUES ('${userId}', '${garageId}', 'administrator')
-        `
-      });
+      console.log("Created garage with ID:", garageId);
+      
+      // Add user as an owner of the garage
+      const { error: memberError } = await supabase
+        .from('garage_members')
+        .insert({
+          user_id: userId,
+          garage_id: garageId,
+          role: 'owner'
+        });
       
       if (memberError) throw memberError;
       
+      console.log("Added user as garage member");
+      
       // Update user's profile with the new garage ID
-      const { error: profileError } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          UPDATE profiles 
-          SET garage_id = '${garageId}'
-          WHERE id = '${userId}'
-        `
-      });
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
       
       if (profileError) throw profileError;
+      
+      console.log("Updated user profile with garage ID");
       
       toast.success("Garage created successfully!");
       onComplete(garageId);
