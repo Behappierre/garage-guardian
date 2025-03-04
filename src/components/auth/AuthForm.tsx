@@ -124,8 +124,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
   }, []);
 
   const handleGarageCreationComplete = (garageId: string) => {
-    // After garage creation, proceed to dashboard
-    navigate("/dashboard");
+    // After garage creation, proceed to garage management page
+    navigate("/garage-management");
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -207,18 +207,19 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
         });
         if (error) throw error;
 
-        // After successful sign in, we'll handle the garage association directly in AuthProvider
-        // This avoids the RLS infinite recursion issues when checking garage memberships
+        // After successful sign in, we'll handle the garage association
         if (signInData.user) {
           try {
-            // Update the user's profile with the selected garage
-            const { error: profileError } = await supabase
-              .from('profiles')
-              .update({ garage_id: selectedGarageId })
-              .eq('id', signInData.user.id);
-            
-            if (profileError && !profileError.message.includes("infinite recursion")) {
-              console.error("Non-critical error updating profile:", profileError.message);
+            // Update the user's profile with the selected garage for staff
+            if (userType === "staff") {
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ garage_id: selectedGarageId })
+                .eq('id', signInData.user.id);
+              
+              if (profileError && !profileError.message.includes("infinite recursion")) {
+                console.error("Non-critical error updating profile:", profileError.message);
+              }
             }
           } catch (updateError) {
             console.error("Error updating profile garage:", updateError);
@@ -240,18 +241,24 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           }
 
           // Redirect based on role
-          switch (roleData?.role) {
-            case 'administrator':
-              navigate("/dashboard");
-              break;
-            case 'technician':
-              navigate("/dashboard/job-tickets");
-              break;
-            case 'front_desk':
-              navigate("/dashboard/appointments");
-              break;
-            default:
-              navigate("/dashboard");
+          if (roleData?.role === 'administrator' && userType === "owner") {
+            // For administrators (garage owners), go to garage management
+            navigate("/garage-management");
+          } else {
+            // For staff roles or direct dashboard access
+            switch (roleData?.role) {
+              case 'administrator':
+                navigate("/dashboard");
+                break;
+              case 'technician':
+                navigate("/dashboard/job-tickets");
+                break;
+              case 'front_desk':
+                navigate("/dashboard/appointments");
+                break;
+              default:
+                navigate("/dashboard");
+            }
           }
         }
       }

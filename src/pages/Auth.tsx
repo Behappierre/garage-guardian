@@ -35,19 +35,27 @@ const Auth = () => {
           if (roleError) throw roleError;
 
           // Redirect based on role
-          switch (roleData?.role) {
-            case 'administrator':
+          if (roleData?.role === 'administrator') {
+            // For administrators (garage owners), check if they came from type=owner
+            if (type === "owner") {
+              navigate("/garage-management");
+            } else {
+              // Default to dashboard for direct dashboard access
               navigate("/dashboard");
-              break;
-            case 'technician':
-              navigate("/dashboard/job-tickets");
-              break;
-            case 'front_desk':
-              navigate("/dashboard/appointments");
-              break;
-            default:
-              // If no role is found, redirect to dashboard
-              navigate("/dashboard");
+            }
+          } else {
+            // For staff roles
+            switch (roleData?.role) {
+              case 'technician':
+                navigate("/dashboard/job-tickets");
+                break;
+              case 'front_desk':
+                navigate("/dashboard/appointments");
+                break;
+              default:
+                // If no matching role is found, redirect to dashboard
+                navigate("/dashboard");
+            }
           }
         } catch (error: any) {
           toast.error("Error fetching user role: " + error.message);

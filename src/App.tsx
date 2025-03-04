@@ -17,6 +17,7 @@ import Settings from "@/pages/Settings";
 import MyWork from "@/pages/MyWork";
 import Help from "@/pages/Help";
 import NotFound from "@/pages/NotFound";
+import GarageManagement from "@/pages/GarageManagement";
 import "./App.css";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,14 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
+              <Route 
+                path="/garage-management" 
+                element={
+                  <ProtectedRoute>
+                    <GarageManagement />
+                  </ProtectedRoute>
+                } 
+              />
               <Route
                 path="/dashboard"
                 element={
