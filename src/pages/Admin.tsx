@@ -20,6 +20,7 @@ import { User } from '@supabase/supabase-js';
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { UserPlus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface UserData {
   id: string;
@@ -35,27 +36,42 @@ const Admin = () => {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
 
   const { data: users, isLoading, error } = useQuery({
-    queryKey: ["users"],
+    queryKey: ["users", garageId],
     queryFn: async () => {
       try {
-        console.log('Fetching users data...');
+        console.log('Fetching users data for garage ID:', garageId);
+        if (!garageId) {
+          console.error("No garage ID available");
+          return [];
+        }
 
-        // First get profiles data
+        // First get profiles data filtered by garage_id
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, first_name, last_name");
+          .select("id, first_name, last_name")
+          .eq("garage_id", garageId);
 
         console.log('Profiles data:', profiles);
         console.log('Profiles error:', profilesError);
 
         if (profilesError) throw profilesError;
+        
+        if (!profiles || profiles.length === 0) {
+          console.log('No profiles found for this garage');
+          return [];
+        }
+
+        // Get user IDs from profiles
+        const userIds = profiles.map(profile => profile.id);
 
         // Then get roles data
         const { data: roles, error: rolesError } = await supabase
           .from("user_roles")
-          .select("user_id, role");
+          .select("user_id, role")
+          .in("user_id", userIds);
 
         console.log('Roles data:', roles);
         console.log('Roles error:', rolesError);
@@ -75,8 +91,15 @@ const Admin = () => {
           throw new Error('Failed to fetch users: No users data returned');
         }
 
+        // Filter users to only include those with profiles in the current garage
+        const filteredUsers = usersResponse.users.filter((user: User) => 
+          userIds.includes(user.id)
+        );
+
+        console.log('Filtered users:', filteredUsers);
+
         // Map the data together
-        const mappedUsers = usersResponse.users.map((user: User) => {
+        const mappedUsers = filteredUsers.map((user: User) => {
           const userProfile = profiles?.find((p: any) => p.id === user.id);
           const userRole = roles?.find((r: any) => r.user_id === user.id);
           
@@ -96,6 +119,7 @@ const Admin = () => {
         throw error;
       }
     },
+    enabled: !!garageId, // Only run query when garageId is available
   });
 
   const deleteUserMutation = useMutation({
@@ -107,7 +131,7 @@ const Admin = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users", garageId] });
       toast.success("User deleted successfully");
     },
     onError: (error: Error) => {
@@ -120,14 +144,14 @@ const Admin = () => {
     return <div>Error loading users: {error.message}</div>;
   }
 
-  if (isLoading) {
+  if (isLoading || !garageId) {
     return <div>Loading...</div>;
   }
 
   const renderUserManagement = () => {
     if (!users || users.length === 0) {
       return (
-        <div className="text-center py-8">No users found</div>
+        <div className="text-center py-8">No users found for this garage</div>
       );
     }
 
