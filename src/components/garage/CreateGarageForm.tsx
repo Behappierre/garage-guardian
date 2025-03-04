@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { addUserToGarage } from "@/hooks/garage/utils/membershipHelpers";
 import { useNavigate } from "react-router-dom";
 
 interface CreateGarageFormProps {
@@ -98,25 +97,6 @@ export const CreateGarageForm = ({ onBack, onComplete, userId }: CreateGarageFor
       
       const newGarageId = garageData[0].id;
       console.log("Created garage:", newGarageId);
-      
-      // For backward compatibility, also add the user as a garage member
-      const success = await addUserToGarage(currentUserId, newGarageId, 'owner');
-      if (!success) {
-        console.warn("Failed to add user as garage member, but garage was created successfully");
-      }
-      
-      // Update user's profile with selected garage - Use a specific column name in the query
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ garage_id: newGarageId })
-        .eq('id', currentUserId);
-      
-      if (profileError) {
-        console.warn("Non-critical error updating profile:", profileError.message);
-      }
-      
-      // Refresh the session to update claims
-      await supabase.auth.refreshSession();
       
       toast.success("Garage created successfully");
       onComplete(newGarageId);
