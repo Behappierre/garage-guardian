@@ -55,6 +55,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
             address: data.address,
             email: data.email,
             phone: data.phone || null
+            owner_id: userId  // Add this line to set the owner ID
           }
         ])
         .select();
