@@ -84,3 +84,30 @@ export const getUserRoles = async (userId: string): Promise<string[]> => {
     return [];
   }
 };
+
+// Get the primary role for a user (first role found)
+export const getUserRole = async (userId: string): Promise<string | null> => {
+  try {
+    console.log(`Getting primary role for user ${userId}`);
+    
+    const roles = await getUserRoles(userId);
+    
+    if (roles.length === 0) {
+      console.log(`No roles found for user ${userId}`);
+      return null;
+    }
+    
+    // Return the first role as the primary role
+    // Prioritize administrator if it exists
+    if (roles.includes('administrator')) {
+      console.log(`User ${userId} has administrator role`);
+      return 'administrator';
+    }
+    
+    console.log(`Primary role for user ${userId}: ${roles[0]}`);
+    return roles[0];
+  } catch (err) {
+    console.error("Exception when getting user's primary role:", err);
+    return null;
+  }
+};
