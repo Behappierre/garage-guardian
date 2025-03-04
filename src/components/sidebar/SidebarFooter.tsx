@@ -1,10 +1,8 @@
 
-import { NavLink, useNavigate } from "react-router-dom";
 import { Settings, LogOut } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
 interface SidebarFooterProps {
   isCollapsed: boolean;
@@ -13,62 +11,39 @@ interface SidebarFooterProps {
 export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
   const navigate = useNavigate();
 
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Error signing out:", error.message);
-        toast.error("Error signing out. Please try again.");
-        return;
-      }
-      
-      console.log("User signed out successfully");
-      toast.success("Signed out successfully");
-      
-      // Navigate to auth page after successful sign out
-      navigate("/auth");
-    } catch (err) {
-      console.error("Exception during sign out:", err);
-      toast.error("Error signing out. Please try again.");
-    }
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
   };
 
   return (
-    <div className={cn(
-      "p-4 border-t border-sidebar-border",
-      isCollapsed && "flex flex-col items-center"
-    )}>
-      <ul className="space-y-1 w-full">
+    <div className="mt-auto p-4 border-t border-sidebar-border">
+      <ul className="space-y-1">
         <li>
-          <NavLink
-            to="/dashboard/settings"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
-                isCollapsed && "justify-center px-2"
-              )
-            }
+          <a
+            href="/dashboard/settings"
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
+              isCollapsed && "justify-center px-2"
+            )}
             title="Settings"
           >
             <Settings className="shrink-0 w-5 h-5" />
             {!isCollapsed && <span>Settings</span>}
-          </NavLink>
+          </a>
         </li>
         <li>
-          <Button
-            variant="ghost"
+          <button
+            onClick={handleLogout}
             className={cn(
-              "w-full flex items-center justify-start gap-2 px-4 py-2 text-sidebar-foreground hover:bg-sidebar-accent rounded-md",
+              "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent w-full text-left",
               isCollapsed && "justify-center px-2"
             )}
-            onClick={handleSignOut}
             title="Logout"
           >
             <LogOut className="shrink-0 w-5 h-5" />
             {!isCollapsed && <span>Logout</span>}
-          </Button>
+          </button>
         </li>
       </ul>
     </div>
