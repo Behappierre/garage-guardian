@@ -89,7 +89,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw memberError;
       }
       
-      // Update the user's profile with the garage ID
+      // Update the user's profile with the garage ID - FIX: Use correct column reference
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: garageId })

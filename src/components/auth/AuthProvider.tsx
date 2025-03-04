@@ -161,7 +161,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // If no garage found yet, try to use default Tractic garage
       console.log("Attempting to use default Tractic garage");
-      // Fix: Change back to simple select format without the table name
+      
+      // FIX: Use explicit column names without table prefixes for the select
       const { data: defaultGarage, error: defaultError } = await supabase
         .from('garages')
         .select('id')

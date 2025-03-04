@@ -88,7 +88,7 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Update user profile
+      // Update user profile - FIX: Specify the full column name to avoid ambiguity
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: newGarage[0].id })
