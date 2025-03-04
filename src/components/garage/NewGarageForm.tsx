@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -88,14 +87,13 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         console.error("Error adding member:", memberError);
       }
       
-      // Update the user's profile with the garage ID using our function
-      // Make sure we're passing valid UUID strings
+      // Update the user's profile with the garage ID using our function with updated parameter names
       console.log("Updating profile with garage_id:", newGarage[0].id);
       const { error: profileError } = await supabase.rpc(
         'update_profile_garage', 
         { 
-          user_id_val: userData.user.id, 
-          garage_id_val: newGarage[0].id 
+          p_user_id: userData.user.id, 
+          p_garage_id: newGarage[0].id 
         }
       );
         

@@ -85,11 +85,14 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       if (ownedGarages && ownedGarages.length > 0) {
         console.log("Admin owns garage:", ownedGarages[0].id);
         
-        // Update profile with owned garage
-        await supabase
-          .from('profiles')
-          .update({ garage_id: ownedGarages[0].id })
-          .eq('id', userId);
+        // Update profile with owned garage using updated parameter names
+        await supabase.rpc(
+          'update_profile_garage',
+          { 
+            p_user_id: userId, 
+            p_garage_id: ownedGarages[0].id 
+          }
+        );
           
         return true;
       }
@@ -105,11 +108,14 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     if (memberData && memberData.length > 0) {
       console.log("User is a member of garage:", memberData[0].garage_id);
       
-      // Update profile with found garage_id
-      await supabase
-        .from('profiles')
-        .update({ garage_id: memberData[0].garage_id })
-        .eq('id', userId);
+      // Update profile with found garage_id using updated parameter names
+      await supabase.rpc(
+        'update_profile_garage',
+        { 
+          p_user_id: userId, 
+          p_garage_id: memberData[0].garage_id 
+        }
+      );
         
       return true;
     }
@@ -132,11 +138,14 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
           { user_id: userId, garage_id: defaultGarageId, role: userRole }
         ]);
         
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: defaultGarageId })
-        .eq('id', userId);
+      // Update profile using updated parameter names
+      await supabase.rpc(
+        'update_profile_garage',
+        { 
+          p_user_id: userId, 
+          p_garage_id: defaultGarageId 
+        }
+      );
         
       return true;
     }
@@ -157,11 +166,14 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
           { user_id: userId, garage_id: anyGarage[0].id, role: userRole }
         ]);
         
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: anyGarage[0].id })
-        .eq('id', userId);
+      // Update profile using updated parameter names
+      await supabase.rpc(
+        'update_profile_garage',
+        { 
+          p_user_id: userId, 
+          p_garage_id: anyGarage[0].id 
+        }
+      );
         
       return true;
     } else {

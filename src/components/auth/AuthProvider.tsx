@@ -64,13 +64,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.log("Found owned garage for admin:", ownedGarageId);
           setGarageId(ownedGarageId);
           
-          // Update the profile with this garage_id using our RPC function
+          // Update the profile with this garage_id using our RPC function with updated parameter names
           console.log("Updating profile with owned garage_id:", ownedGarageId);
           const { error: updateError } = await supabase.rpc(
             'update_profile_garage', 
             { 
-              user_id_val: userId, 
-              garage_id_val: ownedGarageId 
+              p_user_id: userId, 
+              p_garage_id: ownedGarageId 
             }
           );
             
@@ -119,13 +119,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found owned garage:", ownedGarageId);
         setGarageId(ownedGarageId);
         
-        // Update the profile with this garage_id using our RPC function
+        // Update the profile with this garage_id using our RPC function with updated parameter names
         console.log("Updating profile with owned garage_id:", ownedGarageId);
         const { error: updateError } = await supabase.rpc(
           'update_profile_garage', 
           { 
-            user_id_val: userId, 
-            garage_id_val: ownedGarageId 
+            p_user_id: userId, 
+            p_garage_id: ownedGarageId 
           }
         );
           
@@ -155,13 +155,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Found membership garage:", memberGarageId);
         setGarageId(memberGarageId);
         
-        // Update the profile with this garage_id using our RPC function
+        // Update the profile with this garage_id using our RPC function with updated parameter names
         console.log("Updating profile with member garage_id:", memberGarageId);
         const { error: updateError } = await supabase.rpc(
           'update_profile_garage', 
           { 
-            user_id_val: userId, 
-            garage_id_val: memberGarageId 
+            p_user_id: userId, 
+            p_garage_id: memberGarageId 
           }
         );
           
@@ -204,13 +204,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           console.error("Error adding user to default garage:", memberError);
         }
           
-        // Update profile with this garage_id using our RPC function
+        // Update profile with this garage_id using our RPC function with updated parameter names
         console.log("Updating profile with default garage_id:", defaultGarageId);
         const { error: updateError } = await supabase.rpc(
           'update_profile_garage', 
           { 
-            user_id_val: userId, 
-            garage_id_val: defaultGarageId 
+            p_user_id: userId, 
+            p_garage_id: defaultGarageId 
           }
         );
           

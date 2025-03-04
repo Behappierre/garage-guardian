@@ -798,8 +798,8 @@ export type Database = {
       }
       update_profile_garage: {
         Args: {
-          user_id_val: string
-          garage_id_val: string
+          p_user_id: string
+          p_garage_id: string
         }
         Returns: undefined
       }
