@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +12,7 @@ import {
   handleAdminOnStaffLogin,
   handleStaffLogin
 } from "@/utils/auth/staffRedirects";
+import { getAccessibleGarages } from "@/utils/auth/garageAccess";
 
 interface AuthCheckState {
   isChecking: boolean;
@@ -83,14 +83,34 @@ export function useAuthCheck() {
             const isAdmin = await isAdministrator(session.user.id);
             
             if (isAdmin) {
-              // Check if admin owns garages
-              const hasGarages = await handleAdminWithGarages(session.user.id);
+              // Check for accessible garages - this is the key change
+              const accessibleGarages = await getAccessibleGarages(session.user.id);
+              console.log("Admin accessible garages:", accessibleGarages.length);
               
-              if (hasGarages) {
+              // If multiple garages, send to garage selection page
+              if (accessibleGarages.length > 1) {
                 navigate("/garage-management");
                 return;
+              } else if (accessibleGarages.length === 1) {
+                // If only one garage, update the user's profile and role with that garage
+                const garageId = accessibleGarages[0].id;
+                
+                // Update user_roles with this garage_id
+                await supabase
+                  .from('user_roles')
+                  .update({ garage_id: garageId })
+                  .eq('user_id', session.user.id);
+                  
+                // Update profile with this garage_id
+                await supabase
+                  .from('profiles')
+                  .update({ garage_id: garageId })
+                  .eq('id', session.user.id);
+                  
+                navigate("/dashboard");
+                return;
               } else {
-                // Handle admin without garages
+                // No garages yet - redirect to garage creation
                 await handleAdminWithoutGarages(session.user.id);
                 navigate("/garage-management");
                 return;
@@ -104,15 +124,21 @@ export function useAuthCheck() {
           } else {
             // On staff login page
             if (roleData?.role === 'administrator') {
-              const result = await handleAdminOnStaffLogin(session.user.id);
+              // Use the modified handler for staff login as admin
+              const accessibleGarages = await getAccessibleGarages(session.user.id);
               
-              if (result.shouldRedirect && result.path) {
-                if (result.path === "/garage-management") {
-                  navigate(`${result.path}?source=staff`);
-                } else {
-                  navigate(result.path);
-                }
+              if (accessibleGarages.length > 1) {
+                // If multiple garages, redirect to garage selection with staff source param
+                navigate("/garage-management?source=staff");
                 return;
+              } else {
+                // Otherwise, use existing staff redirect logic
+                const result = await handleAdminOnStaffLogin(session.user.id);
+                
+                if (result.shouldRedirect && result.path) {
+                  navigate(result.path);
+                  return;
+                }
               }
               
               setState(prev => ({ ...prev, isChecking: false }));

@@ -54,22 +54,9 @@ export const GarageManager = () => {
         return;
       }
       
-      const { error: membershipError } = await supabase
-        .from('garage_members')
-        .upsert({
-          user_id: userData.user.id,
-          garage_id: garageId,
-          role: 'owner'
-        }, {
-          onConflict: 'user_id,garage_id'
-        });
-        
-      if (membershipError) {
-        console.error("Error creating garage membership:", membershipError);
-        toast.error("Failed to associate with garage");
-        return;
-      }
+      console.log(`Setting garage ${garageId} as active garage for user ${userData.user.id}`);
       
+      // 1. Update user_roles table with the selected garage
       const { error: roleError } = await supabase
         .from('user_roles')
         .update({ garage_id: garageId })
@@ -77,8 +64,11 @@ export const GarageManager = () => {
         
       if (roleError) {
         console.error("Error updating user role:", roleError);
+        toast.error("Failed to update user role with garage");
+        return;
       }
       
+      // 2. Update profile with the selected garage
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: garageId })
@@ -86,11 +76,44 @@ export const GarageManager = () => {
         
       if (profileError) {
         console.error("Error updating profile:", profileError);
+        toast.error("Failed to update profile with garage");
+        return;
+      }
+      
+      // 3. Make sure user is a member of this garage
+      const { data: memberCheck } = await supabase
+        .from('garage_members')
+        .select('id')
+        .eq('user_id', userData.user.id)
+        .eq('garage_id', garageId)
+        .maybeSingle();
+        
+      if (!memberCheck) {
+        const { error: membershipError } = await supabase
+          .from('garage_members')
+          .upsert({
+            user_id: userData.user.id,
+            garage_id: garageId,
+            role: 'owner'
+          }, {
+            onConflict: 'user_id,garage_id'
+          });
+          
+        if (membershipError) {
+          console.error("Error creating garage membership:", membershipError);
+          toast.error("Failed to associate with garage");
+          return;
+        }
       }
       
       toast.success("Successfully associated with garage");
       
-      navigate("/dashboard");
+      // Redirect to dashboard or appointed path based on login source
+      if (loginSource === 'staff') {
+        navigate("/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
       console.error("Error selecting garage:", error);
       toast.error("Failed to select garage");
