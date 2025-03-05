@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -29,11 +28,6 @@ export const GarageManager = () => {
       setIsMultiGarageAdmin(true);
     } else {
       setLoginSource('owner');
-    }
-    
-    if (garages.length === 1 && source !== 'staff') {
-      // Auto-select the only garage if not coming from staff login
-      handleSelectGarage(garages[0].id);
     }
   }, [garages, location]);
   
