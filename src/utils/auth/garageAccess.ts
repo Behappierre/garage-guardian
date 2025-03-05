@@ -50,6 +50,8 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     }
     
     console.log("Accessible garages result:", data);
+    
+    // Explicitly cast the data to the Garage[] type
     return (data || []) as Garage[];
   } catch (err) {
     console.error("Exception in getAccessibleGarages:", err);

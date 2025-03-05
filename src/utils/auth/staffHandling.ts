@@ -4,6 +4,132 @@ import { repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 import { ensureUserHasGarage } from "@/utils/auth/garageAssignment";
 
 /**
+ * Assigns a user to the default "tractic" garage or creates one if it doesn't exist
+ */
+export async function assignDefaultGarage(userId: string, userRole: string): Promise<boolean> {
+  try {
+    console.log("Attempting to assign default garage for user:", userId);
+    
+    // 1. First try to find the default "tractic" garage with properly qualified columns
+    const { data: defaultGarage } = await supabase.rpc('execute_read_only_query', {
+      query_text: `
+        SELECT g.id 
+        FROM garages g
+        WHERE g.slug = 'tractic'
+        LIMIT 1
+      `
+    });
+    
+    if (!defaultGarage || !defaultGarage.length) {
+      console.log("Default 'tractic' garage not found, checking for any garage");
+      
+      // Try to find any garage
+      const { data: anyGarage } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT g.id 
+          FROM garages g
+          LIMIT 1
+        `
+      });
+      
+      if (!anyGarage || !anyGarage.length) {
+        console.log("No garages found, creating a default one");
+        
+        // Create a default garage
+        const { data: newGarage, error: createError } = await supabase
+          .from('garages')
+          .insert({
+            name: 'Default Garage',
+            slug: 'default',
+            owner_id: userId
+          })
+          .select()
+          .single();
+        
+        if (createError) {
+          console.error("Error creating default garage:", createError);
+          return false;
+        }
+        
+        // Use the new garage
+        const garageId = newGarage.id;
+        console.log("Created new default garage with ID:", garageId);
+        
+        // Add user as member
+        await supabase
+          .from('garage_members')
+          .insert({
+            user_id: userId,
+            garage_id: garageId,
+            role: userRole || 'owner'
+          });
+        
+        // Update profile
+        await supabase
+          .from('profiles')
+          .update({ garage_id: garageId })
+          .eq('id', userId);
+        
+        return true;
+      }
+      
+      const garageId = anyGarage[0].id;
+      console.log("Found existing garage to assign:", garageId);
+      
+      // Add user as member
+      await supabase
+        .from('garage_members')
+        .insert({
+          user_id: userId,
+          garage_id: garageId,
+          role: userRole || 'member'
+        });
+      
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
+      
+      return true;
+    }
+    
+    const garageId = defaultGarage[0].id;
+    console.log("Found default 'tractic' garage:", garageId);
+    
+    // Add user as member
+    const { error: memberError } = await supabase
+      .from('garage_members')
+      .insert({
+        user_id: userId,
+        garage_id: garageId,
+        role: userRole || 'member'
+      });
+    
+    if (memberError) {
+      console.error("Error adding member:", memberError);
+      return false;
+    }
+    
+    // Update profile
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ garage_id: garageId })
+      .eq('id', userId);
+    
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error assigning default garage:", error);
+    return false;
+  }
+}
+
+/**
  * Handles staff-specific sign-in logic
  */
 export async function handleStaffSignIn(userId: string, userRole: string) {
@@ -64,68 +190,14 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
     console.log("Staff ensureUserHasGarage result:", hasGarage);
     
     if (!hasGarage) {
-      // DEBUGGING: Last effort - create a garage if none exist
-      const { data: garageCountResult } = await supabase.rpc('execute_read_only_query', {
-        query_text: `SELECT COUNT(*) FROM garages`
-      });
-      console.log("TOTAL GARAGE COUNT:", garageCountResult);
+      // Try the new assignDefaultGarage function
+      const assigned = await assignDefaultGarage(userId, userRole);
       
-      // Extract count using string key from the first object
-      let totalGarages = 0;
-      if (Array.isArray(garageCountResult) && garageCountResult.length > 0) {
-        const countObj = garageCountResult[0];
-        if (typeof countObj === 'object' && countObj !== null) {
-          // Find the count key (might be 'count' or another name)
-          const countKey = Object.keys(countObj).find(key => 
-            key.toLowerCase().includes('count')
-          );
-          
-          if (countKey) {
-            totalGarages = parseInt(String(countObj[countKey]), 10) || 0;
-          }
-        }
+      if (!assigned) {
+        throw new Error("Could not create or assign a default garage");
       }
       
-      if (totalGarages === 0) {
-        console.log("No garages exist, creating a default one");
-        
-        // Create a default garage as a last resort - FIX: Use cleaner SQL to avoid ambiguous column issue
-        const { data: newGarage, error: createError } = await supabase
-          .from('garages')
-          .insert({
-            name: 'Default Garage',
-            slug: 'default',
-            owner_id: userId
-          })
-          .select()
-          .single();
-          
-        if (createError) {
-          console.error("Error creating default garage:", createError);
-          throw new Error("Could not create a default garage");
-        }
-        
-        console.log("Created default garage:", newGarage);
-        
-        // Add user to this garage
-        await supabase
-          .from('garage_members')
-          .insert({
-            user_id: userId,
-            garage_id: newGarage.id,
-            role: userRole
-          });
-          
-        // Update profile
-        await supabase
-          .from('profiles')
-          .update({ garage_id: newGarage.id })
-          .eq('id', userId);
-          
-        return;
-      }
-      
-      throw new Error("You don't have access to any garages. Please contact an administrator.");
+      return;
     }
     
     // Re-verify that profile now has a garage_id after ensureUserHasGarage
