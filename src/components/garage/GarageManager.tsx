@@ -9,15 +9,11 @@ import { GaragesList } from "./GaragesList";
 import { NewGarageForm } from "./NewGarageForm";
 import { useOwnerGarages } from "@/hooks/useOwnerGarages";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { GarageMembershipTest } from "./GarageMembershipTest";
 
 export const GarageManager = () => {
   const navigate = useNavigate();
   const { garages, isLoading, error, refreshGarages } = useOwnerGarages();
   const [showCreateForm, setShowCreateForm] = useState(false);
-
-  // Initially show the garages list, even if empty
-  // Only show the form when user explicitly chooses to create a garage
   
   const handleSignOut = async () => {
     try {
@@ -90,9 +86,6 @@ export const GarageManager = () => {
           onCreateGarage={() => setShowCreateForm(true)}
         />
       )}
-      
-      {/* Add the test component */}
-      <GarageMembershipTest />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createGarageMember } from "@/utils/auth/garageAccess";
 import { Check, AlertCircle } from "lucide-react";
 
+// This component is used for testing purposes only and shouldn't be included in production
 export const GarageMembershipTest = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{success: boolean, message: string} | null>(null);
@@ -42,6 +43,7 @@ export const GarageMembershipTest = () => {
       <Button 
         onClick={testMembership} 
         disabled={loading}
+        variant="default" // Change to match the UI in the screenshots
         className="mb-4"
       >
         {loading ? "Creating..." : "Create Test Membership"}
