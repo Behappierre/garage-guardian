@@ -55,6 +55,7 @@ serve(async (req: Request) => {
     }
 
     console.log('Creating user with email:', email, 'to be assigned to garage:', garageId);
+    console.log('Role selected:', role);
 
     // Create the user
     const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({

@@ -32,6 +32,8 @@ export function UserRoleDialog({ user, open, onOpenChange }: UserRoleDialogProps
 
   const updateRoleMutation = useMutation({
     mutationFn: async () => {
+      console.log('Updating role to:', selectedRole);
+      
       // First, delete existing role
       const { error: deleteError } = await supabase
         .from("user_roles")
