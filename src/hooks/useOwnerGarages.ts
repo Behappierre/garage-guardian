@@ -94,7 +94,7 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
 
       // Use execute_read_only_query as a backup to fetch ALL garage data without RLS restrictions
       // This helps us diagnose if RLS is causing issues
-      const { data: directGarages } = await supabase.rpc('execute_read_only_query', {
+      const { data: directQueryResult } = await supabase.rpc('execute_read_only_query', {
         query_text: `
           SELECT g.* FROM garages g
           WHERE g.owner_id = '${userData.user.id}'
@@ -105,11 +105,11 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         `
       });
       
-      console.log("DIRECT QUERY GARAGES:", JSON.stringify(directGarages));
+      console.log("DIRECT QUERY GARAGES:", JSON.stringify(directQueryResult));
       
-      // If we found no garages but direct query did find some, use those
-      if (allGarages.length === 0 && directGarages && directGarages.length > 0) {
-        directGarages.forEach((garage: any) => {
+      // Properly handle the array result from the RPC function
+      if (directQueryResult && Array.isArray(directQueryResult) && directQueryResult.length > 0) {
+        directQueryResult.forEach((garage: any) => {
           if (!seenGarageIds.has(garage.id)) {
             allGarages.push(garage);
             seenGarageIds.add(garage.id);
