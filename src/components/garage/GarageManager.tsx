@@ -9,6 +9,7 @@ import { GaragesList } from "./GaragesList";
 import { NewGarageForm } from "./NewGarageForm";
 import { useOwnerGarages } from "@/hooks/useOwnerGarages";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { GarageMembershipTest } from "./GarageMembershipTest";
 
 export const GarageManager = () => {
   const navigate = useNavigate();
@@ -89,6 +90,9 @@ export const GarageManager = () => {
           onCreateGarage={() => setShowCreateForm(true)}
         />
       )}
+      
+      {/* Add the test component */}
+      <GarageMembershipTest />
     </div>
   );
 };
