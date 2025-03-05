@@ -35,8 +35,13 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
       }
 
       console.log("Fetching garages for user:", userData.user.id);
+      console.log("User email:", userData.user.email);
 
-      // First, fetch garages that the user owns directly
+      // Use a more comprehensive query to find all garages associated with the user
+      const allGarages: Garage[] = [];
+      const seenGarageIds = new Set<string>();
+
+      // First, check for garages the user owns directly (by owner_id)
       const { data: ownedGarages, error: ownedError } = await supabase
         .from("garages")
         .select("id, name, slug, address, email, phone, created_at, owner_id")
@@ -44,24 +49,40 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
       
       if (ownedError) {
         console.error("Error fetching owned garages:", ownedError);
-        throw new Error("Failed to fetch owned garages: " + ownedError.message);
+      } else if (ownedGarages && ownedGarages.length > 0) {
+        console.log("Found owned garages:", ownedGarages.length);
+        
+        ownedGarages.forEach(garage => {
+          allGarages.push(garage);
+          seenGarageIds.add(garage.id);
+        });
       }
 
-      // Second, fetch garages the user is a member of via garage_members table
-      const { data: memberGarages, error: memberError } = await supabase
+      // Second, check for garage memberships
+      const { data: memberships, error: memberError } = await supabase
         .from("garage_members")
         .select(`
           garage_id,
+          role,
           garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)
         `)
         .eq("user_id", userData.user.id);
       
       if (memberError) {
-        console.error("Error fetching member garages:", memberError);
-        throw new Error("Failed to fetch member garages: " + memberError.message);
+        console.error("Error fetching garage memberships:", memberError);
+      } else if (memberships && memberships.length > 0) {
+        console.log("Found garage memberships:", memberships.length);
+        
+        memberships.forEach(membership => {
+          if (membership.garages && !seenGarageIds.has(membership.garages.id)) {
+            allGarages.push(membership.garages as Garage);
+            seenGarageIds.add(membership.garages.id);
+            console.log("Added garage from membership:", membership.garages.id, membership.garages.name);
+          }
+        });
       }
 
-      // Third, check if the user has a garage_id in their profile
+      // Third, check if the user's profile has a garage_id
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("garage_id")
@@ -70,36 +91,24 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         
       if (profileError && !profileError.message.includes("No rows found")) {
         console.error("Error fetching profile:", profileError);
-      }
-
-      // Combine all garages, removing duplicates
-      const allGarages: Garage[] = [...(ownedGarages || [])];
-
-      // Add member garages if any (transform the nested structure)
-      if (memberGarages && memberGarages.length > 0) {
-        memberGarages.forEach(membership => {
-          if (membership.garages && !allGarages.some(g => g.id === membership.garages.id)) {
-            allGarages.push(membership.garages as Garage);
-          }
-        });
-      }
-
-      // Add profile garage if it exists and is not already included
-      if (profileData?.garage_id && !allGarages.some(g => g.id === profileData.garage_id)) {
+      } else if (profileData?.garage_id && !seenGarageIds.has(profileData.garage_id)) {
+        // Fetch this garage's details
         const { data: profileGarage, error: profileGarageError } = await supabase
           .from("garages")
           .select("id, name, slug, address, email, phone, created_at, owner_id")
           .eq("id", profileData.garage_id)
           .single();
           
-        if (!profileGarageError && profileGarage) {
+        if (profileGarageError) {
+          console.error("Error fetching profile's garage:", profileGarageError);
+        } else if (profileGarage) {
           allGarages.push(profileGarage);
-        } else if (profileGarageError && !profileGarageError.message.includes("No rows found")) {
-          console.error("Error fetching profile garage:", profileGarageError);
+          seenGarageIds.add(profileGarage.id);
+          console.log("Added garage from profile:", profileGarage.id, profileGarage.name);
         }
       }
 
-      console.log("All garages fetched:", allGarages);
+      console.log("Total garages found:", allGarages.length);
       setGarages(allGarages);
     } catch (error: any) {
       console.error("Error in useOwnerGarages:", error);
@@ -110,7 +119,7 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
     }
   }, []);
 
-  // Fetch garages on component mount only
+  // Fetch garages on component mount
   useEffect(() => {
     fetchOwnerGarages();
   }, [fetchOwnerGarages]);

@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { ensureUserHasGarage } from "@/utils/auth/garageAssignment";
 
 export const useSignIn = () => {
   const signIn = async (email: string, password: string, userType: "owner" | "staff") => {
@@ -36,25 +37,29 @@ export const useSignIn = () => {
   };
 
   const handleOwnerSignIn = async (userId: string) => {
+    console.log("Handling owner sign in for user:", userId);
+    
     // Check for owned garages
     const { data: ownedGarages, error: ownedError } = await supabase
       .from('garages')
       .select('id')
       .eq('owner_id', userId)
-      .limit(1);
+      .order('created_at', { ascending: false });
       
     if (ownedError) {
       console.error("Error checking owned garages:", ownedError);
     }
     
     if (ownedGarages && ownedGarages.length > 0) {
+      console.log("Owner has owned garages:", ownedGarages.length);
+      
       // Ensure user's profile has the garage_id set
       await supabase
         .from('profiles')
         .update({ garage_id: ownedGarages[0].id })
         .eq('id', userId);
         
-      // Add user as member of their owned garage
+      // Add user as member of their owned garage if not already
       await supabase
         .from('garage_members')
         .upsert([{ 
@@ -62,43 +67,21 @@ export const useSignIn = () => {
           garage_id: ownedGarages[0].id,
           role: 'owner'
         }]);
+    } else {
+      console.log("Owner has no owned garages");
     }
   };
 
   const handleStaffSignIn = async (userId: string, userRole: string) => {
-    // First check if user has a garage in their profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('garage_id')
-      .eq('id', userId)
-      .single();
-      
-    if (profileData?.garage_id) {
-      console.log("User has garage_id in profile:", profileData.garage_id);
-      return;
-    }
+    console.log("Handling staff sign in for user:", userId, "with role:", userRole);
     
-    // Check if user is a member of any garage
-    const { data: memberData } = await supabase
-      .from('garage_members')
-      .select('garage_id')
-      .eq('user_id', userId)
-      .limit(1);
-        
-    if (memberData && memberData.length > 0) {
-      console.log("User is a member of garage:", memberData[0].garage_id);
-      
-      // Update profile with garage_id
-      await supabase
-        .from('profiles')
-        .update({ garage_id: memberData[0].garage_id })
-        .eq('id', userId);
-      
-      return;
-    }
+    // Ensure the user has a garage assignment
+    const hasGarage = await ensureUserHasGarage(userId, userRole);
     
-    // No garage found
-    throw new Error("You don't have access to any garages. Please contact an administrator.");
+    if (!hasGarage) {
+      console.log("Staff has no garage assignment");
+      throw new Error("You don't have access to any garages. Please contact an administrator.");
+    }
   };
 
   return {
