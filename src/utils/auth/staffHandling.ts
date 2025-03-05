@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { logGarageAssignmentError } from "./garageDiagnostics";
@@ -20,7 +21,8 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       `
     });
     
-    if (garageError || !defaultGarageResult || defaultGarageResult.length === 0) {
+    // Fix: Check if defaultGarageResult is an array and has items
+    if (garageError || !defaultGarageResult || !Array.isArray(defaultGarageResult) || defaultGarageResult.length === 0) {
       console.error("Error or no default garage found:", garageError);
       throw new Error("Default garage not found");
     }
