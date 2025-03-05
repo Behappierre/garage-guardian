@@ -159,7 +159,7 @@ serve(async (req: Request) => {
 
     // Assign the role and garage_id - Using a more explicit approach with proper error handling
     try {
-      // Step 1: Insert role into user_roles - Make sure garage_id is included
+      // Step 1: Insert role into user_roles with garage_id
       console.log('Assigning role and garage_id:', { 
         user_id: userData.user.id, 
         role,
@@ -195,7 +195,7 @@ serve(async (req: Request) => {
         console.log('Successfully updated profile with garage_id:', garageId);
       }
       
-      // Step 3: Add the user to garage_members table for complete integration
+      // Step 3: Add ONLY administrators to garage_members table
       if (role === 'administrator') {
         // If administrator, add as owner in garage_members
         console.log('Adding administrator to garage_members as owner');
@@ -208,28 +208,14 @@ serve(async (req: Request) => {
           }]);
           
         if (memberError) {
-          console.warn('Warning: Error adding user to garage_members:', memberError);
+          console.warn('Warning: Error adding administrator to garage_members:', memberError);
           // Continue even if this fails
         } else {
           console.log('Successfully added administrator to garage_members as owner');
         }
       } else {
-        // For other roles, add as staff
-        console.log('Adding staff user to garage_members');
-        const { error: memberError } = await supabaseClient
-          .from('garage_members')
-          .insert([{
-            user_id: userData.user.id,
-            garage_id: garageId,
-            role: 'staff'
-          }]);
-          
-        if (memberError) {
-          console.warn('Warning: Error adding user to garage_members:', memberError);
-          // Continue even if this fails
-        } else {
-          console.log('Successfully added staff user to garage_members');
-        }
+        // For non-administrator roles, DO NOT add to garage_members
+        console.log('User is not an administrator, skipping garage_members entry');
       }
       
       // If everything succeeded, return success response
