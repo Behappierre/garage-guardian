@@ -61,12 +61,36 @@ serve(async (req: Request) => {
 
     const { email, password, firstName, lastName, role, garageId } = body;
     
+    // Log all received parameters for debugging
+    console.log('Creating user with parameters:', { 
+      email, 
+      password: password ? '******' : undefined, 
+      firstName, 
+      lastName, 
+      role,
+      garageId
+    });
+    
     if (!email || !password || !firstName || !lastName || !role) {
-      console.error('Missing required fields:', { email: !!email, password: !!password, firstName: !!firstName, lastName: !!lastName, role: !!role });
+      console.error('Missing required fields:', { 
+        email: !!email, 
+        password: !!password, 
+        firstName: !!firstName, 
+        lastName: !!lastName, 
+        role: !!role 
+      });
+      
       return new Response(
         JSON.stringify({ 
           error: 'Missing required fields',
-          status: 'error'
+          status: 'error',
+          details: { 
+            email: !!email, 
+            password: !!password, 
+            firstName: !!firstName, 
+            lastName: !!lastName, 
+            role: !!role 
+          }
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -131,60 +155,66 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log('User created:', userData.user.id);
+    console.log('User created successfully with ID:', userData.user.id);
 
-    // Assign the role and garage_id
-    const { error: roleError } = await supabaseClient
-      .from('user_roles')
-      .insert([{ 
-        user_id: userData.user.id, 
-        role,
-        garage_id: garageId 
-      }]);
+    // Assign the role and garage_id - Using a more explicit approach with proper error handling
+    try {
+      // Step 1: Insert role into user_roles
+      const { error: roleError } = await supabaseClient
+        .from('user_roles')
+        .insert([{ 
+          user_id: userData.user.id, 
+          role,
+          garage_id: garageId 
+        }]);
 
-    if (roleError) {
-      console.error('Error assigning role:', roleError);
+      if (roleError) {
+        throw new Error(`Error assigning role: ${roleError.message}`);
+      }
+      
+      console.log('Successfully assigned role:', role, 'with garage:', garageId);
+
+      // Step 2: Update profile with garage_id
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userData.user.id);
+
+      if (profileError) {
+        console.warn('Warning: Error updating profile with garage_id:', profileError);
+        // Continue even if profile update fails
+      } else {
+        console.log('Successfully updated profile with garage_id:', garageId);
+      }
+      
       return new Response(
         JSON.stringify({ 
-          error: roleError.message,
-          status: 'error'
+          message: 'User created successfully',
+          userId: userData.user.id,
+          status: 'success' 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 201,
+        }
+      );
+    } catch (error: any) {
+      console.error('Error in role assignment or profile update:', error);
+      
+      // Still return a success since user was created
+      return new Response(
+        JSON.stringify({ 
+          message: 'User created but role assignment had issues',
+          userId: userData.user.id,
+          error: error.message,
+          status: 'partial_success' 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 201, // Still return success status since user was created
         }
       );
     }
-
-    console.log('User role assigned successfully:', role);
-
-    // Also update the user's profile with the garage_id
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userData.user.id);
-
-    if (profileError) {
-      console.error('Error updating user profile with garage_id:', profileError);
-      // Don't fail the entire operation, just log the error
-    } else {
-      console.log('Updated user profile with garage_id:', garageId);
-    }
-
-    console.log('User created and role assigned successfully');
-
-    return new Response(
-      JSON.stringify({ 
-        message: 'User created successfully',
-        userId: userData.user.id,
-        status: 'success'
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 201,
-      }
-    );
-
   } catch (error: any) {
     console.error('Unexpected error in create-user function:', error);
     return new Response(

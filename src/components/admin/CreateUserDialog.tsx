@@ -31,6 +31,15 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const queryClient = useQueryClient();
   const { garageId } = useAuth();
 
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setFirstName("");
+    setLastName("");
+    setRole("front_desk");
+    setError(null);
+  };
+
   const createUserMutation = useMutation({
     mutationFn: async () => {
       setSubmitting(true);
@@ -43,7 +52,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       console.log('Attempting to create user:', { email, firstName, lastName, role, garageId });
       
       try {
-        const { data, error } = await supabase.functions.invoke('create-user', {
+        const { data, error: invocationError } = await supabase.functions.invoke('create-user', {
           body: {
             email,
             password,
@@ -54,16 +63,27 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
           },
         });
 
-        console.log('Response from create-user function:', data, error);
+        console.log('Response from create-user function:', data);
 
-        if (error) {
-          console.error('Error from create-user function:', error);
-          throw new Error(error.message || 'Failed to create user');
+        if (invocationError) {
+          console.error('Error from create-user function invocation:', invocationError);
+          throw new Error(invocationError.message || 'Failed to invoke create-user function');
         }
         
-        if (!data || data.status === 'error') {
+        if (!data) {
+          throw new Error('No data returned from create-user function');
+        }
+        
+        if (data.status === 'error') {
           console.error('Error response from create-user function:', data);
-          throw new Error(data?.error || 'Failed to create user');
+          throw new Error(data.error || 'Failed to create user');
+        }
+        
+        // Handle partial success
+        if (data.status === 'partial_success') {
+          console.warn('Partial success from create-user function:', data);
+          // We'll still count this as a success but with a warning
+          toast.warning(`User created but: ${data.error}`);
         }
 
         return data;
@@ -74,17 +94,17 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         setSubmitting(false);
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      toast.success("User created successfully");
+      
+      if (data.status === 'partial_success') {
+        toast.success("User created with some issues. Check logs for details.");
+      } else {
+        toast.success("User created successfully");
+      }
+      
       onOpenChange(false);
-      // Reset form
-      setEmail("");
-      setPassword("");
-      setFirstName("");
-      setLastName("");
-      setRole("front_desk");
-      setError(null);
+      resetForm();
     },
     onError: (error: Error) => {
       console.error('Error in createUserMutation:', error);
@@ -107,6 +127,20 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       return;
     }
     
+    // Validate email format
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setError("Please enter a valid email address.");
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+    
+    // Validate password length
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    
     // Clear any previous error
     setError(null);
     
@@ -118,7 +152,12 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) {
+        resetForm();
+      }
+      onOpenChange(newOpen);
+    }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New User</DialogTitle>
@@ -202,7 +241,10 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
           )}
           
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" type="button" onClick={() => {
+              resetForm();
+              onOpenChange(false);
+            }}>
               Cancel
             </Button>
             <Button 
