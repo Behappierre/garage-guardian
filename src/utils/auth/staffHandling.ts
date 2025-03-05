@@ -11,27 +11,21 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
   try {
     console.log(`Attempting to assign default garage for user ${userId}`);
     
-    // 1. Find the default garage with explicit table alias
-    const { data: defaultGarageResult, error: garageError } = await supabase.rpc('execute_read_only_query', {
-      query_text: `
-        SELECT g.id 
-        FROM garages g
-        WHERE g.slug = 'tractic'
-        LIMIT 1
-      `
-    });
+    // 1. Find the default garage with direct table query instead of RPC
+    const { data: defaultGarage, error: garageError } = await supabase
+      .from('garages')
+      .select('id, name')
+      .eq('slug', 'tractic')
+      .limit(1)
+      .single();
     
-    // Fix: Check if defaultGarageResult is an array and has items
-    if (garageError || !defaultGarageResult || !Array.isArray(defaultGarageResult) || defaultGarageResult.length === 0) {
+    if (garageError || !defaultGarage) {
       console.error("Error or no default garage found:", garageError);
       throw new Error("Default garage not found");
     }
     
-    // Fix: Properly access the id property from the JSON result
-    // Type assertion to inform TypeScript that we expect an object with an id property
-    const garageIdObj = defaultGarageResult[0] as { id: string };
-    const garageId = garageIdObj.id;
-    console.log(`Found default garage: ${garageId}`);
+    const garageId = defaultGarage.id;
+    console.log(`Found default garage: ${garageId} (${defaultGarage.name})`);
     
     // 2. Add user as member with SEPARATE query (no joins)
     const { error: memberError } = await supabase
@@ -96,17 +90,18 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       
     // If user_role has a garage_id, verify it exists
     if (userRoleData?.garage_id) {
-      const { data: garageExists } = await supabase
+      // IMPORTANT: Use standard SELECT, not execute_read_only_query
+      const { data: garageExists, error: garageError } = await supabase
         .from('garages')
-        .select('id')
+        .select('id, name')
         .eq('id', userRoleData.garage_id)
         .maybeSingle();
         
       if (garageExists) {
-        console.log("Staff garage exists in user_role");
-        return;
+        console.log("Staff garage exists:", garageExists.name);
+        return; // Exit early - garage exists!
       } else {
-        console.log("Garage in user_role doesn't exist, need to find or create a garage");
+        console.log("Garage in user_role doesn't exist, will find another");
       }
     }
     
