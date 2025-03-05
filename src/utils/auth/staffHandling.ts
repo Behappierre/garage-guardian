@@ -38,7 +38,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
     if (!garageId) {
       console.log("No garages found, creating a default one");
       
-      // Create a default garage
+      // Create a default garage with explicit column selection
       const { data: newGarage, error: createError } = await supabase
         .from('garages')
         .insert({
@@ -46,7 +46,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
           slug: 'default',
           owner_id: userId
         })
-        .select()
+        .select('id')
         .single();
       
       if (createError) {

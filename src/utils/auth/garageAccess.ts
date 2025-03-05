@@ -25,20 +25,45 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       console.error("Error fetching owned garages:", ownedError);
     }
     
-    // Then, get member relationships directly
+    // Then, get member relationships directly - Fix the select statement to avoid column ambiguity
     const { data: memberGarages, error: memberError } = await supabase
       .from('garage_members')
-      .select('garage_id, role, garage:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .select(`
+        id, 
+        role,
+        garage:garage_id (
+          id, 
+          name, 
+          slug, 
+          address, 
+          email, 
+          phone, 
+          created_at, 
+          owner_id
+        )
+      `)
       .eq('user_id', userId);
       
     if (memberError) {
       console.error("Error fetching member garages:", memberError);
     }
     
-    // Check user_roles table for direct garage association (new)
+    // Check user_roles table for direct garage association - Fix the select statement
     const { data: roleGarageData, error: roleGarageError } = await supabase
       .from('user_roles')
-      .select('role, garage_id, garage:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .select(`
+        role,
+        garage:garage_id (
+          id, 
+          name, 
+          slug, 
+          address, 
+          email, 
+          phone, 
+          created_at, 
+          owner_id
+        )
+      `)
       .eq('user_id', userId)
       .not('garage_id', 'is', null);
       
@@ -46,10 +71,22 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       console.error("Error fetching role garages:", roleGarageError);
     }
     
-    // Finally, get profile relationship
+    // Finally, get profile relationship - Fix the select statement
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('garage_id, garage:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .select(`
+        id,
+        garage:garage_id (
+          id, 
+          name, 
+          slug, 
+          address, 
+          email, 
+          phone, 
+          created_at, 
+          owner_id
+        )
+      `)
       .eq('id', userId)
       .maybeSingle();
       
@@ -80,7 +117,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       });
     }
     
-    // Add role-associated garages (new)
+    // Add role-associated garages
     if (roleGarageData && roleGarageData.length > 0) {
       roleGarageData.forEach(roleData => {
         if (roleData.garage) {
@@ -93,7 +130,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     }
     
     // Add profile garage
-    if (profileData?.garage_id && profileData.garage) {
+    if (profileData?.garage) {
       garages.push({
         ...profileData.garage,
         relationship_type: 'profile'
