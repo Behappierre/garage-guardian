@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,6 +5,8 @@ import { toast } from "sonner";
 import { useToast } from "@/components/ui/use-toast";
 import { useSignIn } from "./useSignIn";
 import { useSignUp } from "./useSignUp";
+import { handleOwnerSignIn } from "@/utils/auth/ownerHandling";
+import { handleStaffSignIn } from "@/utils/auth/staffHandling";
 
 type Role = "administrator" | "technician" | "front_desk";
 type UserType = "owner" | "staff";
@@ -18,7 +19,7 @@ export const useAuthSubmit = (userType: UserType) => {
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
   
-  const { signIn, verifyUserAccess, handleOwnerSignIn, handleStaffSignIn } = useSignIn();
+  const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
 
   const handleAuth = async (
