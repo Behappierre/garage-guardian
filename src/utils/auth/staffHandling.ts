@@ -11,7 +11,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
     console.log("Attempting to assign default garage for user:", userId);
     
     // 1. First try to find the default "tractic" garage with properly qualified columns
-    const { data: defaultGarage } = await supabase.rpc('execute_read_only_query', {
+    const { data: defaultGarageResult } = await supabase.rpc('execute_read_only_query', {
       query_text: `
         SELECT g.id 
         FROM garages g
@@ -20,11 +20,13 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       `
     });
     
-    if (!defaultGarage || !defaultGarage.length) {
+    // Check if we have results for default garage
+    const defaultGarage = defaultGarageResult as any[] | null;
+    if (!defaultGarage || defaultGarage.length === 0) {
       console.log("Default 'tractic' garage not found, checking for any garage");
       
       // Try to find any garage
-      const { data: anyGarage } = await supabase.rpc('execute_read_only_query', {
+      const { data: anyGarageResult } = await supabase.rpc('execute_read_only_query', {
         query_text: `
           SELECT g.id 
           FROM garages g
@@ -32,7 +34,9 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
         `
       });
       
-      if (!anyGarage || !anyGarage.length) {
+      // Check if we have results for any garage
+      const anyGarage = anyGarageResult as any[] | null;
+      if (!anyGarage || anyGarage.length === 0) {
         console.log("No garages found, creating a default one");
         
         // Create a default garage
