@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -32,10 +31,55 @@ export const GarageManager = () => {
     toast.success("Garage created successfully");
   };
 
-  const handleSelectGarage = (garageId: string) => {
-    // Here you would normally navigate to the garage dashboard or set it as the active garage
-    toast.success("Selected garage: " + garageId);
-    // For now, we're just showing a toast
+  const handleSelectGarage = async (garageId: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast.error("Unable to detect user for garage association");
+        return;
+      }
+      
+      const { error: membershipError } = await supabase
+        .from('garage_members')
+        .upsert({
+          user_id: userData.user.id,
+          garage_id: garageId,
+          role: 'owner'
+        }, {
+          onConflict: 'user_id,garage_id'
+        });
+        
+      if (membershipError) {
+        console.error("Error creating garage membership:", membershipError);
+        toast.error("Failed to associate with garage");
+        return;
+      }
+      
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ garage_id: garageId })
+        .eq('user_id', userData.user.id);
+        
+      if (roleError) {
+        console.error("Error updating user role:", roleError);
+      }
+      
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userData.user.id);
+        
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
+      }
+      
+      toast.success("Successfully associated with garage");
+      
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Error selecting garage:", error);
+      toast.error("Failed to select garage");
+    }
   };
 
   if (showCreateForm) {
