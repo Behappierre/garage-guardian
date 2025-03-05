@@ -41,9 +41,6 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
     enabled: !!garageId,
   });
 
-  console.log("Settings data:", settings); // Debug log
-  console.log("Garage data:", garage); // Debug log
-
   return (
     <div className={cn(
       "flex items-center border-b border-gray-200",
