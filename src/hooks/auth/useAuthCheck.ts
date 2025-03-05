@@ -50,12 +50,16 @@ export function useAuthCheck() {
     if (state.hasCheckedAuth) return;
     
     const checkAuthAndRole = async () => {
-      setState(prev => ({ ...prev, isChecking: true, hasCheckedAuth: true }));
-      
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
+        // If no session, just mark as not checking and return early
         if (!session?.user) {
-          setState(prev => ({ ...prev, isChecking: false }));
+          setState(prev => ({ 
+            ...prev, 
+            isChecking: false,
+            hasCheckedAuth: true
+          }));
           return;
         }
         
@@ -71,7 +75,11 @@ export function useAuthCheck() {
 
           if (roleError) {
             console.error("Error fetching role:", roleError.message);
-            setState(prev => ({ ...prev, isChecking: false }));
+            setState(prev => ({ 
+              ...prev, 
+              isChecking: false,
+              hasCheckedAuth: true
+            }));
             return;
           }
 
@@ -83,7 +91,7 @@ export function useAuthCheck() {
             const isAdmin = await isAdministrator(session.user.id);
             
             if (isAdmin) {
-              // Check for accessible garages - this is the key change
+              // Check for accessible garages
               const accessibleGarages = await getAccessibleGarages(session.user.id);
               console.log("Admin accessible garages:", accessibleGarages.length);
               
@@ -118,7 +126,11 @@ export function useAuthCheck() {
             } else {
               // Non-administrator on owner login page
               await handleNonAdminAtOwnerLogin(session.user.id);
-              setState(prev => ({ ...prev, isChecking: false }));
+              setState(prev => ({ 
+                ...prev, 
+                isChecking: false,
+                hasCheckedAuth: true
+              }));
               return;
             }
           } else {
@@ -141,7 +153,11 @@ export function useAuthCheck() {
                 }
               }
               
-              setState(prev => ({ ...prev, isChecking: false }));
+              setState(prev => ({ 
+                ...prev, 
+                isChecking: false,
+                hasCheckedAuth: true
+              }));
               return;
             } else if (roleData?.role) {
               // Staff member login flow
@@ -155,21 +171,46 @@ export function useAuthCheck() {
           }
           
           // If no role is set yet, stay on the auth page
-          setState(prev => ({ ...prev, isChecking: false }));
+          setState(prev => ({ 
+            ...prev, 
+            isChecking: false,
+            hasCheckedAuth: true
+          }));
         } catch (error: any) {
           console.error("Error verifying role:", error.message);
           toast.error("Error verifying role: " + error.message);
           // Sign out to allow a clean authentication
           await supabase.auth.signOut();
-          setState(prev => ({ ...prev, isChecking: false }));
+          setState(prev => ({ 
+            ...prev, 
+            isChecking: false,
+            hasCheckedAuth: true
+          }));
         }
       } catch (error) {
         console.error("Error checking session:", error);
-        setState(prev => ({ ...prev, isChecking: false }));
+        setState(prev => ({ 
+          ...prev, 
+          isChecking: false,
+          hasCheckedAuth: true
+        }));
       }
     };
 
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (state.isChecking) {
+        setState(prev => ({ 
+          ...prev, 
+          isChecking: false,
+          hasCheckedAuth: true
+        }));
+      }
+    }, 5000); // 5 second timeout
+    
     checkAuthAndRole();
+    
+    return () => clearTimeout(timeoutId);
   }, [navigate, state.userType, state.hasCheckedAuth]);
 
   return state;

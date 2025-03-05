@@ -4,7 +4,7 @@ import { AuthLoading } from "@/components/auth/AuthLoading";
 import { useAuthCheck } from "@/hooks/auth/useAuthCheck";
 import { runGarageDiagnostics } from "@/utils/auth/garageDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -12,6 +12,24 @@ const Auth = () => {
   const { isChecking, authError, userType } = useAuthCheck();
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  // Set a timeout to show a message if loading takes too long
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isChecking) {
+      timeoutId = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 5000); // 5 seconds
+    } else {
+      setLoadingTimeout(false);
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isChecking]);
 
   const runDiagnostics = async () => {
     try {
@@ -38,7 +56,22 @@ const Auth = () => {
   };
 
   if (isChecking) {
-    return <AuthLoading />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <AuthLoading />
+        {loadingTimeout && (
+          <div className="mt-6 text-center text-sm text-gray-500">
+            <p>Still checking authentication...</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-primary hover:underline mt-2"
+            >
+              Click here to refresh
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
