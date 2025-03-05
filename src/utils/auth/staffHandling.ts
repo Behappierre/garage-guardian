@@ -11,10 +11,10 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
   try {
     console.log(`Attempting to assign default garage for user ${userId}`);
     
-    // Find the 'tractic' garage or any available garage
+    // Find the 'tractic' garage or any available garage - explicitly select columns
     const { data: garageData, error: garageError } = await supabase
       .from('garages')
-      .select('id, name, slug')
+      .select('id:id, name:name, slug:slug') // Explicitly alias columns to avoid ambiguity
       .order('created_at', { ascending: false })
       .limit(5);
     
@@ -48,7 +48,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       return false;
     }
     
-    // 2. Update profile
+    // 2. Update profile - explicitly reference profile's garage_id
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: targetGarage.id })
@@ -59,7 +59,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       return false;
     }
     
-    // 3. Update user_roles with garage_id
+    // 3. Update user_roles with garage_id - explicitly reference user_roles
     const { error: roleError } = await supabase
       .from('user_roles')
       .update({ garage_id: targetGarage.id })
@@ -89,7 +89,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
     // STEP 1: First check user's profile for garage_id
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('id, garage_id')
+      .select('id:id, garage_id:garage_id') // Explicitly alias columns to avoid ambiguity
       .eq('id', userId)
       .single();
     
@@ -98,7 +98,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       // Verify this garage still exists
       const { data: garageData } = await supabase
         .from('garages')
-        .select('id, name')
+        .select('id:id, name:name') // Explicitly alias columns
         .eq('id', profileData.garage_id)
         .single();
       
@@ -111,7 +111,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
     // STEP 2: Check if user already has a valid garage assignment in user_roles
     const { data: userRoleData } = await supabase
       .from('user_roles')
-      .select('role, garage_id')
+      .select('role:role, garage_id:garage_id') // Explicitly alias columns
       .eq('user_id', userId)
       .maybeSingle();
     
@@ -121,7 +121,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
     if (userRoleData?.garage_id) {
       const { data: garageExists } = await supabase
         .from('garages')
-        .select('id, name')
+        .select('id:id, name:name') // Explicitly alias columns
         .eq('id', userRoleData.garage_id)
         .maybeSingle();
         
@@ -136,7 +136,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
     // STEP 3: Check garage_members for this user
     const { data: memberData } = await supabase
       .from('garage_members')
-      .select('garage_id, role')
+      .select('garage_id:garage_id, role:role') // Explicitly alias columns
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1);
