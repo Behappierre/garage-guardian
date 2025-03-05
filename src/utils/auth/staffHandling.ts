@@ -46,42 +46,103 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
 
 /**
  * Handles staff-specific sign-in logic with simplified approach
- * Avoids inserting staff users into garage_members
  */
 export async function handleStaffSignIn(userId: string, userRole: string) {
   console.log("Handling staff sign in for user:", userId, "with role:", userRole);
   
   try {
-    // STEP 1: Check if user has garage_id in user_roles
-    const { data: userRoleData, error: roleError } = await supabase
+    // Check if user has garage_id in profiles or user_roles
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('garage_id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileData?.garage_id) {
+      console.log("User already has garage_id in profile:", profileData.garage_id);
+      
+      // Ensure user_roles also has this garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: profileData.garage_id })
+        .eq('user_id', userId);
+        
+      return; // Success - user already has garage association
+    }
+    
+    // Check user_roles if not found in profile
+    const { data: userRoleData } = await supabase
       .from('user_roles')
       .select('garage_id')
       .eq('user_id', userId)
       .maybeSingle();
     
-    if (roleError) {
-      console.error("Error checking user roles:", roleError);
-    }
-      
     if (userRoleData?.garage_id) {
-      console.log("User already has garage_id in user_roles:", userRoleData.garage_id);
+      console.log("User has garage_id in user_roles:", userRoleData.garage_id);
+      
+      // Update profile with this garage_id for consistency
+      await supabase
+        .from('profiles')
+        .update({ garage_id: userRoleData.garage_id })
+        .eq('id', userId);
+        
       return; // Success - user already has garage association
     }
     
-    // STEP 2: If no garage_id found, assign one
-    console.log("No existing garage_id found for user, assigning one");
-    const assigned = await assignDefaultGarage(userId, userRole);
+    // If no garage_id found in either place, find a garage to assign
+    console.log("No existing garage_id found for user, finding a suitable garage");
     
-    if (!assigned) {
-      toast({
-        variant: "destructive",
-        title: "Login Error",
-        description: "Could not set up your account. Please contact support."
-      });
-      throw new Error("Could not assign garage to staff user");
+    // First try to find the tractic garage
+    const { data: tracticGarage } = await supabase
+      .from('garages')
+      .select('id')
+      .eq('slug', 'tractic')
+      .maybeSingle();
+      
+    if (tracticGarage?.id) {
+      console.log("Found tractic garage:", tracticGarage.id);
+      
+      // Update user_roles with garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: tracticGarage.id })
+        .eq('user_id', userId);
+        
+      // Update profile with garage_id
+      await supabase
+        .from('profiles')
+        .update({ garage_id: tracticGarage.id })
+        .eq('id', userId);
+        
+      return; // Success
     }
     
-    console.log("Assigned garage to staff user - proceeding with login");
+    // If tractic not found, try to find any garage
+    const { data: anyGarage } = await supabase
+      .from('garages')
+      .select('id')
+      .limit(1);
+      
+    if (anyGarage && anyGarage.length > 0) {
+      console.log("Found a garage to assign:", anyGarage[0].id);
+      
+      // Update user_roles with garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: anyGarage[0].id })
+        .eq('user_id', userId);
+        
+      // Update profile with garage_id
+      await supabase
+        .from('profiles')
+        .update({ garage_id: anyGarage[0].id })
+        .eq('id', userId);
+        
+      return; // Success
+    }
+    
+    // No garages found at all
+    throw new Error("No garages found in the system. Please create a garage first.");
   } catch (error) {
     console.error("Error in handleStaffSignIn:", error);
     throw error;
