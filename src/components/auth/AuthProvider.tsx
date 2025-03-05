@@ -33,6 +33,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
+      // First check if user has a garage in their profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .single();
+        
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error("Error fetching profile:", profileError);
+      }
+      
+      if (profileData?.garage_id) {
+        console.log("Found profile garage_id:", profileData.garage_id);
+        setGarageId(profileData.garage_id);
+        setLoading(false);
+        setHasFetchedGarage(true);
+        setFetchingGarage(false);
+        return;
+      }
+      
+      // Check user role
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -60,8 +81,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!ownedError && ownedGarages && ownedGarages.length > 0) {
           const ownedGarageId = ownedGarages[0].id;
           console.log("Found owned garage for admin:", ownedGarageId);
-          setGarageId(ownedGarageId);
           
+          // Update profile with garage_id
+          await supabase
+            .from('profiles')
+            .update({ garage_id: ownedGarageId })
+            .eq('id', userId);
+          
+          // Ensure user is a member of their owned garage
           await supabase
             .from('garage_members')
             .upsert([{
@@ -70,6 +97,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               role: 'owner'
             }]);
           
+          setGarageId(ownedGarageId);
           setLoading(false);
           setHasFetchedGarage(true);
           setFetchingGarage(false);
@@ -77,6 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
       
+      // Check if user is a member of any garage
       const { data: memberships, error: membershipError } = await supabase
         .from('garage_members')
         .select('garage_id, role')
@@ -89,6 +118,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!membershipError && memberships && memberships.length > 0) {
         const memberGarageId = memberships[0].garage_id;
         console.log("Found membership garage:", memberGarageId);
+        
+        // Update profile with garage_id
+        await supabase
+          .from('profiles')
+          .update({ garage_id: memberGarageId })
+          .eq('id', userId);
+        
         setGarageId(memberGarageId);
         setLoading(false);
         setHasFetchedGarage(true);
@@ -96,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // Clean solution: No default garage lookup
+      // No garage found
       console.log("No garage found for this user");
       toast.info("You don't have a garage associated with your account. Please create or join one.");
     } catch (error) {

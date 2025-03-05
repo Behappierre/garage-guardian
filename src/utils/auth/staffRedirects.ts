@@ -15,6 +15,12 @@ export async function handleAdminOnStaffLogin(userId: string) {
     .limit(1);
     
   if (memberData && memberData.length > 0) {
+    // Update profile with garage_id to ensure it's properly set
+    await supabase
+      .from('profiles')
+      .update({ garage_id: memberData[0].garage_id })
+      .eq('id', userId);
+      
     return { shouldRedirect: true, path: "/dashboard" };
   } 
   
@@ -35,6 +41,12 @@ export async function handleAdminOnStaffLogin(userId: string) {
         role: 'owner'
       }]);
       
+    // Update profile with garage_id
+    await supabase
+      .from('profiles')
+      .update({ garage_id: ownedGarages[0].id })
+      .eq('id', userId);
+      
     return { shouldRedirect: true, path: "/dashboard" };
   } 
   
@@ -47,22 +59,55 @@ export async function handleAdminOnStaffLogin(userId: string) {
  * Handles staff users (non-admin) login redirects
  */
 export async function handleStaffLogin(userId: string, userRole: string) {
-  // Staff member - ensure they have a garage
-  const hasGarage = await ensureUserHasGarage(userId, userRole);
-  
-  if (!hasGarage) {
-    toast.info("You don't have a garage associated with your account. Please contact an administrator.");
-    await supabase.auth.signOut();
-    return { shouldRedirect: false, path: null };
+  // First check if user has a garage in their profile
+  const { data: profileData } = await supabase
+    .from('profiles')
+    .select('garage_id')
+    .eq('id', userId)
+    .single();
+    
+  if (profileData?.garage_id) {
+    // User already has a garage in profile
+    console.log("User has garage_id in profile:", profileData.garage_id);
+    
+    // Redirect based on role
+    switch (userRole) {
+      case 'technician':
+        return { shouldRedirect: true, path: "/dashboard/job-tickets" };
+      case 'front_desk':
+        return { shouldRedirect: true, path: "/dashboard/appointments" };
+      default:
+        return { shouldRedirect: true, path: "/dashboard" };
+    }
   }
   
-  // Redirect based on role
-  switch (userRole) {
-    case 'technician':
-      return { shouldRedirect: true, path: "/dashboard/job-tickets" };
-    case 'front_desk':
-      return { shouldRedirect: true, path: "/dashboard/appointments" };
-    default:
-      return { shouldRedirect: true, path: "/dashboard" };
+  // Check garage memberships if profile doesn't have garage_id
+  const { data: memberData } = await supabase
+    .from('garage_members')
+    .select('garage_id')
+    .eq('user_id', userId)
+    .limit(1);
+    
+  if (memberData && memberData.length > 0) {
+    // Found a garage membership, update profile
+    await supabase
+      .from('profiles')
+      .update({ garage_id: memberData[0].garage_id })
+      .eq('id', userId);
+      
+    // Redirect based on role
+    switch (userRole) {
+      case 'technician':
+        return { shouldRedirect: true, path: "/dashboard/job-tickets" };
+      case 'front_desk':
+        return { shouldRedirect: true, path: "/dashboard/appointments" };
+      default:
+        return { shouldRedirect: true, path: "/dashboard" };
+    }
   }
+  
+  // No garage found at all
+  toast.info("You don't have a garage associated with your account. Please contact an administrator.");
+  await supabase.auth.signOut();
+  return { shouldRedirect: false, path: null };
 }

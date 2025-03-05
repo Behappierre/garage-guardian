@@ -36,6 +36,7 @@ export const useSignIn = () => {
   };
 
   const handleOwnerSignIn = async (userId: string) => {
+    // Check for owned garages
     const { data: ownedGarages, error: ownedError } = await supabase
       .from('garages')
       .select('id')
@@ -47,6 +48,12 @@ export const useSignIn = () => {
     }
     
     if (ownedGarages && ownedGarages.length > 0) {
+      // Ensure user's profile has the garage_id set
+      await supabase
+        .from('profiles')
+        .update({ garage_id: ownedGarages[0].id })
+        .eq('id', userId);
+        
       // Add user as member of their owned garage
       await supabase
         .from('garage_members')
@@ -59,6 +66,18 @@ export const useSignIn = () => {
   };
 
   const handleStaffSignIn = async (userId: string, userRole: string) => {
+    // First check if user has a garage in their profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('garage_id')
+      .eq('id', userId)
+      .single();
+      
+    if (profileData?.garage_id) {
+      console.log("User has garage_id in profile:", profileData.garage_id);
+      return;
+    }
+    
     // Check if user is a member of any garage
     const { data: memberData } = await supabase
       .from('garage_members')
@@ -66,10 +85,20 @@ export const useSignIn = () => {
       .eq('user_id', userId)
       .limit(1);
         
-    if (!memberData || memberData.length === 0) {
-      // No garage found - we don't automatically assign one anymore
-      throw new Error("You don't have access to any garages. Please contact an administrator.");
+    if (memberData && memberData.length > 0) {
+      console.log("User is a member of garage:", memberData[0].garage_id);
+      
+      // Update profile with garage_id
+      await supabase
+        .from('profiles')
+        .update({ garage_id: memberData[0].garage_id })
+        .eq('id', userId);
+      
+      return;
     }
+    
+    // No garage found
+    throw new Error("You don't have access to any garages. Please contact an administrator.");
   };
 
   return {
