@@ -30,8 +30,12 @@ export const ClientSelector = ({
   const { data: fetchedClients, isLoading } = useQuery({
     queryKey: ["clients-select", garageId],
     queryFn: async () => {
-      if (!garageId) return [];
-
+      if (!garageId) {
+        console.error("No garage ID available for filtering clients");
+        return [];
+      }
+      
+      console.log("Fetching clients for garage ID:", garageId);
       const { data, error } = await supabase
         .from("clients")
         .select("id, first_name, last_name")
@@ -43,6 +47,7 @@ export const ClientSelector = ({
         throw error;
       }
 
+      console.log(`Retrieved ${data?.length || 0} clients for garage ${garageId}`);
       return data || [];
     },
     enabled: !providedClients && !!garageId,

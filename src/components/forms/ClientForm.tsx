@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface ClientFormProps {
   onClose: () => void;
@@ -24,6 +25,8 @@ interface ClientFormProps {
 export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { garageId } = useAuth();
+  
   const [formData, setFormData] = useState({
     first_name: initialData?.first_name || "",
     last_name: initialData?.last_name || "",
@@ -39,11 +42,15 @@ export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
     setIsSubmitting(true);
 
     try {
+      if (!garageId) {
+        throw new Error("No garage ID available. Please select a garage first.");
+      }
+
       if (initialData?.id) {
         // Update existing client
         const { error } = await supabase
           .from("clients")
-          .update(formData)
+          .update({ ...formData, garage_id: garageId })
           .eq("id", initialData.id);
 
         if (error) throw error;
@@ -54,9 +61,10 @@ export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
         });
       } else {
         // Create new client
-        const { error } = await supabase
+        console.log("Creating new client with garage_id:", garageId);
+        const { error, data } = await supabase
           .from("clients")
-          .insert([formData]);
+          .insert([{ ...formData, garage_id: garageId }]);
 
         if (error) throw error;
 
@@ -64,12 +72,15 @@ export const ClientForm = ({ onClose, initialData }: ClientFormProps) => {
           title: "Success",
           description: "Client added successfully",
         });
+        
+        console.log("New client created:", data);
       }
 
       // Refresh clients data
       await queryClient.invalidateQueries({ queryKey: ["clients"] });
       onClose();
     } catch (error: any) {
+      console.error("Error saving client:", error.message);
       toast({
         variant: "destructive",
         title: "Error",
