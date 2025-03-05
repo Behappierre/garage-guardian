@@ -4,9 +4,11 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { JobTicketFormData } from "@/types/job-ticket";
 import { sendEmailNotification } from "@/services/notification-service";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const useTicketMutations = (onClose: () => void) => {
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
 
   const submitTicket = async (
     formData: JobTicketFormData,
@@ -14,6 +16,11 @@ export const useTicketMutations = (onClose: () => void) => {
     selectedAppointmentId: string | null
   ) => {
     try {
+      if (!garageId) {
+        toast.error("No garage ID available. Please select a garage first.");
+        throw new Error("No garage ID available");
+      }
+      
       let ticketId;
       
       if (initialTicketId) {
@@ -25,7 +32,8 @@ export const useTicketMutations = (onClose: () => void) => {
             priority: formData.priority,
             assigned_technician_id: formData.assigned_technician_id,
             client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id
+            vehicle_id: formData.vehicle_id,
+            garage_id: garageId
           })
           .eq("id", initialTicketId);
 
@@ -41,6 +49,7 @@ export const useTicketMutations = (onClose: () => void) => {
             assigned_technician_id: formData.assigned_technician_id,
             client_id: formData.client_id,
             vehicle_id: formData.vehicle_id,
+            garage_id: garageId,
             ticket_number: 'TEMP'
           })
           .select()
