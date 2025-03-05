@@ -27,11 +27,18 @@ export const DashboardMetrics = () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       // Get active repairs (open job tickets) for this garage
-      const { count: activeRepairs } = await supabase
+      const { data: activeTickets, count: activeRepairs, error: activeRepairsError } = await supabase
         .from('job_tickets')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('garage_id', garageId)
         .not('status', 'in', ['completed', 'cancelled']);
+      
+      // Log data for debugging
+      console.log('Active repairs query result:', { activeTickets, activeRepairs, error: activeRepairsError });
+      
+      if (activeRepairsError) {
+        console.error('Error fetching active repairs:', activeRepairsError);
+      }
 
       // Get today's appointments for this garage
       const { count: todayAppointments } = await supabase
