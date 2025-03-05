@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
@@ -33,6 +32,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
+      
+      // Check if current URL contains source=staff for admins
+      const isAdminFromStaff = window.location.search.includes('source=staff');
+      
+      // Get user role first
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      const isAdmin = roleData?.role === 'administrator';
+      
+      // Skip garage fetching for admins coming from staff login
+      // This forces them to explicitly select a garage
+      if (isAdmin && isAdminFromStaff && window.location.pathname.includes('/garage-management')) {
+        console.log("Admin from staff login, skipping automatic garage fetch");
+        setGarageId(null);
+        setFetchingGarage(false);
+        setLoading(false);
+        return;
+      }
       
       // First try to get garage from profile
       let foundGarageId = null;

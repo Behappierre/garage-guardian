@@ -23,36 +23,8 @@ export async function handleAdminOnStaffLogin(userId: string) {
     return { shouldRedirect: false, path: null };
   }
   
-  // Now check if admin is an owner in any garages via garage_members
-  const { data: ownerMemberships, error: membershipError } = await supabase
-    .from('garage_members')
-    .select('garage_id')
-    .eq('user_id', userId)
-    .eq('role', 'owner');
-    
-  if (membershipError) {
-    console.error("Error checking garage memberships:", membershipError);
-  }
-  
-  // Also check directly owned garages
-  const { data: ownedGarages } = await supabase
-    .from('garages')
-    .select('id')
-    .eq('owner_id', userId);
-  
-  // Combine owned garages with garages where user is an owner member
-  const totalGarages = [
-    ...(ownedGarages || []).map(g => g.id),
-    ...(ownerMemberships || []).map(g => g.garage_id)
-  ];
-  
-  // Remove duplicates
-  const uniqueGarageIds = [...new Set(totalGarages)];
-  
-  console.log("Admin has access to garages as owner:", uniqueGarageIds);
-  
-  // ALWAYS send admins to garage selection if they're coming from staff login
-  // This ensures they can choose which garage to manage
+  // CRITICAL FIX: Always send administrators to garage selection
+  // when they come through the staff login flow
   console.log("Admin on staff login, sending to garage selection");
   return { shouldRedirect: true, path: "/garage-management?source=staff" };
 }

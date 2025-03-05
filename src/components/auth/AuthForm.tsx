@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthFormContainer } from "./AuthFormContainer";
@@ -32,6 +33,8 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
           
           if (userType === 'staff' && isAdmin) {
             console.log("Admin user accessing staff login, redirecting to garage selection");
+            // Force admins to always select a garage when coming from staff login
+            await supabase.from('profiles').update({ garage_id: null }).eq('id', userId);
             navigate("/garage-management?source=staff");
             return;
           }
@@ -42,7 +45,16 @@ export const AuthForm = ({ userType }: AuthFormProps) => {
             return;
           }
           
-          navigate(isAdmin ? "/garage-management" : "/dashboard");
+          // For admin on owner login, or staff on staff login
+          if (isAdmin) {
+            navigate("/garage-management");
+          } else {
+            // Clear any existing garage selection to force a new selection
+            if (roleData?.role === 'administrator') {
+              await supabase.from('profiles').update({ garage_id: null }).eq('id', userId);
+            }
+            navigate("/dashboard");
+          }
         }
       } catch (error) {
         console.error("Error checking session:", error);
