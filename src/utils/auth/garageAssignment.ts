@@ -113,10 +113,14 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       console.log("Verified member's garage exists:", garageExists.id);
       
       // Update profile with garage_id
-      await supabase
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userId);
+      try {
+        await supabase
+          .from('profiles')
+          .update({ garage_id: garageId })
+          .eq('id', userId);
+      } catch (error) {
+        console.error("Error updating profile with garage_id:", error);
+      }
       
       return true;
     }
@@ -149,10 +153,14 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       }
       
       // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userId);
+      try {
+        await supabase
+          .from('profiles')
+          .update({ garage_id: garageId })
+          .eq('id', userId);
+      } catch (error) {
+        console.error("Error updating profile for admin:", error);
+      }
       
       return true;
     }
@@ -368,4 +376,3 @@ export async function assignUserToGarage(userId: string, garageId: string, userR
     return false;
   }
 }
-

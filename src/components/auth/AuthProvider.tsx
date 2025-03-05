@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [hasFetchedGarage, setHasFetchedGarage] = useState(false);
 
   const fetchUserGarage = useCallback(async (userId: string) => {
-    if (fetchingGarage || hasFetchedGarage) return;
+    if (fetchingGarage || hasFetchedGarage || !userId) return;
     
     try {
       setFetchingGarage(true);
@@ -156,7 +156,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setSession(session);
           setUser(session?.user ?? null);
           
-          if (session?.user) {
+          if (session?.user && !hasFetchedGarage) {
             await fetchUserGarage(session.user.id);
           } else {
             setLoading(false);
@@ -180,9 +180,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          setHasFetchedGarage(false);
-          setGarageId(null);
-          fetchUserGarage(session.user.id);
+          if (!hasFetchedGarage) {
+            fetchUserGarage(session.user.id);
+          }
         } else {
           setGarageId(null);
           setLoading(false);
@@ -194,7 +194,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserGarage]);
+  }, [fetchUserGarage, hasFetchedGarage]);
 
   return (
     <AuthContext.Provider value={{ session, user, loading, garageId }}>

@@ -9,10 +9,16 @@ const GarageManagement = () => {
   const navigate = useNavigate();
   const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [hasVerified, setHasVerified] = useState(false);
 
   useEffect(() => {
+    // Prevent multiple checks
+    if (hasVerified) return;
+    
     const checkAdminStatus = async () => {
       try {
+        setIsVerifyingAdmin(true);
+        
         // Get current user
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
@@ -54,11 +60,12 @@ const GarageManagement = () => {
         navigate("/auth?type=owner");
       } finally {
         setIsVerifyingAdmin(false);
+        setHasVerified(true);
       }
     };
 
     checkAdminStatus();
-  }, [navigate]);
+  }, [navigate, hasVerified]);
 
   // Show loading state while checking admin status
   if (isVerifyingAdmin) {

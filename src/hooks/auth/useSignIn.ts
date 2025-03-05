@@ -190,9 +190,11 @@ export const useSignIn = () => {
         // Fixed: Check if garageCount is an array and get the count value safely
         let totalGarages = 0;
         if (Array.isArray(garageCount) && garageCount.length > 0) {
-          // Extract count value safely using type assertion 
-          const countRecord = garageCount[0] as Record<string, any>;
-          totalGarages = parseInt(countRecord.count as string);
+          // Extract count using string key or number index depending on the structure
+          const firstItem = garageCount[0];
+          if (typeof firstItem === 'object' && firstItem !== null) {
+            totalGarages = parseInt(String(firstItem.count || 0));
+          }
         }
         
         if (totalGarages === 0) {
@@ -260,4 +262,3 @@ export const useSignIn = () => {
     handleStaffSignIn
   };
 };
-

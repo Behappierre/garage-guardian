@@ -15,11 +15,16 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
   const [garages, setGarages] = useState<Garage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
 
   const fetchOwnerGarages = useCallback(async () => {
+    // Prevent multiple fetches while already loading
+    if (isLoading && hasAttemptedFetch) return;
+    
     try {
       setIsLoading(true);
       setError(null);
+      setHasAttemptedFetch(true);
 
       // Get current authenticated user
       const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -52,28 +57,6 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         query_text: `SELECT garage_id FROM profiles WHERE id = '${userData.user.id}'::uuid`
       });
       console.log("DIRECT PROFILE GARAGE:", profileCheck);
-
-      // DEBUGGING: Table structure verification
-      const { data: memberTableCheck } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT column_name, data_type 
-          FROM information_schema.columns 
-          WHERE table_name = 'garage_members'
-        `
-      });
-      console.log("GARAGE_MEMBERS TABLE STRUCTURE:", memberTableCheck);
-
-      // DEBUGGING: Check if referenced garages actually exist
-      const { data: garageExistence } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT id FROM garages WHERE id IN (
-            SELECT garage_id FROM profiles WHERE id = '${userData.user.id}'::uuid
-            UNION
-            SELECT garage_id FROM garage_members WHERE user_id = '${userData.user.id}'::uuid
-          )
-        `
-      });
-      console.log("GARAGE EXISTENCE CHECK:", garageExistence);
 
       // Use a single SQL query with explicit UUID casting
       const { data: directResults } = await supabase.rpc('execute_read_only_query', {
@@ -110,42 +93,22 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
           setGarages(defaultGarage as unknown as Garage[]);
           
           // Add user to this garage if not already a member
-          await supabase.from('garage_members')
-            .upsert([{ 
-              user_id: userData.user.id, 
-              garage_id: (defaultGarage[0] as unknown as Garage).id,
-              role: 'member'
-            }]);
-            
-          // Update profile
-          await supabase.from('profiles')
-            .update({ garage_id: (defaultGarage[0] as unknown as Garage).id })
-            .eq('id', userData.user.id);
-            
-          // DEBUGGING: Verify the records were actually created
-          const { data: verifyMemberInsert } = await supabase.rpc('execute_read_only_query', {
-            query_text: `
-              SELECT * FROM garage_members 
-              WHERE user_id = '${userData.user.id}'::uuid 
-              AND garage_id = '${(defaultGarage[0] as unknown as Garage).id}'::uuid
-            `
-          });
-          console.log("VERIFY MEMBER INSERT:", verifyMemberInsert);
-          
-          const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
-            query_text: `
-              SELECT garage_id FROM profiles 
-              WHERE id = '${userData.user.id}'::uuid
-            `
-          });
-          console.log("VERIFY PROFILE UPDATE:", verifyProfileUpdate);
+          try {
+            await supabase.from('garage_members')
+              .upsert([{ 
+                user_id: userData.user.id, 
+                garage_id: (defaultGarage[0] as unknown as Garage).id,
+                role: 'member'
+              }]);
+              
+            // Update profile
+            await supabase.from('profiles')
+              .update({ garage_id: (defaultGarage[0] as unknown as Garage).id })
+              .eq('id', userData.user.id);
+          } catch (err) {
+            console.error("Error associating user with default garage:", err);
+          }
         } else {
-          // DEBUGGING: Last resort - check if ANY garage exists at all
-          const { data: anyGarageCheck } = await supabase.rpc('execute_read_only_query', {
-            query_text: `SELECT COUNT(*) FROM garages`
-          });
-          console.log("ANY GARAGE EXISTS CHECK:", anyGarageCheck);
-          
           setGarages([]);
         }
       }
@@ -156,17 +119,25 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isLoading, hasAttemptedFetch]);
 
-  // Fetch garages on component mount
+  // Fetch garages only once on component mount
   useEffect(() => {
-    fetchOwnerGarages();
+    if (!hasAttemptedFetch) {
+      fetchOwnerGarages();
+    }
+  }, [fetchOwnerGarages, hasAttemptedFetch]);
+
+  // Create a clean version of refreshGarages that resets the fetch state
+  const refreshGarages = useCallback(async () => {
+    setHasAttemptedFetch(false);
+    await fetchOwnerGarages();
   }, [fetchOwnerGarages]);
 
   return {
     garages,
     isLoading,
     error,
-    refreshGarages: fetchOwnerGarages
+    refreshGarages
   };
 };
