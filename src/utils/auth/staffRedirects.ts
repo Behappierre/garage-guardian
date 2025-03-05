@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -52,47 +51,10 @@ export async function handleAdminOnStaffLogin(userId: string) {
   
   console.log("Admin has access to garages as owner:", uniqueGarageIds);
   
-  // If admin has multiple garages where they're an owner, send them to garage selection
-  if (uniqueGarageIds.length > 1) {
-    console.log("Admin has multiple garages as owner, redirecting to garage selection");
-    // Add source=staff param to indicate we're coming from staff login
-    return { shouldRedirect: true, path: "/garage-management?source=staff" };
-  }
-  
-  // If admin has exactly one garage where they're an owner
-  if (uniqueGarageIds.length === 1) {
-    console.log("Admin has single garage as owner:", uniqueGarageIds[0]);
-    
-    // Update user_roles with garage_id
-    await supabase
-      .from('user_roles')
-      .update({ garage_id: uniqueGarageIds[0] })
-      .eq('user_id', userId);
-      
-    return { shouldRedirect: true, path: "/dashboard" };
-  }
-  
-  // If no garages found where they're an owner, try to find any garage they're a member of
-  const { data: memberGarages } = await supabase
-    .from('garage_members')
-    .select('garage_id')
-    .eq('user_id', userId);
-    
-  if (memberGarages && memberGarages.length > 0) {
-    console.log("Admin is a member of garages:", memberGarages.length);
-    
-    // Update user_roles with first garage_id
-    await supabase
-      .from('user_roles')
-      .update({ garage_id: memberGarages[0].garage_id })
-      .eq('user_id', userId);
-      
-    return { shouldRedirect: true, path: "/dashboard" };
-  }
-  
-  // No garage found at all, redirect to garage creation
-  console.log("Admin has no garages, redirecting to garage management");
-  return { shouldRedirect: true, path: "/garage-management" };
+  // ALWAYS send admins to garage selection if they're coming from staff login
+  // This ensures they can choose which garage to manage
+  console.log("Admin on staff login, sending to garage selection");
+  return { shouldRedirect: true, path: "/garage-management?source=staff" };
 }
 
 /**

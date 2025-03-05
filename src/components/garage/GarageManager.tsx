@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { LogOut, AlertCircle } from "lucide-react";
@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const GarageManager = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { garages, isLoading, error, refreshGarages } = useOwnerGarages();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isMultiGarageAdmin, setIsMultiGarageAdmin] = useState(false);
@@ -19,15 +20,22 @@ export const GarageManager = () => {
   
   // Check if user came from staff login or owner login
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const source = params.get('source');
+    
     if (source === 'staff') {
+      console.log("User came from staff login, setting multi-garage mode");
       setLoginSource('staff');
       setIsMultiGarageAdmin(true);
     } else {
       setLoginSource('owner');
     }
-  }, []);
+    
+    if (garages.length === 1 && source !== 'staff') {
+      // Auto-select the only garage if not coming from staff login
+      handleSelectGarage(garages[0].id);
+    }
+  }, [garages, location]);
   
   const handleSignOut = async () => {
     try {
@@ -54,6 +62,21 @@ export const GarageManager = () => {
         return;
       }
       
+      console.log(`User ${userData.user.id} selecting garage ${garageId}`);
+      
+      // Update user_roles with garage_id
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ garage_id: garageId })
+        .eq('user_id', userData.user.id);
+        
+      if (roleError) {
+        console.error("Error updating user role:", roleError);
+        toast.error("Failed to update your garage association");
+        return;
+      }
+      
+      // Ensure user is in garage_members table as owner
       const { error: membershipError } = await supabase
         .from('garage_members')
         .upsert({
@@ -66,19 +89,9 @@ export const GarageManager = () => {
         
       if (membershipError) {
         console.error("Error creating garage membership:", membershipError);
-        toast.error("Failed to associate with garage");
-        return;
       }
       
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .update({ garage_id: garageId })
-        .eq('user_id', userData.user.id);
-        
-      if (roleError) {
-        console.error("Error updating user role:", roleError);
-      }
-      
+      // Update profile with garage_id
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: garageId })
@@ -134,7 +147,8 @@ export const GarageManager = () => {
       )}
       
       {isMultiGarageAdmin && (
-        <Alert className="mb-6">
+        <Alert className="mb-6" variant="info">
+          <AlertCircle className="h-4 w-4" />
           <AlertTitle>Multiple Garages Detected</AlertTitle>
           <AlertDescription>
             You have access to multiple garages. Please select which garage you want to manage.
