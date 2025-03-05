@@ -1,86 +1,50 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/auth/useAuth";
 
-export const useAppointmentQueries = (clientId: string, appointmentId?: string) => {
-  // Get clients
+export const useAppointmentQueries = (clientId: string | null) => {
+  const { garageId } = useAuth();
+
   const { data: clients } = useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", garageId],
     queryFn: async () => {
+      if (!garageId) {
+        console.error("No garage ID available for filtering clients");
+        return [];
+      }
+      
       const { data, error } = await supabase
         .from("clients")
         .select("id, first_name, last_name")
+        .eq("garage_id", garageId)
         .order("first_name");
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
+    enabled: !!garageId,
   });
 
-  // Get vehicles for selected client
   const { data: vehicles } = useQuery({
-    queryKey: ["vehicles", clientId],
-    enabled: !!clientId,
+    queryKey: ["vehicles", clientId, garageId],
     queryFn: async () => {
+      if (!clientId || !garageId) return [];
+      
       const { data, error } = await supabase
         .from("vehicles")
-        .select("*")
-        .eq("client_id", clientId);
-      
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Get job tickets for selected client
-  const { data: jobTickets } = useQuery({
-    queryKey: ["job_tickets", clientId],
-    enabled: !!clientId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("job_tickets")
-        .select(`
-          id, 
-          ticket_number, 
-          description,
-          vehicle:vehicles(*)
-        `)
+        .select("id, make, model, year, license_plate")
         .eq("client_id", clientId)
-        .not("status", "eq", "completed");
+        .eq("garage_id", garageId);
       
       if (error) throw error;
-      return data;
+      return data || [];
     },
-  });
-
-  // Get appointment tickets with vehicle information
-  const { data: appointmentTickets, isSuccess: appointmentTicketsLoaded } = useQuery({
-    queryKey: ["appointment-tickets", appointmentId],
-    enabled: !!appointmentId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("appointment_job_tickets")
-        .select(`
-          job_ticket_id,
-          job_tickets (
-            id,
-            ticket_number,
-            description,
-            vehicle:vehicles(*)
-          )
-        `)
-        .eq("appointment_id", appointmentId);
-      
-      if (error) throw error;
-      return data;
-    },
+    enabled: !!clientId && !!garageId,
   });
 
   return {
     clients,
-    vehicles,
-    jobTickets,
-    appointmentTickets,
-    appointmentTicketsLoaded
+    vehicles
   };
 };
