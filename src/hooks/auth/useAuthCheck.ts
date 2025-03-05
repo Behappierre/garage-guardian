@@ -13,7 +13,6 @@ import {
   handleAdminOnStaffLogin,
   handleStaffLogin
 } from "@/utils/auth/staffRedirects";
-import { getAccessibleGarages } from "@/utils/auth/garageAccess";
 
 interface AuthCheckState {
   isChecking: boolean;
@@ -47,21 +46,16 @@ export function useAuthCheck() {
 
   // Check if user is already authenticated and handle routing
   useEffect(() => {
-    // Don't check auth again if we've already done it
+    // Only check auth once per render
     if (state.hasCheckedAuth) return;
     
     const checkAuthAndRole = async () => {
+      setState(prev => ({ ...prev, isChecking: true, hasCheckedAuth: true }));
+      
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
-        // If no session, just mark as not checking and return early
         if (!session?.user) {
-          console.log("No active session found, allowing auth page access");
-          setState(prev => ({ 
-            ...prev, 
-            isChecking: false,
-            hasCheckedAuth: true
-          }));
+          setState(prev => ({ ...prev, isChecking: false }));
           return;
         }
         
@@ -77,11 +71,7 @@ export function useAuthCheck() {
 
           if (roleError) {
             console.error("Error fetching role:", roleError.message);
-            setState(prev => ({ 
-              ...prev, 
-              isChecking: false,
-              hasCheckedAuth: true
-            }));
+            setState(prev => ({ ...prev, isChecking: false }));
             return;
           }
 
@@ -93,34 +83,14 @@ export function useAuthCheck() {
             const isAdmin = await isAdministrator(session.user.id);
             
             if (isAdmin) {
-              // Check for accessible garages
-              const accessibleGarages = await getAccessibleGarages(session.user.id);
-              console.log("Admin accessible garages:", accessibleGarages.length);
+              // Check if admin owns garages
+              const hasGarages = await handleAdminWithGarages(session.user.id);
               
-              // If multiple garages, send to garage selection page
-              if (accessibleGarages.length > 1) {
+              if (hasGarages) {
                 navigate("/garage-management");
                 return;
-              } else if (accessibleGarages.length === 1) {
-                // If only one garage, update the user's profile and role with that garage
-                const garageId = accessibleGarages[0].id;
-                
-                // Update user_roles with this garage_id
-                await supabase
-                  .from('user_roles')
-                  .update({ garage_id: garageId })
-                  .eq('user_id', session.user.id);
-                  
-                // Update profile with this garage_id
-                await supabase
-                  .from('profiles')
-                  .update({ garage_id: garageId })
-                  .eq('id', session.user.id);
-                  
-                navigate("/dashboard");
-                return;
               } else {
-                // No garages yet - redirect to garage creation
+                // Handle admin without garages
                 await handleAdminWithoutGarages(session.user.id);
                 navigate("/garage-management");
                 return;
@@ -128,38 +98,24 @@ export function useAuthCheck() {
             } else {
               // Non-administrator on owner login page
               await handleNonAdminAtOwnerLogin(session.user.id);
-              setState(prev => ({ 
-                ...prev, 
-                isChecking: false,
-                hasCheckedAuth: true
-              }));
+              setState(prev => ({ ...prev, isChecking: false }));
               return;
             }
           } else {
             // On staff login page
             if (roleData?.role === 'administrator') {
-              // Use the modified handler for staff login as admin
-              const accessibleGarages = await getAccessibleGarages(session.user.id);
+              const result = await handleAdminOnStaffLogin(session.user.id);
               
-              if (accessibleGarages.length > 1) {
-                // If multiple garages, redirect to garage selection with staff source param
-                navigate("/garage-management?source=staff");
-                return;
-              } else {
-                // Otherwise, use existing staff redirect logic
-                const result = await handleAdminOnStaffLogin(session.user.id);
-                
-                if (result.shouldRedirect && result.path) {
+              if (result.shouldRedirect && result.path) {
+                if (result.path === "/garage-management") {
+                  navigate(`${result.path}?source=staff`);
+                } else {
                   navigate(result.path);
-                  return;
                 }
+                return;
               }
               
-              setState(prev => ({ 
-                ...prev, 
-                isChecking: false,
-                hasCheckedAuth: true
-              }));
+              setState(prev => ({ ...prev, isChecking: false }));
               return;
             } else if (roleData?.role) {
               // Staff member login flow
@@ -173,47 +129,21 @@ export function useAuthCheck() {
           }
           
           // If no role is set yet, stay on the auth page
-          setState(prev => ({ 
-            ...prev, 
-            isChecking: false,
-            hasCheckedAuth: true
-          }));
+          setState(prev => ({ ...prev, isChecking: false }));
         } catch (error: any) {
           console.error("Error verifying role:", error.message);
           toast.error("Error verifying role: " + error.message);
           // Sign out to allow a clean authentication
           await supabase.auth.signOut();
-          setState(prev => ({ 
-            ...prev, 
-            isChecking: false,
-            hasCheckedAuth: true
-          }));
+          setState(prev => ({ ...prev, isChecking: false }));
         }
       } catch (error) {
         console.error("Error checking session:", error);
-        setState(prev => ({ 
-          ...prev, 
-          isChecking: false,
-          hasCheckedAuth: true
-        }));
+        setState(prev => ({ ...prev, isChecking: false }));
       }
     };
 
-    // Set a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (state.isChecking) {
-        console.log("Auth check timeout reached, allowing form to be displayed");
-        setState(prev => ({ 
-          ...prev, 
-          isChecking: false,
-          hasCheckedAuth: true
-        }));
-      }
-    }, 3000); // Reduced timeout to 3 seconds for better UX
-    
     checkAuthAndRole();
-    
-    return () => clearTimeout(timeoutId);
   }, [navigate, state.userType, state.hasCheckedAuth]);
 
   return state;

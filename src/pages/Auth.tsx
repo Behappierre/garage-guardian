@@ -4,33 +4,14 @@ import { AuthLoading } from "@/components/auth/AuthLoading";
 import { useAuthCheck } from "@/hooks/auth/useAuthCheck";
 import { runGarageDiagnostics } from "@/utils/auth/garageDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 const Auth = () => {
-  // Destructure the auth check hook but add the hasCheckedAuth property
-  const { isChecking, hasCheckedAuth, authError, userType } = useAuthCheck();
+  const { isChecking, authError, userType } = useAuthCheck();
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
-  const [loadingTimeout, setLoadingTimeout] = useState(false);
-
-  // Set a timeout to show a message if loading takes too long
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    
-    if (isChecking) {
-      timeoutId = setTimeout(() => {
-        setLoadingTimeout(true);
-      }, 3000); // 3 seconds
-    } else {
-      setLoadingTimeout(false);
-    }
-    
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isChecking]);
 
   const runDiagnostics = async () => {
     try {
@@ -56,8 +37,10 @@ const Auth = () => {
     }
   };
 
-  // Only show loading state during initial page load, not during form interaction
-  // Changed to show the form immediately and only show loading if it's the very first check
+  if (isChecking) {
+    return <AuthLoading />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -71,23 +54,7 @@ const Auth = () => {
             <AlertDescription>{authError}</AlertDescription>
           </Alert>
         )}
-        
-        {/* Always show the auth form, but show loading indicator if we're still checking */}
         <AuthForm userType={userType} />
-        
-        {isChecking && (
-          <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Checking authentication in background...</p>
-            {loadingTimeout && (
-              <button 
-                onClick={() => window.location.reload()}
-                className="text-primary hover:underline mt-2"
-              >
-                Taking too long? Click here to refresh
-              </button>
-            )}
-          </div>
-        )}
         
         {diagnosticResult && (
           <Alert variant={diagnosticResult.includes("failed") || diagnosticResult.includes("Error") ? "destructive" : "default"} className="mt-4">

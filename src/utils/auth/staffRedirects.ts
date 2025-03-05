@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getAccessibleGarages } from "./garageAccess";
 
 /**
  * Handles admin user on staff login page
@@ -25,12 +24,29 @@ export async function handleAdminOnStaffLogin(userId: string) {
     return { shouldRedirect: false, path: null };
   }
   
-  // Use the getAccessibleGarages helper to check for multiple garages
-  const accessibleGarages = await getAccessibleGarages(userId);
-  console.log("Admin has access to garages:", accessibleGarages.length);
+  // Check if admin has access to multiple garages
+  const { data: ownerGarages } = await supabase
+    .from('garages')
+    .select('id')
+    .eq('owner_id', userId);
+    
+  const { data: memberGarages } = await supabase
+    .from('garage_members')
+    .select('garage_id')
+    .eq('user_id', userId);
+    
+  const totalGarages = [
+    ...(ownerGarages || []).map(g => g.id),
+    ...(memberGarages || []).map(g => g.garage_id)
+  ];
+  
+  // Remove duplicates
+  const uniqueGarageIds = [...new Set(totalGarages)];
+  
+  console.log("Admin has access to garages:", uniqueGarageIds.length);
   
   // If admin has multiple garages, send them to garage selection page
-  if (accessibleGarages.length > 1) {
+  if (uniqueGarageIds.length > 1) {
     console.log("Admin has multiple garages, redirecting to garage selection");
     return { shouldRedirect: true, path: "/garage-management" };
   }
@@ -57,26 +73,6 @@ export async function handleAdminOnStaffLogin(userId: string) {
         
       return { shouldRedirect: true, path: "/dashboard" };
     }
-  }
-  
-  // If admin has a single garage in accessibleGarages, use that
-  if (accessibleGarages.length === 1) {
-    const garageId = accessibleGarages[0].id;
-    console.log("Using single accessible garage:", garageId);
-    
-    // Update user_roles with garage_id
-    await supabase
-      .from('user_roles')
-      .update({ garage_id: garageId })
-      .eq('user_id', userId);
-      
-    // Update profile with garage_id
-    await supabase
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userId);
-      
-    return { shouldRedirect: true, path: "/dashboard" };
   }
   
   // Try to find owned garages

@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { handleOwnerSignIn } from "@/utils/auth/ownerHandling";
 import { handleStaffSignIn } from "@/utils/auth/staffHandling";
+// Remove the incorrect import and use appropriate functions
 import { isAdministrator } from "@/utils/auth/roleVerification";
 
 export const useSignIn = () => {

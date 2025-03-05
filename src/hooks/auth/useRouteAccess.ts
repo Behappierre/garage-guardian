@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -70,7 +71,6 @@ export function useRouteAccess() {
           return;
         }
 
-        console.log("User role verified:", role);
         setState(prev => ({ ...prev, userRole: role }));
         
         // For garage management, only allow administrators
@@ -102,27 +102,16 @@ export function useRouteAccess() {
             return;
           }
           
-          // If user has a role and the garageId is already set, give access directly
-          if (role && garageId) {
-            setState({
-              isVerifyingRole: false,
-              hasAccess: true,
-              userRole: role,
-              hasAttemptedVerification: true,
-              redirectTo: null
-            });
-            return;
-          }
-          
-          // Otherwise check if user has a garage_id
+          // Check if user has a garage_id
           const hasGarage = await ensureUserHasGarage(user.id, role || 'front_desk');
           
+          // If we reach this point, the user has proper access
           setState({
             isVerifyingRole: false,
             hasAccess: hasGarage,
             userRole: role,
             hasAttemptedVerification: true,
-            redirectTo: hasGarage ? null : "/garage-management"
+            redirectTo: hasGarage ? null : "/auth"
           });
           return;
         }

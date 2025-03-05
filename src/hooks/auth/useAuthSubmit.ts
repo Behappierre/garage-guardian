@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,13 +22,6 @@ export const useAuthSubmit = (userType: UserType) => {
   const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
 
-  // Clear any stale loading state when component unmounts or user changes
-  useEffect(() => {
-    return () => {
-      setLoading(false);
-    };
-  }, [userType]);
-
   const handleAuth = async (
     e: React.FormEvent,
     mode: AuthMode,
@@ -39,13 +32,6 @@ export const useAuthSubmit = (userType: UserType) => {
     role: Role
   ) => {
     e.preventDefault();
-    
-    // Check if we're already loading
-    if (loading) {
-      console.log("Auth submission already in progress, ignoring new request");
-      return;
-    }
-    
     setLoading(true);
 
     try {
@@ -84,9 +70,6 @@ export const useAuthSubmit = (userType: UserType) => {
           }
         }
       } else {
-        // Sign in flow
-        console.log(`Attempting to sign in as ${userType} with email: ${email}`);
-        
         const signInData = await signIn(email, password, userType);
 
         if (signInData.user) {
@@ -99,70 +82,55 @@ export const useAuthSubmit = (userType: UserType) => {
               return;
             }
 
-            if (userType === "staff") {
-              if (userRole === 'administrator') {
-                const { data: profileData } = await supabase
-                  .from('profiles')
-                  .select('garage_id')
-                  .eq('id', signInData.user.id)
-                  .single();
+            if (userType === "staff" && userRole === 'administrator') {
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('garage_id')
+                .eq('id', signInData.user.id)
+                .single();
                 
-                if (profileData?.garage_id) {
-                  console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
+              if (profileData?.garage_id) {
+                console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
+                navigate("/dashboard");
+                return;
+              } else {
+                const { data: ownedGarages } = await supabase
+                  .from('garages')
+                  .select('id')
+                  .eq('owner_id', signInData.user.id)
+                  .limit(1);
+                  
+                if (ownedGarages && ownedGarages.length > 0) {
+                  await supabase
+                    .from('profiles')
+                    .update({ garage_id: ownedGarages[0].id })
+                    .eq('id', signInData.user.id);
+                    
                   navigate("/dashboard");
                   return;
                 } else {
-                  const { data: ownedGarages } = await supabase
-                    .from('garages')
-                    .select('id')
-                    .eq('owner_id', signInData.user.id)
-                    .limit(1);
-                  
-                  if (ownedGarages && ownedGarages.length > 0) {
-                    await supabase
-                      .from('profiles')
-                      .update({ garage_id: ownedGarages[0].id })
-                      .eq('id', signInData.user.id);
-                    
-                    navigate("/dashboard");
-                    return;
-                  } else {
-                    throw new Error("Administrators should use the garage owner login");
-                  }
+                  throw new Error("Administrators should use the garage owner login");
                 }
-              } else if (userRole) {
-                console.log(`Handling regular staff sign-in for role: ${userRole}`);
-                
-                try {
-                  await handleStaffSignIn(signInData.user.id, userRole);
-                  
-                  console.log(`Redirecting ${userRole} to appropriate dashboard`);
-                  
-                  switch (userRole) {
-                    case 'technician':
-                      navigate("/dashboard/job-tickets");
-                      break;
-                    case 'front_desk':
-                      navigate("/dashboard/appointments");
-                      break;
-                    default:
-                      navigate("/dashboard");
-                  }
-                  return;
-                } catch (staffError: any) {
-                  console.error("Error during staff sign-in flow:", staffError.message);
-                  uiToast({
-                    variant: "destructive",
-                    title: "Access Error",
-                    description: staffError.message,
-                  });
-                  await supabase.auth.signOut();
-                  setLoading(false);
-                  return;
-                }
-              } else {
-                throw new Error("Your account does not have an assigned role");
               }
+            }
+            
+            if (userRole) {
+              await handleStaffSignIn(signInData.user.id, userRole);
+              
+              console.log(`Redirecting ${userRole} to appropriate dashboard`);
+              
+              switch (userRole) {
+                case 'technician':
+                  navigate("/dashboard/job-tickets");
+                  break;
+                case 'front_desk':
+                  navigate("/dashboard/appointments");
+                  break;
+                default:
+                  navigate("/dashboard");
+              }
+            } else {
+              throw new Error("Your account does not have an assigned role");
             }
           } catch (error: any) {
             console.error("Error during sign-in flow:", error.message);
@@ -185,7 +153,6 @@ export const useAuthSubmit = (userType: UserType) => {
         description: error.message,
       });
     } finally {
-      // Always reset loading state
       setLoading(false);
     }
   };
