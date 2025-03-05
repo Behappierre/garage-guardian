@@ -2,7 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { handleOwnerSignIn } from "@/utils/auth/ownerHandling";
 import { handleStaffSignIn } from "@/utils/auth/staffHandling";
-import { verifyUserRole } from "@/utils/auth/roleVerification";
+// Remove the incorrect import and use appropriate functions
+import { isAdministrator } from "@/utils/auth/roleVerification";
 
 export const useSignIn = () => {
   const signIn = async (email: string, password: string, userType: "owner" | "staff") => {
