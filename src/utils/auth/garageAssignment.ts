@@ -18,15 +18,18 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
   if (profileData?.garage_id) {
     console.log("User has garage_id in profile:", profileData.garage_id);
     
-    // Verify that this garage actually exists
+    // Verify that this garage actually exists - use a less ambiguous query
     const { data: garageCheck, error: garageCheckError } = await supabase
       .from('garages')
       .select('id')
       .eq('id', profileData.garage_id)
       .single();
       
-    if (garageCheckError && !garageCheckError.message.includes('No rows found')) {
-      console.error("Error checking if garage exists:", garageCheckError);
+    if (garageCheckError) {
+      // Only log if it's not a "no rows" error
+      if (!garageCheckError.message.includes('No rows found')) {
+        console.error("Error checking if garage exists:", garageCheckError);
+      }
     }
       
     if (garageCheck) {

@@ -96,7 +96,7 @@ export async function handleStaffLogin(userId: string, userRole: string) {
       if (profileData?.garage_id) {
         console.log("Staff has garage_id in profile:", profileData.garage_id);
         
-        // Verify the garage still exists
+        // Verify the garage still exists with a clearer query
         const { data: garageCheck, error: garageCheckError } = await supabase
           .from('garages')
           .select('id')

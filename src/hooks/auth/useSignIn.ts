@@ -81,7 +81,7 @@ export const useSignIn = () => {
     console.log("Handling staff sign in for user:", userId, "with role:", userRole);
     
     try {
-      // Ensure the user has a garage assignment
+      // Ensure the user has a garage assignment with improved error handling
       const hasGarage = await ensureUserHasGarage(userId, userRole);
       
       if (!hasGarage) {
@@ -108,13 +108,35 @@ export const useSignIn = () => {
           .limit(1);
           
         if (memberData && memberData.length > 0) {
-          // Update profile with this garage_id
-          await supabase
-            .from('profiles')
-            .update({ garage_id: memberData[0].garage_id })
-            .eq('id', userId);
+          // First verify the garage exists
+          const { data: garageExists } = await supabase
+            .from('garages')
+            .select('id')
+            .eq('id', memberData[0].garage_id)
+            .single();
+            
+          if (garageExists) {
+            // Update profile with this garage_id
+            await supabase
+              .from('profiles')
+              .update({ garage_id: memberData[0].garage_id })
+              .eq('id', userId);
+          } else {
+            throw new Error("Your assigned garage no longer exists. Please contact an administrator.");
+          }
         } else {
           throw new Error("You don't have access to any garages. Please contact an administrator.");
+        }
+      } else {
+        // Verify the garage_id in profile actually exists
+        const { data: garageExists } = await supabase
+          .from('garages')
+          .select('id')
+          .eq('id', profileData.garage_id)
+          .single();
+          
+        if (!garageExists) {
+          throw new Error("Your assigned garage no longer exists. Please contact an administrator.");
         }
       }
     } catch (error) {
