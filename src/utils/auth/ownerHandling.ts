@@ -4,34 +4,49 @@ import { toast } from "@/hooks/use-toast";
 import { repairUserGarageRelationships } from "./garageAccess";
 
 /**
- * Handles owner-specific sign-in logic with simplified approach
+ * Handles owner-specific sign-in logic with focus on garage_members
  */
 export async function handleOwnerSignIn(userId: string) {
   console.log("Handling owner sign in for user:", userId);
   
   try {
-    // First check if user already has a valid garage_id in user_roles
-    const { data: userRoleData, error: roleError } = await supabase
-      .from('user_roles')
+    // First check if user already has a valid garage in garage_members
+    const { data: garageMemberData, error: memberError } = await supabase
+      .from('garage_members')
       .select('garage_id, role')
       .eq('user_id', userId)
+      .eq('role', 'owner')
       .maybeSingle();
     
-    if (roleError) {
-      console.error("Error checking user roles:", roleError);
+    if (memberError) {
+      console.error("Error checking garage_members:", memberError);
     }
     
-    // If user has a garage_id in user_roles, verify it's valid
-    if (userRoleData?.garage_id) {
-      console.log("User already has garage_id in user_roles:", userRoleData.garage_id);
+    // If user has a garage_id in garage_members, use that
+    if (garageMemberData?.garage_id) {
+      console.log("User already has garage_id in garage_members:", garageMemberData.garage_id);
       
-      // Update profile with this garage_id to ensure consistency
-      await supabase
+      // Update both user_roles and profile with this garage_id to ensure consistency
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ garage_id: garageMemberData.garage_id })
+        .eq('user_id', userId);
+        
+      if (roleError) {
+        console.error("Error updating user_roles with garage_id:", roleError);
+      }
+      
+      // Update profile with this garage_id
+      const { error: profileError } = await supabase
         .from('profiles')
-        .update({ garage_id: userRoleData.garage_id })
+        .update({ garage_id: garageMemberData.garage_id })
         .eq('id', userId);
         
-      console.log("Updated profile with existing garage_id - proceeding with login");
+      if (profileError) {
+        console.error("Error updating profile with garage_id:", profileError);
+      }
+        
+      console.log("Updated profile and user_roles with existing garage_id - proceeding with login");
       return;
     }
     
@@ -55,30 +70,41 @@ export async function handleOwnerSignIn(userId: string) {
     if (ownedGarages && ownedGarages.length > 0) {
       console.log("Owner has owned garages:", ownedGarages.length);
       
-      // Update both user_roles and profiles with the garage_id
+      // Get first garage owned by user
       const garageId = ownedGarages[0].id;
       
-      // Update user_roles with garage_id
-      await supabase
-        .from('user_roles')
-        .update({ garage_id: garageId })
-        .eq('user_id', userId);
-      
-      // Update profile with garage_id
-      await supabase
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userId);
-        
-      // Add user as member of their owned garage if not already
-      // This is only relevant for owners who need to be in garage_members
-      await supabase
+      // Add user as owner in garage_members
+      const { error: membershipError } = await supabase
         .from('garage_members')
         .upsert([{ 
           user_id: userId, 
           garage_id: garageId,
           role: 'owner'
         }]);
+      
+      if (membershipError) {
+        console.error("Error adding user to garage_members:", membershipError);
+      }
+      
+      // Update user_roles with garage_id
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ garage_id: garageId })
+        .eq('user_id', userId);
+      
+      if (roleError) {
+        console.error("Error updating user_roles with garage_id:", roleError);
+      }
+      
+      // Update profile with garage_id
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
+      
+      if (profileError) {
+        console.error("Error updating profile with garage_id:", profileError);
+      }
       
       console.log(`Successfully assigned user ${userId} to garage ${garageId}`);
       return;
