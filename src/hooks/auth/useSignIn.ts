@@ -39,48 +39,87 @@ export const useSignIn = () => {
   const handleOwnerSignIn = async (userId: string) => {
     console.log("Handling owner sign in for user:", userId);
     
-    // Check for owned garages
-    const { data: ownedGarages, error: ownedError } = await supabase
-      .from('garages')
-      .select('id')
-      .eq('owner_id', userId)
-      .order('created_at', { ascending: false });
-      
-    if (ownedError) {
-      console.error("Error checking owned garages:", ownedError);
-    }
-    
-    if (ownedGarages && ownedGarages.length > 0) {
-      console.log("Owner has owned garages:", ownedGarages.length);
-      
-      // Ensure user's profile has the garage_id set
-      await supabase
-        .from('profiles')
-        .update({ garage_id: ownedGarages[0].id })
-        .eq('id', userId);
+    try {
+      // Check for owned garages
+      const { data: ownedGarages, error: ownedError } = await supabase
+        .from('garages')
+        .select('id')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false });
         
-      // Add user as member of their owned garage if not already
-      await supabase
-        .from('garage_members')
-        .upsert([{ 
-          user_id: userId, 
-          garage_id: ownedGarages[0].id,
-          role: 'owner'
-        }]);
-    } else {
-      console.log("Owner has no owned garages");
+      if (ownedError) {
+        console.error("Error checking owned garages:", ownedError);
+      }
+      
+      if (ownedGarages && ownedGarages.length > 0) {
+        console.log("Owner has owned garages:", ownedGarages.length);
+        
+        // Ensure user's profile has the garage_id set
+        await supabase
+          .from('profiles')
+          .update({ garage_id: ownedGarages[0].id })
+          .eq('id', userId);
+          
+        // Add user as member of their owned garage if not already
+        await supabase
+          .from('garage_members')
+          .upsert([{ 
+            user_id: userId, 
+            garage_id: ownedGarages[0].id,
+            role: 'owner'
+          }]);
+      } else {
+        console.log("Owner has no owned garages");
+      }
+    } catch (error) {
+      console.error("Error in handleOwnerSignIn:", error);
+      // Continue execution, as this is not critical
     }
   };
 
   const handleStaffSignIn = async (userId: string, userRole: string) => {
     console.log("Handling staff sign in for user:", userId, "with role:", userRole);
     
-    // Ensure the user has a garage assignment
-    const hasGarage = await ensureUserHasGarage(userId, userRole);
-    
-    if (!hasGarage) {
-      console.log("Staff has no garage assignment");
-      throw new Error("You don't have access to any garages. Please contact an administrator.");
+    try {
+      // Ensure the user has a garage assignment
+      const hasGarage = await ensureUserHasGarage(userId, userRole);
+      
+      if (!hasGarage) {
+        console.log("Staff has no garage assignment");
+        throw new Error("You don't have access to any garages. Please contact an administrator.");
+      }
+      
+      // Double-check that profile has garage_id
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .single();
+        
+      if (!profileData?.garage_id) {
+        console.log("Staff has no garage_id in profile after ensureUserHasGarage");
+        
+        // One last attempt - check memberships directly
+        const { data: memberData } = await supabase
+          .from('garage_members')
+          .select('garage_id')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+          
+        if (memberData && memberData.length > 0) {
+          // Update profile with this garage_id
+          await supabase
+            .from('profiles')
+            .update({ garage_id: memberData[0].garage_id })
+            .eq('id', userId);
+        } else {
+          throw new Error("You don't have access to any garages. Please contact an administrator.");
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleStaffSignIn:", error);
+      throw error; // Re-throw to be handled by the calling function
     }
   };
 

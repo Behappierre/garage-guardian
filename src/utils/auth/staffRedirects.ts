@@ -19,13 +19,26 @@ export async function handleAdminOnStaffLogin(userId: string) {
   if (memberData && memberData.length > 0) {
     console.log("Admin has garage memberships:", memberData.length);
     
-    // Update profile with garage_id to ensure it's properly set
-    await supabase
-      .from('profiles')
-      .update({ garage_id: memberData[0].garage_id })
-      .eq('id', userId);
+    // Verify this garage exists
+    const { data: garageCheck, error: garageCheckError } = await supabase
+      .from('garages')
+      .select('id')
+      .eq('id', memberData[0].garage_id)
+      .single();
       
-    return { shouldRedirect: true, path: "/dashboard" };
+    if (garageCheckError && !garageCheckError.message.includes('No rows found')) {
+      console.error("Error checking if admin's member garage exists:", garageCheckError);
+    }
+    
+    if (garageCheck) {
+      // Update profile with garage_id to ensure it's properly set
+      await supabase
+        .from('profiles')
+        .update({ garage_id: memberData[0].garage_id })
+        .eq('id', userId);
+        
+      return { shouldRedirect: true, path: "/dashboard" };
+    }
   } 
   
   // Try to find owned garages
@@ -68,35 +81,60 @@ export async function handleAdminOnStaffLogin(userId: string) {
 export async function handleStaffLogin(userId: string, userRole: string) {
   console.log("Handling staff login for user:", userId, "with role:", userRole);
   
-  // Ensure the user has a garage assignment
-  const hasGarage = await ensureUserHasGarage(userId, userRole);
-  
-  if (hasGarage) {
-    // Get the garage_id from profile since it should be updated by ensureUserHasGarage
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('garage_id')
-      .eq('id', userId)
-      .single();
-      
-    if (profileData?.garage_id) {
-      console.log("Staff has garage_id in profile:", profileData.garage_id);
-      
-      // Redirect based on role
-      switch (userRole) {
-        case 'technician':
-          return { shouldRedirect: true, path: "/dashboard/job-tickets" };
-        case 'front_desk':
-          return { shouldRedirect: true, path: "/dashboard/appointments" };
-        default:
-          return { shouldRedirect: true, path: "/dashboard" };
+  try {
+    // Ensure the user has a garage assignment
+    const hasGarage = await ensureUserHasGarage(userId, userRole);
+    
+    if (hasGarage) {
+      // Get the garage_id from profile since it should be updated by ensureUserHasGarage
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .single();
+        
+      if (profileData?.garage_id) {
+        console.log("Staff has garage_id in profile:", profileData.garage_id);
+        
+        // Verify the garage still exists
+        const { data: garageCheck, error: garageCheckError } = await supabase
+          .from('garages')
+          .select('id')
+          .eq('id', profileData.garage_id)
+          .single();
+          
+        if (garageCheckError && !garageCheckError.message.includes('No rows found')) {
+          console.error("Error checking if staff's garage exists:", garageCheckError);
+        }
+        
+        if (!garageCheck) {
+          console.log("Staff's garage does not exist. Need to find another garage or display error.");
+          toast.error("Your garage no longer exists. Please contact an administrator.");
+          await supabase.auth.signOut();
+          return { shouldRedirect: false, path: null };
+        }
+        
+        // Redirect based on role
+        switch (userRole) {
+          case 'technician':
+            return { shouldRedirect: true, path: "/dashboard/job-tickets" };
+          case 'front_desk':
+            return { shouldRedirect: true, path: "/dashboard/appointments" };
+          default:
+            return { shouldRedirect: true, path: "/dashboard" };
+        }
       }
     }
+    
+    // No garage found at all
+    console.log("Staff has no garage assignment");
+    toast.info("You don't have a garage associated with your account. Please contact an administrator.");
+    await supabase.auth.signOut();
+    return { shouldRedirect: false, path: null };
+  } catch (error) {
+    console.error("Error in handleStaffLogin:", error);
+    toast.error("An error occurred while processing your login. Please try again.");
+    await supabase.auth.signOut();
+    return { shouldRedirect: false, path: null };
   }
-  
-  // No garage found at all
-  console.log("Staff has no garage assignment");
-  toast.info("You don't have a garage associated with your account. Please contact an administrator.");
-  await supabase.auth.signOut();
-  return { shouldRedirect: false, path: null };
 }

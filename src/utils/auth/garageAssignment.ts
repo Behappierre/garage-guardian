@@ -19,11 +19,15 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     console.log("User has garage_id in profile:", profileData.garage_id);
     
     // Verify that this garage actually exists
-    const { data: garageCheck } = await supabase
+    const { data: garageCheck, error: garageCheckError } = await supabase
       .from('garages')
       .select('id')
       .eq('id', profileData.garage_id)
       .single();
+      
+    if (garageCheckError && !garageCheckError.message.includes('No rows found')) {
+      console.error("Error checking if garage exists:", garageCheckError);
+    }
       
     if (garageCheck) {
       console.log("Verified garage exists:", garageCheck.id);
@@ -66,12 +70,29 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     // Found a garage membership, update profile
     console.log("User is member of garage:", memberData[0].garage_id, "with role:", memberData[0].role);
     
-    await supabase
-      .from('profiles')
-      .update({ garage_id: memberData[0].garage_id })
-      .eq('id', userId);
+    // Verify this garage actually exists
+    const { data: memberGarageCheck, error: memberGarageError } = await supabase
+      .from('garages')
+      .select('id')
+      .eq('id', memberData[0].garage_id)
+      .single();
       
-    return true;
+    if (memberGarageError && !memberGarageError.message.includes('No rows found')) {
+      console.error("Error checking if member's garage exists:", memberGarageError);
+    }
+    
+    if (memberGarageCheck) {
+      console.log("Verified member's garage exists:", memberGarageCheck.id);
+      
+      await supabase
+        .from('profiles')
+        .update({ garage_id: memberData[0].garage_id })
+        .eq('id', userId);
+        
+      return true;
+    } else {
+      console.log("Member's garage does not exist, checking for owned garages");
+    }
   }
   
   // If user is an administrator, check if they own any garages
@@ -118,6 +139,23 @@ export async function assignUserToGarage(userId: string, garageId: string, userR
   
   try {
     console.log(`Assigning user ${userId} to garage ${garageId} with role ${userRole}`);
+    
+    // First verify the garage exists
+    const { data: garageCheck, error: garageCheckError } = await supabase
+      .from('garages')
+      .select('id')
+      .eq('id', garageId)
+      .single();
+    
+    if (garageCheckError) {
+      console.error("Error checking if garage exists:", garageCheckError);
+      return false;
+    }
+    
+    if (!garageCheck) {
+      console.error("Garage does not exist:", garageId);
+      return false;
+    }
     
     // Add user as member
     const { error: memberError } = await supabase
