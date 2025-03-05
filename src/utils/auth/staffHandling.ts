@@ -11,59 +11,66 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
   try {
     console.log(`Attempting to assign default garage for user ${userId}`);
     
-    // 1. Find the default garage with direct table query instead of RPC
-    const { data: defaultGarage, error: garageError } = await supabase
+    // Find the 'tractic' garage or any available garage
+    const { data: garageData, error: garageError } = await supabase
       .from('garages')
-      .select('id, name')
-      .eq('slug', 'tractic')
-      .limit(1)
-      .single();
+      .select('id, name, slug')
+      .order('created_at', { ascending: false })
+      .limit(5);
     
-    if (garageError || !defaultGarage) {
-      console.error("Error or no default garage found:", garageError);
-      throw new Error("Default garage not found");
+    if (garageError || !garageData || garageData.length === 0) {
+      console.error("No garages found:", garageError);
+      return false;
     }
     
-    const garageId = defaultGarage.id;
-    console.log(`Found default garage: ${garageId} (${defaultGarage.name})`);
+    // First try to find "tractic" garage
+    let targetGarage = garageData.find(g => g.slug === 'tractic');
     
-    // 2. Add user as member with SEPARATE query (no joins)
+    // If not found, use the first available garage
+    if (!targetGarage) {
+      targetGarage = garageData[0];
+    }
+    
+    console.log(`Assigning garage "${targetGarage.name}" (${targetGarage.id}) to user`);
+    
+    // Do operations one by one to avoid ambiguity
+    // 1. Create garage_members entry
     const { error: memberError } = await supabase
       .from('garage_members')
-      .upsert([{
+      .upsert({
         user_id: userId,
-        garage_id: garageId,
+        garage_id: targetGarage.id,
         role: userRole
-      }]);
-      
+      });
+    
     if (memberError) {
-      console.error("Error adding garage member:", memberError);
-      throw new Error("Failed to add garage membership");
+      console.error("Error creating membership:", memberError);
+      return false;
     }
     
-    // 3. Update profile with SEPARATE query (no joins, no ambiguity)
+    // 2. Update profile
     const { error: profileError } = await supabase
       .from('profiles')
-      .update({ garage_id: garageId })
+      .update({ garage_id: targetGarage.id })
       .eq('id', userId);
-      
+    
     if (profileError) {
       console.error("Error updating profile:", profileError);
-      throw new Error("Failed to update profile");
+      return false;
     }
     
-    // 4. Update user_roles with garage_id
+    // 3. Update user_roles with garage_id
     const { error: roleError } = await supabase
       .from('user_roles')
-      .update({ garage_id: garageId })
+      .update({ garage_id: targetGarage.id })
       .eq('user_id', userId);
       
     if (roleError) {
       console.error("Error updating user_roles with garage_id:", roleError);
-      throw new Error("Failed to update user roles");
+      return false;
     }
     
-    console.log(`Successfully assigned user ${userId} to garage ${garageId}`);
+    console.log(`Successfully assigned user ${userId} to garage ${targetGarage.id}`);
     return true;
   } catch (error) {
     logGarageAssignmentError(error, "assignDefaultGarage");
@@ -79,7 +86,29 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
   console.log("Handling staff sign in for user:", userId, "with role:", userRole);
   
   try {
-    // Check if user already has a valid garage assignment in user_roles
+    // STEP 1: First check user's profile for garage_id
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, garage_id')
+      .eq('id', userId)
+      .single();
+    
+    if (profileData?.garage_id) {
+      console.log("Found garage_id in profile:", profileData.garage_id);
+      // Verify this garage still exists
+      const { data: garageData } = await supabase
+        .from('garages')
+        .select('id, name')
+        .eq('id', profileData.garage_id)
+        .single();
+      
+      if (garageData) {
+        console.log("Valid garage found in profile:", garageData.name);
+        return; // Valid garage found, exit
+      }
+    }
+    
+    // STEP 2: Check if user already has a valid garage assignment in user_roles
     const { data: userRoleData } = await supabase
       .from('user_roles')
       .select('role, garage_id')
@@ -90,8 +119,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       
     // If user_role has a garage_id, verify it exists
     if (userRoleData?.garage_id) {
-      // IMPORTANT: Use standard SELECT, not execute_read_only_query
-      const { data: garageExists, error: garageError } = await supabase
+      const { data: garageExists } = await supabase
         .from('garages')
         .select('id, name')
         .eq('id', userRoleData.garage_id)
@@ -105,7 +133,35 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       }
     }
     
-    // Try the improved assignDefaultGarage function
+    // STEP 3: Check garage_members for this user
+    const { data: memberData } = await supabase
+      .from('garage_members')
+      .select('garage_id, role')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    
+    if (memberData && memberData.length > 0) {
+      const memberGarageId = memberData[0].garage_id;
+      console.log("Found garage in membership:", memberGarageId);
+      
+      // Update profile with this garage_id
+      await supabase
+        .from('profiles')
+        .update({ garage_id: memberGarageId })
+        .eq('id', userId);
+      
+      // Also update user_roles
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: memberGarageId })
+        .eq('user_id', userId);
+      
+      return; // Valid garage found, exit
+    }
+    
+    // STEP 4: If no garage found, assign default
+    console.log("No garage found, attempting to assign default");
     const assigned = await assignDefaultGarage(userId, userRole);
     
     if (!assigned) {
