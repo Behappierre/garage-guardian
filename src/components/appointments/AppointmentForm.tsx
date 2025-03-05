@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ExternalLink } from "lucide-react";
 import type { AppointmentWithRelations, AppointmentStatus, BayType } from "@/types/appointment";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 interface AppointmentFormProps {
   initialData: AppointmentWithRelations | null;
@@ -26,6 +26,7 @@ interface AppointmentFormData {
   notes: string | null;
   status: AppointmentStatus;
   bay: BayType;
+  garage_id: string | null;
 }
 
 const roundToNearestHour = (date: Date): Date => {
@@ -45,19 +46,30 @@ const formatDateTimeForInput = (dateString: string | Date) => {
 const durations = Array.from({ length: 16 }, (_, i) => (i + 1) * 30); // 30 min to 8 hours in 30 min intervals
 
 const ClientSelector = ({ value, onChange }: { value: string | null, onChange: (value: string) => void }) => {
+  const { garageId } = useAuth();
+  
   const { data: clients, isLoading, error } = useQuery({
-    queryKey: ["clients"],
+    queryKey: ["clients", garageId],
     queryFn: async () => {
+      if (!garageId) {
+        console.error("No garage ID available for filtering clients");
+        return [];
+      }
+      
+      console.log("Fetching clients for garage ID:", garageId);
       const { data, error } = await supabase
         .from("clients")
         .select("id, first_name, last_name")
+        .eq("garage_id", garageId)
         .order("first_name");
 
       if (error) {
         throw new Error(error.message);
       }
+      console.log(`Retrieved ${data?.length || 0} clients for garage ${garageId}`);
       return data;
     },
+    enabled: !!garageId,
   });
 
   if (isLoading) return <div>Loading clients...</div>;
@@ -83,20 +95,25 @@ const ClientSelector = ({ value, onChange }: { value: string | null, onChange: (
 };
 
 const VehicleSelector = ({ clientId, value, onChange }: { clientId: string, value: string | null, onChange: (value: string) => void }) => {
+  const { garageId } = useAuth();
+  
   const { data: vehicles, isLoading, error } = useQuery({
-    queryKey: ["vehicles", clientId],
+    queryKey: ["vehicles", clientId, garageId],
     queryFn: async () => {
+      if (!clientId || !garageId) return [];
+      
       const { data, error } = await supabase
         .from("vehicles")
         .select("id, make, model, year, license_plate")
-        .eq("client_id", clientId);
+        .eq("client_id", clientId)
+        .eq("garage_id", garageId);
 
       if (error) {
         throw new Error(error.message);
       }
       return data;
     },
-    enabled: !!clientId,
+    enabled: !!clientId && !!garageId,
   });
 
   if (isLoading) return <div>Loading vehicles...</div>;
@@ -121,7 +138,8 @@ const VehicleSelector = ({ clientId, value, onChange }: { clientId: string, valu
   );
 };
 
-const TimeSelector = ({ startTime, endTime, onStartTimeChange, onEndTimeChange }: { startTime: string, endTime: string, onStartTimeChange: (value: string) => void, onEndTimeChange: (value: string) => void }) => {
+const TimeSelector = ({ startTime, endTime, onStartTimeChange, onEndTimeChange }: 
+  { startTime: string, endTime: string, onStartTimeChange: (value: string) => void, onEndTimeChange: (value: string) => void }) => {
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -180,6 +198,7 @@ export const AppointmentForm = ({
   onClose,
   preselectedClientId
 }: AppointmentFormProps) => {
+  const { garageId } = useAuth();
   const [isLoadingTimeSlot, setIsLoadingTimeSlot] = useState(false);
   const defaultStartTime = roundToNearestHour(selectedDate || new Date());
   const [duration, setDuration] = useState("60"); // Default 1 hour duration
@@ -195,12 +214,23 @@ export const AppointmentForm = ({
     notes: initialData?.notes || null,
     status: initialData?.status || 'scheduled',
     bay: initialData?.bay || null,
+    garage_id: initialData?.garage_id || garageId,
   });
 
-  // Fetch all appointments to find available time slots
+  useEffect(() => {
+    if (garageId && formData.garage_id !== garageId) {
+      setFormData(prev => ({ ...prev, garage_id: garageId }));
+    }
+  }, [garageId]);
+
   const { data: existingAppointments } = useQuery({
-    queryKey: ["all-appointments"],
+    queryKey: ["all-appointments", garageId],
     queryFn: async () => {
+      if (!garageId) {
+        console.error("No garage ID available for filtering appointments");
+        return [];
+      }
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -211,6 +241,7 @@ export const AppointmentForm = ({
       const { data, error } = await supabase
         .from("appointments")
         .select("start_time, end_time")
+        .eq("garage_id", garageId)
         .gte("start_time", today.toISOString())
         .lte("start_time", endDate.toISOString())
         .neq("status", "cancelled");
@@ -218,13 +249,12 @@ export const AppointmentForm = ({
       if (error) throw error;
       return data || [];
     },
-    enabled: !initialData, // Only fetch if creating a new appointment
+    enabled: !initialData && !!garageId,
   });
 
-  // Fetch linked job tickets through appointment_job_tickets junction table
   const { data: linkedJobTickets } = useQuery({
-    queryKey: ["linked-job-tickets", initialData?.id],
-    enabled: !!initialData?.id,
+    queryKey: ["linked-job-tickets", initialData?.id, garageId],
+    enabled: !!initialData?.id && !!garageId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointment_job_tickets")
@@ -245,46 +275,37 @@ export const AppointmentForm = ({
 
   const findNextAvailableTimeSlot = () => {
     if (!existingAppointments || existingAppointments.length === 0) {
-      // If no appointments, return the default start time
       return defaultStartTime;
     }
 
     setIsLoadingTimeSlot(true);
     
     try {
-      // Start checking from current hour
       const now = new Date();
       const startCheckingFrom = new Date(now);
       startCheckingFrom.setMinutes(0);
       startCheckingFrom.setSeconds(0);
       startCheckingFrom.setMilliseconds(0);
       
-      // Only check during business hours (8 AM to 6 PM)
       const businessHourStart = 8; // 8 AM
       const businessHourEnd = 18; // 6 PM
       
-      // Convert existing appointments to JavaScript Date objects
       const bookedSlots = existingAppointments.map(appointment => ({
         start: new Date(appointment.start_time),
         end: new Date(appointment.end_time)
       }));
       
-      // Duration in milliseconds (from the selected duration in minutes)
       const durationMs = parseInt(duration) * 60 * 1000;
       
-      // Check for available slots
       let currentSlot = new Date(startCheckingFrom);
-      let daysToCheck = 14; // Limit search to next 14 days
+      let daysToCheck = 14;
       
       while (daysToCheck > 0) {
         const currentHour = currentSlot.getHours();
         
-        // Only check during business hours
         if (currentHour >= businessHourStart && currentHour < businessHourEnd) {
-          // Calculate end time for this slot
           const slotEnd = new Date(currentSlot.getTime() + durationMs);
           
-          // Check if this slot conflicts with any existing appointment
           const isBooked = bookedSlots.some(bookedSlot => {
             return (
               (currentSlot >= bookedSlot.start && currentSlot < bookedSlot.end) ||
@@ -294,28 +315,23 @@ export const AppointmentForm = ({
           });
           
           if (!isBooked) {
-            // Found an available slot!
             return currentSlot;
           }
         }
         
-        // Move to next 30-minute slot
         currentSlot.setTime(currentSlot.getTime() + 30 * 60 * 1000);
         
-        // If we've moved to the next day, decrement our day counter
         if (currentSlot.getHours() === 0) {
           daysToCheck--;
         }
       }
       
-      // If no slot found, return default
       return defaultStartTime;
     } finally {
       setIsLoadingTimeSlot(false);
     }
   };
 
-  // Find next available slot when component mounts or when new appointments are fetched
   useEffect(() => {
     if (!initialData && existingAppointments) {
       const nextAvailableSlot = findNextAvailableTimeSlot();

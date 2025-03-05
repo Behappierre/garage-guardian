@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 interface AppointmentSelectorProps {
   appointmentId: string | null;

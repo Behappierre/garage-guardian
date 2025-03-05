@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 export const useTicketQueries = (formData: { client_id: string | null }) => {
   const { garageId } = useAuth();
