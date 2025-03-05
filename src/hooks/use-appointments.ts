@@ -2,14 +2,20 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppointmentWithRelations } from "@/types/appointment";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const useAppointments = () => {
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
 
   const query = useQuery({
-    queryKey: ["appointments"],
+    queryKey: ["appointments", garageId],
     queryFn: async () => {
-      // First, get all appointments with their basic relations
+      if (!garageId) {
+        return [];
+      }
+      
+      // First, get all appointments with their basic relations for the current garage
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select(`
@@ -17,6 +23,7 @@ export const useAppointments = () => {
           client:clients(*),
           vehicle:vehicles(*)
         `)
+        .eq('garage_id', garageId)
         .order('start_time', { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
@@ -25,6 +32,10 @@ export const useAppointments = () => {
 
       // Get the appointment IDs to fetch related job tickets
       const appointmentIds = appointmentsData.map(appointment => appointment.id);
+      
+      if (appointmentIds.length === 0) {
+        return [];
+      }
       
       // Fetch job tickets linked to these appointments through the junction table
       const { data: appointmentJobTickets, error: relationError } = await supabase
@@ -65,11 +76,12 @@ export const useAppointments = () => {
 
       return appointments;
     },
+    enabled: !!garageId, // Only run the query if we have a garageId
   });
 
   // Add this function to allow manual refreshing
   const refreshAppointments = () => {
-    queryClient.invalidateQueries({ queryKey: ["appointments"] });
+    queryClient.invalidateQueries({ queryKey: ["appointments", garageId] });
   };
 
   return {

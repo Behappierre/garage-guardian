@@ -26,13 +26,14 @@ export const AppointmentSelector = ({
       <Label>Link to Appointment</Label>
       <Select
         value={appointmentId || ""}
-        onValueChange={onAppointmentChange}
+        onValueChange={(value) => onAppointmentChange(value || null)}
         disabled={isLoading}
       >
         <SelectTrigger className="w-full">
           <SelectValue placeholder={isLoading ? "Loading appointments..." : "Select appointment"} />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="">None</SelectItem>
           {appointments?.map((appointment) => (
             <SelectItem key={appointment.id} value={appointment.id}>
               {new Date(appointment.start_time).toLocaleString()} - {appointment.service_type}
