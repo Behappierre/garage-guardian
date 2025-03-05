@@ -1,15 +1,14 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 /**
  * Handles admin user on staff login page
- * Uses the user_roles.garage_id direct association
+ * Checks both user_roles and garage_members tables
  */
 export async function handleAdminOnStaffLogin(userId: string) {
   console.log("Handling admin on staff login page for user:", userId);
   
-  // Check if user is actually an admin with the direct garage reference
+  // First check if user is an admin
   const { data: roleData, error: roleError } = await supabase
     .from('user_roles')
     .select('role, garage_id')
@@ -24,78 +23,72 @@ export async function handleAdminOnStaffLogin(userId: string) {
     return { shouldRedirect: false, path: null };
   }
   
-  // Check if admin has access to multiple garages
-  const { data: ownerGarages } = await supabase
-    .from('garages')
-    .select('id')
-    .eq('owner_id', userId);
-    
-  const { data: memberGarages } = await supabase
+  // Now check if admin is an owner in any garages via garage_members
+  const { data: ownerMemberships, error: membershipError } = await supabase
     .from('garage_members')
     .select('garage_id')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('role', 'owner');
     
-  const totalGarages = [
-    ...(ownerGarages || []).map(g => g.id),
-    ...(memberGarages || []).map(g => g.garage_id)
-  ];
-  
-  // Remove duplicates
-  const uniqueGarageIds = [...new Set(totalGarages)];
-  
-  console.log("Admin has access to garages:", uniqueGarageIds.length);
-  
-  // If admin has multiple garages, send them to garage selection page
-  if (uniqueGarageIds.length > 1) {
-    console.log("Admin has multiple garages, redirecting to garage selection");
-    return { shouldRedirect: true, path: "/garage-management" };
+  if (membershipError) {
+    console.error("Error checking garage memberships:", membershipError);
   }
   
-  // If admin has a garage_id in user_roles, use it directly
-  if (roleData.garage_id) {
-    console.log("Admin has garage_id in user_roles:", roleData.garage_id);
-    
-    // Verify this garage exists
-    const { data: garageCheck } = await supabase
-      .from('garages')
-      .select('id')
-      .eq('id', roleData.garage_id)
-      .maybeSingle();
-      
-    if (garageCheck) {
-      console.log("Verified garage exists:", garageCheck.id);
-      
-      // Update only user_roles with garage_id
-      await supabase
-        .from('user_roles')
-        .update({ garage_id: roleData.garage_id })
-        .eq('user_id', userId);
-        
-      return { shouldRedirect: true, path: "/dashboard" };
-    }
-  }
-  
-  // Try to find owned garages
+  // Also check directly owned garages
   const { data: ownedGarages } = await supabase
     .from('garages')
     .select('id')
     .eq('owner_id', userId);
   
-  console.log("Owned garages:", JSON.stringify(ownedGarages));
-    
-  if (ownedGarages && ownedGarages.length > 0) {
-    console.log("Admin owns garages:", ownedGarages.length);
+  // Combine owned garages with garages where user is an owner member
+  const totalGarages = [
+    ...(ownedGarages || []).map(g => g.id),
+    ...(ownerMemberships || []).map(g => g.garage_id)
+  ];
+  
+  // Remove duplicates
+  const uniqueGarageIds = [...new Set(totalGarages)];
+  
+  console.log("Admin has access to garages as owner:", uniqueGarageIds.length);
+  
+  // If admin has multiple garages where they're an owner, send them to garage selection
+  if (uniqueGarageIds.length > 1) {
+    console.log("Admin has multiple garages as owner, redirecting to garage selection");
+    return { shouldRedirect: true, path: "/garage-management?source=staff" };
+  }
+  
+  // If admin has exactly one garage where they're an owner
+  if (uniqueGarageIds.length === 1) {
+    console.log("Admin has single garage as owner:", uniqueGarageIds[0]);
     
     // Update user_roles with garage_id
     await supabase
       .from('user_roles')
-      .update({ garage_id: ownedGarages[0].id })
+      .update({ garage_id: uniqueGarageIds[0] })
       .eq('user_id', userId);
       
     return { shouldRedirect: true, path: "/dashboard" };
-  } 
+  }
   
-  // No garage found, redirect to garage creation
+  // If no garages found where they're an owner, try to find any garage they're a member of
+  const { data: memberGarages } = await supabase
+    .from('garage_members')
+    .select('garage_id')
+    .eq('user_id', userId);
+    
+  if (memberGarages && memberGarages.length > 0) {
+    console.log("Admin is a member of garages:", memberGarages.length);
+    
+    // Update user_roles with first garage_id
+    await supabase
+      .from('user_roles')
+      .update({ garage_id: memberGarages[0].garage_id })
+      .eq('user_id', userId);
+      
+    return { shouldRedirect: true, path: "/dashboard" };
+  }
+  
+  // No garage found at all, redirect to garage creation
   console.log("Admin has no garages, redirecting to garage management");
   return { shouldRedirect: true, path: "/garage-management" };
 }
