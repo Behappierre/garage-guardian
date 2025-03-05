@@ -10,12 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 export default function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme, setTheme } = useTheme();
   const [uploading, setUploading] = useState(false);
+  const { garageId } = useAuth();
 
   const { data: settings } = useQuery({
     queryKey: ["settings"],
@@ -28,6 +30,23 @@ export default function Settings() {
       if (error) throw error;
       return data;
     }
+  });
+
+  const { data: garageData } = useQuery({
+    queryKey: ["garage", garageId],
+    queryFn: async () => {
+      if (!garageId) return null;
+      
+      const { data, error } = await supabase
+        .from("garages")
+        .select("*")
+        .eq("id", garageId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!garageId
   });
 
   useEffect(() => {
@@ -97,6 +116,15 @@ export default function Settings() {
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
+      if (!garageId) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No garage selected. Please select a garage first.",
+        });
+        return;
+      }
+
       setUploading(true);
       const file = event.target.files?.[0];
       if (!file) return;
@@ -116,15 +144,16 @@ export default function Settings() {
         .from("logos")
         .getPublicUrl(filePath);
 
-      // Update settings with new logo URL
+      // Update garage with new logo URL
       const { error: updateError } = await supabase
-        .from("settings")
+        .from("garages")
         .update({ logo_url: publicURL.publicUrl })
-        .eq("id", settings.id);
+        .eq("id", garageId);
 
       if (updateError) throw updateError;
 
-      await queryClient.invalidateQueries({ queryKey: ["settings"] });
+      await queryClient.invalidateQueries({ queryKey: ["garage", garageId] });
+      await queryClient.invalidateQueries({ queryKey: ["garages"] });
 
       toast({
         title: "Success",
@@ -235,9 +264,9 @@ export default function Settings() {
               Garage Logo
             </h2>
             <div className="flex items-center space-x-4">
-              {settings?.logo_url && (
+              {garageData?.logo_url && (
                 <img
-                  src={settings.logo_url}
+                  src={garageData.logo_url}
                   alt="Garage logo"
                   className="h-12 object-contain"
                 />
@@ -249,7 +278,7 @@ export default function Settings() {
                     ? "bg-gray-100 hover:bg-gray-200 text-black" 
                     : ""
                 }`}
-                disabled={uploading}
+                disabled={uploading || !garageId}
                 onClick={() => document.getElementById("logo-upload")?.click()}
               >
                 <Upload className="h-4 w-4" />
@@ -267,6 +296,11 @@ export default function Settings() {
           <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-muted-foreground"}`}>
             Upload your garage logo (recommended size: 200x50px)
           </p>
+          {!garageId && (
+            <p className="mt-2 text-amber-500 text-sm">
+              You need to select a garage before uploading a logo
+            </p>
+          )}
         </div>
       </div>
     </div>

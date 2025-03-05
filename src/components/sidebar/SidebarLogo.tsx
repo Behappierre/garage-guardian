@@ -2,12 +2,15 @@
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 interface SidebarLogoProps {
   isCollapsed: boolean;
 }
 
 export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
+  const { garageId } = useAuth();
+
   const { data: settings } = useQuery({
     queryKey: ["settings"],
     queryFn: async () => {
@@ -21,18 +24,44 @@ export const SidebarLogo = ({ isCollapsed }: SidebarLogoProps) => {
     },
   });
 
+  const { data: garage } = useQuery({
+    queryKey: ["garage", garageId],
+    queryFn: async () => {
+      if (!garageId) return null;
+      
+      const { data, error } = await supabase
+        .from("garages")
+        .select("*")
+        .eq("id", garageId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!garageId,
+  });
+
   console.log("Settings data:", settings); // Debug log
+  console.log("Garage data:", garage); // Debug log
 
   return (
     <div className={cn(
       "flex items-center border-b border-gray-200",
       isCollapsed ? "justify-center p-4" : "px-6 py-4"
     )}>
-      {settings?.logo_url ? (
+      {garage?.logo_url ? (
+        <img 
+          src={garage.logo_url} 
+          alt="Garage Logo" 
+          className="h-8 w-auto object-contain"
+          onError={(e) => console.error("Error loading garage logo:", e)}
+        />
+      ) : settings?.logo_url ? (
         <img 
           src={settings.logo_url} 
           alt="Garage Logo" 
-          className="h-8 w-auto"
+          className="h-8 w-auto object-contain"
+          onError={(e) => console.error("Error loading settings logo:", e)}
         />
       ) : (
         <div className="grid grid-cols-2 gap-2 w-full">
