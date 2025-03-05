@@ -147,7 +147,7 @@ export const GarageManager = () => {
       )}
       
       {isMultiGarageAdmin && (
-        <Alert className="mb-6" variant="info">
+        <Alert className="mb-6" variant="default">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Multiple Garages Detected</AlertTitle>
           <AlertDescription>
