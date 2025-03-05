@@ -1,110 +1,114 @@
 
 import { useState, useEffect } from "react";
-import { Menu } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+import { GarageSwitcher } from "@/components/garage/GarageSwitcher";
 
-const Navbar = () => {
+export const Navbar = () => {
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userInitials, setUserInitials] = useState("U");
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserDetails = async () => {
       if (!user) return;
       
-      try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) throw error;
+      // Set email from user object
+      setUserEmail(user.email || "");
+      
+      // Get user profile for name
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .maybeSingle();
         
-        if (data) {
-          setUserRole(data.role);
+      if (profileData) {
+        const firstInitial = profileData.first_name?.[0] || '';
+        const lastInitial = profileData.last_name?.[0] || '';
+        
+        if (firstInitial || lastInitial) {
+          setUserInitials((firstInitial + lastInitial).toUpperCase());
+        } else {
+          // If no name, use first letter of email
+          setUserInitials((user.email?.[0] || 'U').toUpperCase());
         }
-      } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "Error fetching user role",
-          description: error.message
-        });
+      } else {
+        // If no profile, use first letter of email
+        setUserInitials((user.email?.[0] || 'U').toUpperCase());
       }
     };
-
-    fetchUserRole();
-  }, [user, toast]);
+    
+    fetchUserDetails();
+  }, [user]);
 
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Signed out successfully",
-      });
-      navigate("/");
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error signing out",
-        description: error.message,
-      });
+      toast.success("Signed out successfully");
+      navigate("/auth");
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Failed to sign out");
     }
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <Button variant="ghost" size="icon" className="lg:hidden">
-              <Menu className="h-6 w-6" />
-            </Button>
-            <span className="text-xl font-semibold text-primary ml-2">GarageGuardian</span>
-          </div>
-          <div className="hidden lg:flex items-center space-x-4">
-            <Button variant="ghost" onClick={() => navigate("/")}>Home</Button>
-            
-            {user && (
-              <Button variant="ghost" onClick={() => navigate("/dashboard")}>Dashboard</Button>
-            )}
-
-            {userRole === 'administrator' && (
-              <>
-                <Button variant="ghost">Users</Button>
-                <Button variant="ghost">Settings</Button>
-              </>
-            )}
-
-            {userRole === 'technician' && (
-              <>
-                <Button variant="ghost">Repairs</Button>
-                <Button variant="ghost">Inventory</Button>
-              </>
-            )}
-
-            {userRole === 'front_desk' && (
-              <>
-                <Button variant="ghost">Appointments</Button>
-                <Button variant="ghost">Customers</Button>
-              </>
-            )}
-
-            {user ? (
-              <Button variant="default" onClick={handleSignOut}>Sign Out</Button>
-            ) : (
-              <Button variant="default" onClick={() => navigate("/auth")}>Sign In</Button>
-            )}
-          </div>
+    <header className="sticky top-0 z-30 w-full border-b bg-background">
+      <div className="flex h-16 items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center">
+          <Link 
+            to="/dashboard" 
+            className="flex items-center text-xl font-semibold text-primary"
+          >
+            <img 
+              src="/lovable-uploads/e33cb773-8a89-43de-82f8-1026ab6337c3.png" 
+              alt="Tractic Logo" 
+              className="mr-2 h-8 w-8" 
+            />
+            Tractic
+          </Link>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Garage Switcher Component */}
+          <GarageSwitcher />
+          
+          {!loading && user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <Avatar className="h-8 w-8 border">
+                  <AvatarImage src="" alt={userEmail} />
+                  <AvatarFallback>{userInitials}</AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{userEmail}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/dashboard/admin")}>
+                  Admin Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 };
-
-export default Navbar;
