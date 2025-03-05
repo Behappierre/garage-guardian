@@ -46,7 +46,7 @@ export const useSignUp = () => {
   };
 
   const assignRole = async (userId: string, role: string) => {
-    // Fixed: Use typed role and ensure we're inserting a single object, not an array
+    // Ensure we're inserting a single object with the role properly cast to the Role type
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({

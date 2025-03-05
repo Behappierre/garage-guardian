@@ -107,6 +107,9 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       return;
     }
     
+    // Clear any previous error
+    setError(null);
+    
     try {
       await createUserMutation.mutate();
     } catch (error) {
