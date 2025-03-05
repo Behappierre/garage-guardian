@@ -21,137 +21,80 @@ export function useUserManagement() {
     queryFn: async () => {
       try {
         console.log('Fetching users data for garage ID:', garageId);
-        console.log('Current user ID:', user?.id);
         
-        // First try to get the user's own profile data if nothing else is available
-        if (!garageId && user?.id) {
-          console.log('No garage ID available, fetching current user profile');
-          
-          // Get the current user's profile
-          const { data: currentUserProfile, error: profileError } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name")
-            .eq("id", user.id)
-            .single();
-
-          if (profileError) {
-            console.error('Error fetching current user profile:', profileError);
-          }
-
-          // Get the current user's role
-          const { data: userRole, error: roleError } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .single();
-
-          if (roleError) {
-            console.error('Error fetching current user role:', roleError);
-          }
-
-          // Get the user's email from auth function
-          const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
-          
-          if (usersError) {
-            console.error('Error fetching users:', usersError);
-            throw usersError;
-          }
-
-          const currentUserData = usersResponse?.users?.find((u: any) => u.id === user.id);
-          
-          if (currentUserProfile && userRole && currentUserData) {
-            const userData: UserData[] = [{
-              id: user.id,
-              email: currentUserData.email || '',
-              role: userRole.role || "none",
-              first_name: currentUserProfile.first_name || null,
-              last_name: currentUserProfile.last_name || null,
-            }];
-            
-            console.log('Current user data:', userData);
-            return userData;
-          }
+        if (!garageId) {
+          console.warn('No garage ID available, cannot fetch users');
+          return [];
         }
 
-        // If garageId is available, proceed with the normal flow
-        if (garageId) {
-          // First get profiles data filtered by garage_id
-          const { data: profiles, error: profilesError } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name")
-            .eq("garage_id", garageId);
+        // First get all users from auth system
+        const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
+        
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
+          throw usersError;
+        }
 
-          console.log('Profiles data:', profiles);
-          console.log('Profiles error:', profilesError);
-
-          if (profilesError) throw profilesError;
-          
-          if (!profiles || profiles.length === 0) {
-            console.log('No profiles found for this garage');
-            return [];
-          }
-
-          // Get user IDs from profiles
-          const userIds = profiles.map(profile => profile.id);
-
-          // Then get roles data
-          const { data: roles, error: rolesError } = await supabase
-            .from("user_roles")
-            .select("user_id, role")
-            .in("user_id", userIds);
-
-          console.log('Roles data:', roles);
-          console.log('Roles error:', rolesError);
-
-          if (rolesError) throw rolesError;
-
-          // Finally get users data using the Edge Function
-          console.log('Calling get-users function...');
-          const { data: usersResponse, error: usersError } = await supabase.functions.invoke('get-users');
-          
-          console.log('Users response:', usersResponse);
-          console.log('Users error:', usersError);
-
-          if (usersError) throw usersError;
-
-          if (!usersResponse || !usersResponse.users) {
-            throw new Error('Failed to fetch users: No users data returned');
-          }
-
-          // Filter users to only include those with profiles in the current garage
-          const filteredUsers = usersResponse.users.filter((user: any) => 
-            userIds.includes(user.id)
-          );
-
-          console.log('Filtered users:', filteredUsers);
-
-          // Map the data together
-          const mappedUsers = filteredUsers.map((user: any) => {
-            const userProfile = profiles?.find((p: any) => p.id === user.id);
-            const userRole = roles?.find((r: any) => r.user_id === user.id);
-            
-            return {
-              id: user.id,
-              email: user.email || '',
-              role: userRole?.role || "none",
-              first_name: userProfile?.first_name || null,
-              last_name: userProfile?.last_name || null,
-            };
-          });
-
-          console.log('Mapped users data:', mappedUsers);
-          return mappedUsers;
+        if (!usersResponse || !usersResponse.users) {
+          throw new Error('Failed to fetch users: No users data returned');
         }
         
-        // If we get here, we have no data to return
-        console.warn('No garage ID or user ID available');
-        return [];
+        // Now get all user roles specific to this garage
+        const { data: roles, error: rolesError } = await supabase
+          .from("user_roles")
+          .select("user_id, role")
+          .eq("garage_id", garageId);
+
+        if (rolesError) {
+          console.error('Error fetching roles for garage:', rolesError);
+          throw rolesError;
+        }
+        
+        console.log('User roles for garage:', roles);
+        
+        // Also get profiles for better user data
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name");
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          throw profilesError;
+        }
+
+        // Get user IDs that belong to this garage
+        const garageUserIds = roles.map(role => role.user_id);
+        console.log('User IDs in this garage:', garageUserIds);
+        
+        // Filter users to only include those with roles in the current garage
+        const filteredUsers = usersResponse.users.filter((user: any) => 
+          garageUserIds.includes(user.id)
+        );
+        
+        console.log('Filtered users for this garage:', filteredUsers);
+
+        // Map the data together
+        const mappedUsers = filteredUsers.map((user: any) => {
+          const userProfile = profiles?.find((p: any) => p.id === user.id);
+          const userRole = roles?.find((r: any) => r.user_id === user.id);
+          
+          return {
+            id: user.id,
+            email: user.email || '',
+            role: userRole?.role || "none",
+            first_name: userProfile?.first_name || user.user_metadata?.first_name || null,
+            last_name: userProfile?.last_name || user.user_metadata?.last_name || null,
+          };
+        });
+
+        console.log('Mapped users data for this garage:', mappedUsers);
+        return mappedUsers;
       } catch (error) {
         console.error('Error in queryFn:', error);
         throw error;
       }
     },
-    enabled: !!user?.id, // Enable the query if at least the user ID is available
+    enabled: !!garageId && !!user?.id,
   });
 
   const deleteUserMutation = useMutation({

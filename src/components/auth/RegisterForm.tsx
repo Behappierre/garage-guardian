@@ -95,8 +95,8 @@ export const RegisterForm = ({
         </div>
       </div>
 
-      {/* This is where the error was occurring - Fixed by ensuring proper type comparison */}
-      {userType === "staff" && (
+      {/* Roles section for owner - TypeScript needs a proper type guard here */}
+      {userType === "owner" && (
         <div className="space-y-2">
           <Label>Select Your Role</Label>
           <RadioGroup value={role} onValueChange={(value) => setRole(value as Role)} className="grid grid-cols-1 gap-2">
