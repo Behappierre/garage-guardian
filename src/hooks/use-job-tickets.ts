@@ -4,12 +4,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { JobTicket, TicketPriority, TicketStatus } from "@/types/job-ticket";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type SortField = "created_at" | "client_name";
 type SortOrder = "asc" | "desc";
 
 export const useJobTickets = (ticketId: string | null) => {
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [showTicketForm, setShowTicketForm] = useState(!!ticketId);
   const [nameFilter, setNameFilter] = useState("");
@@ -24,9 +26,9 @@ export const useJobTickets = (ticketId: string | null) => {
 
   // Fetch specific ticket if ID is provided
   const { data: ticketData, isLoading: isLoadingTicketQuery } = useQuery({
-    queryKey: ['job_ticket', ticketId],
+    queryKey: ['job_ticket', ticketId, garageId],
     queryFn: async () => {
-      if (!ticketId) return null;
+      if (!ticketId || !garageId) return null;
       
       const { data, error } = await supabase
         .from('job_tickets')
@@ -36,6 +38,7 @@ export const useJobTickets = (ticketId: string | null) => {
           vehicle:vehicles(*)
         `)
         .eq('id', ticketId)
+        .eq('garage_id', garageId)
         .maybeSingle();
       
       if (error) {
@@ -45,14 +48,14 @@ export const useJobTickets = (ticketId: string | null) => {
       
       return data as JobTicket | null;
     },
-    enabled: !!ticketId,
+    enabled: !!ticketId && !!garageId,
   });
 
   // Fetch linked appointment data when ticket ID is available
   const { data: linkedAppointment } = useQuery({
-    queryKey: ['linked_appointment', ticketId],
+    queryKey: ['linked_appointment', ticketId, garageId],
     queryFn: async () => {
-      if (!ticketId) return null;
+      if (!ticketId || !garageId) return null;
       
       const { data, error } = await supabase
         .from('appointment_job_tickets')
@@ -67,7 +70,7 @@ export const useJobTickets = (ticketId: string | null) => {
       
       return data?.appointment_id || null;
     },
-    enabled: !!ticketId,
+    enabled: !!ticketId && !!garageId,
   });
 
   // Update linked appointment ID when data is loaded
@@ -87,6 +90,11 @@ export const useJobTickets = (ticketId: string | null) => {
 
   const fetchTicket = useCallback(async (id: string) => {
     try {
+      if (!garageId) {
+        toast.error("No garage selected");
+        return;
+      }
+      
       setIsLoadingTicket(true);
       
       const { data, error } = await supabase
@@ -97,6 +105,7 @@ export const useJobTickets = (ticketId: string | null) => {
           vehicle:vehicles(*)
         `)
         .eq('id', id)
+        .eq('garage_id', garageId)
         .maybeSingle();
       
       if (error) {
@@ -122,7 +131,7 @@ export const useJobTickets = (ticketId: string | null) => {
           setLinkedAppointmentId(appointmentLink.appointment_id);
         }
       } else {
-        toast.error("Ticket not found");
+        toast.error("Ticket not found or you don't have access to it");
       }
     } catch (error) {
       console.error("Error fetching ticket:", error);
@@ -130,18 +139,23 @@ export const useJobTickets = (ticketId: string | null) => {
     } finally {
       setIsLoadingTicket(false);
     }
-  }, []);
+  }, [garageId]);
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, hideCompleted, sortField, sortOrder],
+    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, hideCompleted, sortField, sortOrder, garageId],
     queryFn: async () => {
+      if (!garageId) {
+        return [];
+      }
+      
       let query = supabase
         .from("job_tickets")
         .select(`
           *,
           client:clients(*),
           vehicle:vehicles(*)
-        `);
+        `)
+        .eq('garage_id', garageId);
       
       // Only apply filter if it's not "all"
       if (statusFilter !== "all") {
@@ -189,6 +203,7 @@ export const useJobTickets = (ticketId: string | null) => {
 
       return filteredData;
     },
+    enabled: !!garageId,
   });
 
   const toggleSort = (field: SortField) => {
