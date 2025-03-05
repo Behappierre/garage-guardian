@@ -69,24 +69,13 @@ export const useSignUp = () => {
       throw new Error("No garages exist in the system. Please contact an administrator.");
     }
     
-    // Add user as garage member
-    const { error: garageMemberError } = await supabase
-      .from('garage_members')
-      .insert({
-        user_id: userId,
-        garage_id: garageId,
-        role: role as Role // Cast to the Role type
-      });
-      
-    if (garageMemberError) throw garageMemberError;
-    
-    // Update profile with garage ID
-    const { error: profileError } = await supabase
-      .from('profiles')
+    // Update user_roles with garage ID
+    const { error: userRoleError } = await supabase
+      .from('user_roles')
       .update({ garage_id: garageId })
-      .eq('id', userId);
+      .eq('user_id', userId);
       
-    if (profileError) throw profileError;
+    if (userRoleError) throw userRoleError;
     
     return garageId;
   };

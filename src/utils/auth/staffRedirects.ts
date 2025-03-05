@@ -38,50 +38,15 @@ export async function handleAdminOnStaffLogin(userId: string) {
     if (garageCheck) {
       console.log("Verified garage exists:", garageCheck.id);
       
-      // Ensure profile has the same garage_id
+      // Update only user_roles with garage_id
       await supabase
-        .from('profiles')
+        .from('user_roles')
         .update({ garage_id: roleData.garage_id })
-        .eq('id', userId);
+        .eq('user_id', userId);
         
       return { shouldRedirect: true, path: "/dashboard" };
     }
   }
-  
-  // Check garage memberships
-  const { data: memberData } = await supabase
-    .from('garage_members')
-    .select('garage_id, role')
-    .eq('user_id', userId);
-  
-  console.log("Admin garage memberships:", JSON.stringify(memberData));
-    
-  if (memberData && memberData.length > 0) {
-    console.log("Admin has garage memberships:", memberData.length);
-    
-    // Verify this garage exists
-    const { data: garageCheck } = await supabase
-      .from('garages')
-      .select('id')
-      .eq('id', memberData[0].garage_id)
-      .maybeSingle();
-      
-    if (garageCheck) {
-      // Update user_roles with garage_id
-      await supabase
-        .from('user_roles')
-        .update({ garage_id: memberData[0].garage_id })
-        .eq('user_id', userId);
-      
-      // Update profile with garage_id
-      await supabase
-        .from('profiles')
-        .update({ garage_id: memberData[0].garage_id })
-        .eq('id', userId);
-        
-      return { shouldRedirect: true, path: "/dashboard" };
-    }
-  } 
   
   // Try to find owned garages
   const { data: ownedGarages } = await supabase
@@ -99,21 +64,6 @@ export async function handleAdminOnStaffLogin(userId: string) {
       .from('user_roles')
       .update({ garage_id: ownedGarages[0].id })
       .eq('user_id', userId);
-    
-    // Add user as owner member if not already a member
-    await supabase
-      .from('garage_members')
-      .upsert([{
-        user_id: userId,
-        garage_id: ownedGarages[0].id,
-        role: 'owner'
-      }]);
-      
-    // Update profile with garage_id
-    await supabase
-      .from('profiles')
-      .update({ garage_id: ownedGarages[0].id })
-      .eq('id', userId);
       
     return { shouldRedirect: true, path: "/dashboard" };
   } 
@@ -153,109 +103,6 @@ export async function handleStaffLogin(userId: string, userRole: string) {
       if (garageExists) {
         console.log("Verified garage exists:", garageExists.id);
         
-        // Make sure profile has the same garage_id
-        await supabase
-          .from('profiles')
-          .update({ garage_id: userRoleData.garage_id })
-          .eq('id', userId);
-        
-        // Make sure user is also in garage_members
-        await supabase
-          .from('garage_members')
-          .upsert([
-            { user_id: userId, garage_id: userRoleData.garage_id, role: userRole }
-          ]);
-        
-        // Redirect based on role
-        switch (userRole) {
-          case 'technician':
-            return { shouldRedirect: true, path: "/dashboard/job-tickets" };
-          case 'front_desk':
-            return { shouldRedirect: true, path: "/dashboard/appointments" };
-          default:
-            return { shouldRedirect: true, path: "/dashboard" };
-        }
-      }
-    }
-    
-    // If no garage_id in user_role, check profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('garage_id')
-      .eq('id', userId)
-      .maybeSingle();
-    
-    console.log("Staff profile check:", JSON.stringify(profileData));
-    
-    // If profile has a valid garage_id, verify it exists
-    if (profileData?.garage_id) {
-      console.log("Staff has garage_id in profile:", profileData.garage_id);
-      
-      const { data: garageExists } = await supabase
-        .from('garages')
-        .select('id')
-        .eq('id', profileData.garage_id)
-        .maybeSingle();
-      
-      if (garageExists) {
-        console.log("Verified profile garage exists:", garageExists.id);
-        
-        // Update user_roles with garage_id
-        await supabase
-          .from('user_roles')
-          .update({ garage_id: profileData.garage_id })
-          .eq('user_id', userId);
-        
-        // Make sure user is also in garage_members
-        await supabase
-          .from('garage_members')
-          .upsert([
-            { user_id: userId, garage_id: profileData.garage_id, role: userRole }
-          ]);
-        
-        // Redirect based on role
-        switch (userRole) {
-          case 'technician':
-            return { shouldRedirect: true, path: "/dashboard/job-tickets" };
-          case 'front_desk':
-            return { shouldRedirect: true, path: "/dashboard/appointments" };
-          default:
-            return { shouldRedirect: true, path: "/dashboard" };
-        }
-      }
-    }
-    
-    // Check directly if user is a member of any garage
-    const { data: membershipData } = await supabase
-      .from('garage_members')
-      .select('garage_id, role')
-      .eq('user_id', userId);
-    
-    console.log("Staff garage memberships:", JSON.stringify(membershipData));
-    
-    if (membershipData && membershipData.length > 0) {
-      console.log("Staff is member of garage:", membershipData[0].garage_id);
-      
-      // Verify garage exists
-      const { data: garageExists } = await supabase
-        .from('garages')
-        .select('id')
-        .eq('id', membershipData[0].garage_id)
-        .maybeSingle();
-        
-      if (garageExists) {
-        // Update user_roles with garage_id
-        await supabase
-          .from('user_roles')
-          .update({ garage_id: membershipData[0].garage_id })
-          .eq('user_id', userId);
-        
-        // Update profile with garage_id
-        await supabase
-          .from('profiles')
-          .update({ garage_id: membershipData[0].garage_id })
-          .eq('id', userId);
-          
         // Redirect based on role
         switch (userRole) {
           case 'technician':
@@ -284,19 +131,6 @@ export async function handleStaffLogin(userId: string, userRole: string) {
         .update({ garage_id: defaultGarage.id })
         .eq('user_id', userId);
       
-      // Add user to this garage
-      await supabase
-        .from('garage_members')
-        .upsert([
-          { user_id: userId, garage_id: defaultGarage.id, role: userRole }
-        ]);
-        
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: defaultGarage.id })
-        .eq('id', userId);
-        
       // Redirect based on role
       switch (userRole) {
         case 'technician':
@@ -324,19 +158,6 @@ export async function handleStaffLogin(userId: string, userRole: string) {
         .update({ garage_id: anyGarage.id })
         .eq('user_id', userId);
       
-      // Add user to this garage
-      await supabase
-        .from('garage_members')
-        .upsert([
-          { user_id: userId, garage_id: anyGarage.id, role: userRole }
-        ]);
-        
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: anyGarage.id })
-        .eq('id', userId);
-        
       // Redirect based on role
       switch (userRole) {
         case 'technician':

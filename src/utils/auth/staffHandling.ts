@@ -64,7 +64,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
     
     console.log("Using garage ID:", garageId);
     
-    // Only update the user_roles table with garage_id
+    // Only update the user_roles table with garage_id - explicit column references
     const { error: roleError } = await supabase
       .from('user_roles')
       .update({ garage_id: garageId })
