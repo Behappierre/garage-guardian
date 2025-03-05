@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Garage } from "@/types/garage";
 
@@ -13,35 +14,35 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     // Use separate queries and combine results to avoid ambiguous column issues
     const allGarages = new Map(); // Use Map to ensure unique garages by ID
     
-    // 1. Try to get garages the user owns (by owner_id)
+    // 1. Try to get garages where the user has administrator role
     try {
-      const { data: ownedGarages } = await supabase
+      const { data: adminRoles } = await supabase
         .from('user_roles')
         .select('garage_id')
         .eq('user_id', userId)
         .eq('role', 'administrator');
         
-      if (ownedGarages?.length > 0) {
-        for (const g of ownedGarages) {
-          if (g.garage_id) {
+      if (adminRoles?.length > 0) {
+        for (const role of adminRoles) {
+          if (role.garage_id) {
             // Get garage details in a separate query
             const { data: garageDetails } = await supabase
               .from('garages')
               .select('id, name, slug, address, email, phone, created_at, owner_id')
-              .eq('id', g.garage_id)
+              .eq('id', role.garage_id)
               .single();
             
             if (garageDetails) {
-              allGarages.set(g.garage_id, {
+              allGarages.set(role.garage_id, {
                 ...garageDetails,
-                relationship_type: 'owner'
+                relationship_type: 'administrator'
               });
             }
           }
         }
       }
     } catch (error) {
-      console.error("Error fetching owned garages:", error);
+      console.error("Error fetching administrator garages:", error);
     }
     
     // 2. Try to get garages the user is a member of
@@ -52,19 +53,19 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
         .eq('user_id', userId);
         
       if (memberGarages?.length > 0) {
-        for (const g of memberGarages) {
-          if (!allGarages.has(g.garage_id)) {
+        for (const member of memberGarages) {
+          if (!allGarages.has(member.garage_id)) {
             // Only fetch if we don't already have this garage
             const { data: garageDetails } = await supabase
               .from('garages')
               .select('id, name, slug, address, email, phone, created_at, owner_id')
-              .eq('id', g.garage_id)
+              .eq('id', member.garage_id)
               .single();
               
             if (garageDetails) {
-              allGarages.set(g.garage_id, {
+              allGarages.set(member.garage_id, {
                 ...garageDetails,
-                relationship_type: g.role
+                relationship_type: member.role
               });
             }
           }
@@ -113,10 +114,12 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
         // Add user as member of this garage
         await supabase
           .from('garage_members')
-          .upsert({
+          .upsert([{
             user_id: userId,
             garage_id: knownGarageId,
             role: 'owner'
+          }], {
+            onConflict: 'user_id, garage_id'
           });
           
         // Get garage details

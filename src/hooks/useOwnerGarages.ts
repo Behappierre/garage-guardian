@@ -55,34 +55,50 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
       } else {
         console.log("No garages found, checking for default garage");
         
-        // Fallback check for a default "tractic" garage
-        const { data: defaultGarage } = await supabase.rpc('execute_read_only_query', {
-          query_text: `SELECT * FROM garages WHERE slug = 'tractic' LIMIT 1`
-        });
-        
-        console.log("Default garage check:", JSON.stringify(defaultGarage));
-        
-        if (defaultGarage && Array.isArray(defaultGarage) && defaultGarage.length > 0) {
-          console.log("Using default 'tractic' garage");
-          setGarages(defaultGarage as unknown as Garage[]);
+        // Simplified check for a default "tractic" garage
+        try {
+          const { data: defaultGarage } = await supabase
+            .from('garages')
+            .select('*')
+            .eq('slug', 'tractic')
+            .limit(1);
           
-          // Add user to this garage if not already a member
-          try {
-            await supabase.from('garage_members')
-              .upsert([{ 
-                user_id: userData.user.id, 
-                garage_id: (defaultGarage[0] as unknown as Garage).id,
-                role: 'member'
-              }]);
-              
-            // Update profile
-            await supabase.from('profiles')
-              .update({ garage_id: (defaultGarage[0] as unknown as Garage).id })
-              .eq('id', userData.user.id);
-          } catch (err) {
-            console.error("Error associating user with default garage:", err);
+          console.log("Default garage check:", JSON.stringify(defaultGarage));
+          
+          if (defaultGarage && Array.isArray(defaultGarage) && defaultGarage.length > 0) {
+            console.log("Using default 'tractic' garage");
+            
+            // Transform to expected Garage type
+            const processedGarages = defaultGarage.map(garage => ({
+              ...garage,
+              relationship_type: 'member'
+            })) as Garage[];
+            
+            setGarages(processedGarages);
+            
+            // Add user to this garage if not already a member
+            try {
+              await supabase.from('garage_members')
+                .upsert([{ 
+                  user_id: userData.user.id, 
+                  garage_id: defaultGarage[0].id,
+                  role: 'member'
+                }], {
+                  onConflict: 'user_id, garage_id'
+                });
+                
+              // Update profile
+              await supabase.from('profiles')
+                .update({ garage_id: defaultGarage[0].id })
+                .eq('id', userData.user.id);
+            } catch (err) {
+              console.error("Error associating user with default garage:", err);
+            }
+          } else {
+            setGarages([]);
           }
-        } else {
+        } catch (error) {
+          console.error("Error fetching default garage:", error);
           setGarages([]);
         }
       }
