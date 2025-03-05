@@ -187,7 +187,15 @@ export const useSignIn = () => {
         });
         console.log("TOTAL GARAGE COUNT:", garageCount);
         
-        if (!garageCount || (Array.isArray(garageCount) && garageCount.length > 0 && parseInt(garageCount[0].count) === 0)) {
+        // Fixed: Check if garageCount is an array and get the count value safely
+        let totalGarages = 0;
+        if (Array.isArray(garageCount) && garageCount.length > 0) {
+          // Extract count value safely using type assertion 
+          const countRecord = garageCount[0] as Record<string, any>;
+          totalGarages = parseInt(countRecord.count as string);
+        }
+        
+        if (totalGarages === 0) {
           console.log("No garages exist, creating a default one");
           
           // Create a default garage as a last resort
@@ -252,3 +260,4 @@ export const useSignIn = () => {
     handleStaffSignIn
   };
 };
+

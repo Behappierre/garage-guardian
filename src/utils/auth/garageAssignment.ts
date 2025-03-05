@@ -45,26 +45,32 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
         console.log("Adding user to garage_members for consistency");
         
         // DEBUGGING: Try direct SQL insertion if the supabase.from approach fails
-        await supabase.rpc('execute_read_only_query', {
-          query_text: `
-            INSERT INTO garage_members (user_id, garage_id, role)
-            VALUES ('${userId}'::uuid, '${profileData.garage_id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
-            ON CONFLICT DO NOTHING
-          `
-        }).catch(err => {
+        try {
+          await supabase.rpc('execute_read_only_query', {
+            query_text: `
+              INSERT INTO garage_members (user_id, garage_id, role)
+              VALUES ('${userId}'::uuid, '${profileData.garage_id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
+              ON CONFLICT DO NOTHING
+            `
+          });
+        } catch (err) {
           console.error("Error with direct SQL insert:", err);
-        });
+        }
         
         // Also try the normal approach
-        await supabase
-          .from('garage_members')
-          .upsert([
-            { 
-              user_id: userId, 
-              garage_id: profileData.garage_id, 
-              role: userRole === 'administrator' ? 'owner' : userRole 
-            }
-          ]);
+        try {
+          await supabase
+            .from('garage_members')
+            .upsert([
+              { 
+                user_id: userId, 
+                garage_id: profileData.garage_id, 
+                role: userRole === 'administrator' ? 'owner' : userRole 
+              }
+            ]);
+        } catch (err) {
+          console.error("Error with normal upsert:", err);
+        }
           
         // Verify the insert worked
         const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
@@ -132,11 +138,15 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       console.log("Admin owns garage:", garageId);
       
       // Make sure admin is a member of their owned garage
-      await supabase
-        .from('garage_members')
-        .upsert([
-          { user_id: userId, garage_id: garageId, role: 'owner' }
-        ]);
+      try {
+        await supabase
+          .from('garage_members')
+          .upsert([
+            { user_id: userId, garage_id: garageId, role: 'owner' }
+          ]);
+      } catch (err) {
+        console.error("Error upserting garage member:", err);
+      }
       
       // Update profile
       await supabase
@@ -164,26 +174,32 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     
     try {
       // Try direct SQL insert as a workaround if the normal approach fails
-      await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          INSERT INTO garage_members (user_id, garage_id, role)
-          VALUES ('${userId}'::uuid, '${defaultGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
-          ON CONFLICT DO NOTHING
-        `
-      }).catch(err => {
+      try {
+        await supabase.rpc('execute_read_only_query', {
+          query_text: `
+            INSERT INTO garage_members (user_id, garage_id, role)
+            VALUES ('${userId}'::uuid, '${defaultGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
+            ON CONFLICT DO NOTHING
+          `
+        });
+      } catch (err) {
         console.error("Error with direct SQL insert for default garage:", err);
-      });
+      }
       
       // Also try normal approach
-      await supabase
-        .from('garage_members')
-        .upsert([
-          { 
-            user_id: userId, 
-            garage_id: defaultGarage.id, 
-            role: userRole === 'administrator' ? 'owner' : userRole 
-          }
-        ]);
+      try {
+        await supabase
+          .from('garage_members')
+          .upsert([
+            { 
+              user_id: userId, 
+              garage_id: defaultGarage.id, 
+              role: userRole === 'administrator' ? 'owner' : userRole 
+            }
+          ]);
+      } catch (err) {
+        console.error("Error with normal upsert for default garage:", err);
+      }
       
       // Update profile
       await supabase
@@ -231,26 +247,32 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     
     try {
       // Try direct SQL insert as a workaround
-      await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          INSERT INTO garage_members (user_id, garage_id, role)
-          VALUES ('${userId}'::uuid, '${anyGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
-          ON CONFLICT DO NOTHING
-        `
-      }).catch(err => {
+      try {
+        await supabase.rpc('execute_read_only_query', {
+          query_text: `
+            INSERT INTO garage_members (user_id, garage_id, role)
+            VALUES ('${userId}'::uuid, '${anyGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
+            ON CONFLICT DO NOTHING
+          `
+        });
+      } catch (err) {
         console.error("Error with direct SQL insert for any garage:", err);
-      });
+      }
       
       // Also try normal approach
-      await supabase
-        .from('garage_members')
-        .upsert([
-          { 
-            user_id: userId, 
-            garage_id: anyGarage.id, 
-            role: userRole === 'administrator' ? 'owner' : userRole 
-          }
-        ]);
+      try {
+        await supabase
+          .from('garage_members')
+          .upsert([
+            { 
+              user_id: userId, 
+              garage_id: anyGarage.id, 
+              role: userRole === 'administrator' ? 'owner' : userRole 
+            }
+          ]);
+      } catch (err) {
+        console.error("Error with normal upsert for any garage:", err);
+      }
       
       // Update profile
       await supabase
@@ -346,3 +368,4 @@ export async function assignUserToGarage(userId: string, garageId: string, userR
     return false;
   }
 }
+
