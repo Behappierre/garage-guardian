@@ -20,8 +20,14 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   } = useAuthForm(userType);
   
   const {
-    loading, showGarageForm, newUserId, handleAuth, setShowGarageForm
+    loading, showGarageForm, newUserId, handleAuth, setShowGarageForm, setLoading
   } = useAuthSubmit(userType);
+
+  // Reset loading state on component mount to prevent stuck loading
+  useState(() => {
+    // Clear any stale loading state
+    setLoading(false);
+  });
 
   const handleGarageCreationComplete = (garageId: string) => {
     navigate("/garage-management");

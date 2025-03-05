@@ -22,7 +22,7 @@ const Auth = () => {
     if (isChecking) {
       timeoutId = setTimeout(() => {
         setLoadingTimeout(true);
-      }, 5000); // 5 seconds
+      }, 3000); // 3 seconds
     } else {
       setLoadingTimeout(false);
     }
@@ -56,26 +56,8 @@ const Auth = () => {
     }
   };
 
-  // Only show loading state if we're actually checking and haven't completed the check yet
-  if (isChecking && !hasCheckedAuth) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-        <AuthLoading />
-        {loadingTimeout && (
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Still checking authentication...</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-primary hover:underline mt-2"
-            >
-              Click here to refresh
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
+  // Only show loading state during initial page load, not during form interaction
+  // Changed to show the form immediately and only show loading if it's the very first check
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -89,7 +71,23 @@ const Auth = () => {
             <AlertDescription>{authError}</AlertDescription>
           </Alert>
         )}
+        
+        {/* Always show the auth form, but show loading indicator if we're still checking */}
         <AuthForm userType={userType} />
+        
+        {isChecking && (
+          <div className="mt-4 text-center text-sm text-gray-500">
+            <p>Checking authentication in background...</p>
+            {loadingTimeout && (
+              <button 
+                onClick={() => window.location.reload()}
+                className="text-primary hover:underline mt-2"
+              >
+                Taking too long? Click here to refresh
+              </button>
+            )}
+          </div>
+        )}
         
         {diagnosticResult && (
           <Alert variant={diagnosticResult.includes("failed") || diagnosticResult.includes("Error") ? "destructive" : "default"} className="mt-4">

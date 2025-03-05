@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -22,6 +22,13 @@ export const useAuthSubmit = (userType: UserType) => {
   
   const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
+
+  // Clear any stale loading state when component unmounts or user changes
+  useEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, [userType]);
 
   const handleAuth = async (
     e: React.FormEvent,
