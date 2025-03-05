@@ -8,6 +8,7 @@ import { useSignIn } from "./useSignIn";
 import { useSignUp } from "./useSignUp";
 import { handleOwnerSignIn } from "@/utils/auth/ownerHandling";
 import { handleStaffSignIn } from "@/utils/auth/staffHandling";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Role = "administrator" | "technician" | "front_desk";
 type UserType = "owner" | "staff";
@@ -19,11 +20,12 @@ export const useAuthSubmit = (userType: UserType) => {
   const [newUserId, setNewUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
+  const { garageId } = useAuth();
   
   const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
 
-  // Modified to return void instead of Promise<void>
+  // This function is now properly typed to return void
   const handleAuth = (
     e: React.FormEvent,
     mode: AuthMode,
@@ -56,7 +58,14 @@ export const useAuthSubmit = (userType: UserType) => {
                 description: "Now let's set up your garage.",
               });
             } else {
-              await assignStaffToGarage(user.id, role);
+              // For staff users, explicitly use the current garage context if available
+              const targetGarageId = garageId || await assignStaffToGarage(user.id, role);
+              
+              if (targetGarageId) {
+                console.log(`Staff user assigned to garage: ${targetGarageId}`);
+              } else {
+                console.warn("No garage ID available for staff assignment");
+              }
               
               const { error: signInError } = await supabase.auth.signInWithPassword({
                 email,
@@ -65,6 +74,7 @@ export const useAuthSubmit = (userType: UserType) => {
               
               if (signInError) throw signInError;
               
+              // Navigate based on role
               if (role === 'technician') {
                 navigate("/dashboard/job-tickets");
               } else {

@@ -187,6 +187,41 @@ serve(async (req: Request) => {
         console.log('Successfully updated profile with garage_id:', garageId);
       }
       
+      // Step 3: Add the user to garage_members table for complete integration
+      if (role === 'administrator') {
+        // If administrator, add as owner in garage_members
+        const { error: memberError } = await supabaseClient
+          .from('garage_members')
+          .insert([{
+            user_id: userData.user.id,
+            garage_id: garageId,
+            role: 'owner'
+          }]);
+          
+        if (memberError) {
+          console.warn('Warning: Error adding user to garage_members:', memberError);
+          // Continue even if this fails
+        } else {
+          console.log('Successfully added administrator to garage_members as owner');
+        }
+      } else {
+        // For other roles, add as staff
+        const { error: memberError } = await supabaseClient
+          .from('garage_members')
+          .insert([{
+            user_id: userData.user.id,
+            garage_id: garageId,
+            role: 'staff'
+          }]);
+          
+        if (memberError) {
+          console.warn('Warning: Error adding user to garage_members:', memberError);
+          // Continue even if this fails
+        } else {
+          console.log('Successfully added staff user to garage_members');
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           message: 'User created successfully',

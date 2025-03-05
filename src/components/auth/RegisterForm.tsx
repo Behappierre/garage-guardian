@@ -23,7 +23,7 @@ export interface RegisterFormProps {
   role?: Role;
   setRole?: (value: Role) => void;
   isLoading?: boolean;
-  onSubmit?: (e: React.FormEvent) => void; // Changed from Promise<void> to void
+  onSubmit?: (e: React.FormEvent) => void; // Changed type to exactly match useAuthSubmit
   navigateToOtherLogin?: () => void;
 }
 
