@@ -12,6 +12,7 @@ export const useAppointments = () => {
     queryKey: ["appointments", garageId],
     queryFn: async () => {
       if (!garageId) {
+        console.log("No garage ID available for appointments query");
         return [];
       }
       
@@ -26,12 +27,15 @@ export const useAppointments = () => {
         .eq('garage_id', garageId)
         .order('start_time', { ascending: true });
 
-      if (appointmentsError) throw appointmentsError;
+      if (appointmentsError) {
+        console.error("Error fetching appointments:", appointmentsError);
+        throw appointmentsError;
+      }
 
       if (!appointmentsData) return [];
 
       // Get the appointment IDs to fetch related job tickets
-      const appointmentIds = appointmentsData.map(appointment => appointment.id);
+      const appointmentIds = appointmentsData.map(appointment => appointment.id).filter(Boolean);
       
       if (appointmentIds.length === 0) {
         return [];
@@ -52,7 +56,10 @@ export const useAppointments = () => {
         `)
         .in('appointment_id', appointmentIds);
       
-      if (relationError) throw relationError;
+      if (relationError) {
+        console.error("Error fetching appointment job tickets:", relationError);
+        throw relationError;
+      }
 
       // Create a map of appointment IDs to their linked job tickets
       const jobTicketsMap = {} as Record<string, any[]>;
@@ -68,7 +75,7 @@ export const useAppointments = () => {
 
       // Transform the data to match the expected type and filter out appointments with missing client data
       const appointments = appointmentsData
-        .filter(appointment => appointment.client) // Only include appointments with valid client data
+        .filter(appointment => appointment && appointment.id) // Ensure appointment exists
         .map(appointment => ({
           ...appointment,
           job_tickets: jobTicketsMap[appointment.id] || []
@@ -81,7 +88,9 @@ export const useAppointments = () => {
 
   // Add this function to allow manual refreshing
   const refreshAppointments = () => {
-    queryClient.invalidateQueries({ queryKey: ["appointments", garageId] });
+    if (garageId) {
+      queryClient.invalidateQueries({ queryKey: ["appointments", garageId] });
+    }
   };
 
   return {

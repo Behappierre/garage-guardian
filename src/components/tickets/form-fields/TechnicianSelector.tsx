@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface TechnicianSelectorProps {
   technicianId: string | null;
@@ -17,13 +18,17 @@ interface TechnicianSelectorProps {
     last_name: string;
   }[];
   onTechnicianChange: (technicianId: string) => void;
+  isLoading?: boolean;
 }
 
 export const TechnicianSelector = ({
   technicianId,
   technicians,
   onTechnicianChange,
+  isLoading = false,
 }: TechnicianSelectorProps) => {
+  const { garageId } = useAuth();
+  
   return (
     <div>
       <Label>Assigned Technician</Label>
@@ -36,7 +41,7 @@ export const TechnicianSelector = ({
         }}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Assign a technician" />
+          <SelectValue placeholder={isLoading ? "Loading technicians..." : "Assign a technician"} />
         </SelectTrigger>
         <SelectContent>
           <ScrollArea className="h-[200px]">

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface AppointmentSelectorProps {
   appointmentId: string | null;
@@ -27,6 +28,8 @@ export const AppointmentSelector = ({
   onAppointmentChange,
   isLoading = false,
 }: AppointmentSelectorProps) => {
+  const { garageId } = useAuth();
+  
   // Format the date for display
   const formatAppointmentDate = (dateString: string) => {
     try {

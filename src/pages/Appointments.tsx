@@ -10,6 +10,7 @@ import { useAppointments } from "@/hooks/use-appointments";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const Appointments = () => {
   const navigate = useNavigate();
@@ -22,8 +23,16 @@ const Appointments = () => {
   const [calendarViewType, setCalendarViewType] = useState<"dayGridMonth" | "timeGridWeek" | "timeGridDay">("timeGridWeek");
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+  const { garageId } = useAuth();
 
-  const { data: appointments, isLoading } = useAppointments();
+  const { data: appointments, isLoading, error } = useAppointments();
+
+  useEffect(() => {
+    console.log("Appointments loaded:", appointments?.length);
+    console.log("Loading state:", isLoading);
+    console.log("Error state:", error);
+    console.log("Garage ID:", garageId);
+  }, [appointments, isLoading, error, garageId]);
 
   // Parse URL parameters on component mount and when URL changes
   useEffect(() => {
@@ -58,6 +67,19 @@ const Appointments = () => {
     e.stopPropagation();
     navigate(`/dashboard/job-tickets?id=${ticketId}`);
   };
+
+  if (error) {
+    console.error("Error loading appointments:", error);
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <h2 className="text-xl font-semibold mb-2">Error Loading Appointments</h2>
+        <p className="text-red-500">There was a problem loading the appointments. Please try refreshing the page.</p>
+        <pre className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded text-sm overflow-auto max-w-full">
+          {error instanceof Error ? error.message : String(error)}
+        </pre>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>

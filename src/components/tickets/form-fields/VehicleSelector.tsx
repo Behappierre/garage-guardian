@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 interface VehicleSelectorProps {
   vehicleId: string | null;
@@ -18,13 +19,17 @@ interface VehicleSelectorProps {
     license_plate?: string;
   }[];
   onVehicleChange: (vehicleId: string) => void;
+  isLoading?: boolean;
 }
 
 export const VehicleSelector = ({
   vehicleId,
   vehicles,
   onVehicleChange,
+  isLoading = false,
 }: VehicleSelectorProps) => {
+  const { garageId } = useAuth();
+  
   return (
     <div>
       <Label>Vehicle</Label>
@@ -37,7 +42,7 @@ export const VehicleSelector = ({
         }}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select vehicle" />
+          <SelectValue placeholder={isLoading ? "Loading vehicles..." : "Select vehicle"} />
         </SelectTrigger>
         <SelectContent>
           <ScrollArea className="h-[200px]">
