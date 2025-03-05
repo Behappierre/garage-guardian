@@ -5,24 +5,31 @@ import { useAuthCheck } from "@/hooks/auth/useAuthCheck";
 import { runGarageDiagnostics } from "@/utils/auth/garageDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Auth = () => {
   const { isChecking, authError, userType } = useAuthCheck();
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
 
   const runDiagnostics = async () => {
     try {
       setIsRunningDiagnostics(true);
+      setDiagnosticResult(null);
       const { data } = await supabase.auth.getUser();
       
       if (data.user) {
-        await runGarageDiagnostics(data.user.id);
+        const result = await runGarageDiagnostics(data.user.id);
+        setDiagnosticResult(result ? "Diagnostics completed successfully" : "Diagnostics failed");
         console.log("Diagnostics completed for user:", data.user.id);
       } else {
+        setDiagnosticResult("No user logged in to run diagnostics");
         console.log("No user logged in to run diagnostics");
       }
     } catch (error) {
       console.error("Error running diagnostics:", error);
+      setDiagnosticResult("Error running diagnostics");
     } finally {
       setIsRunningDiagnostics(false);
     }
@@ -39,11 +46,19 @@ const Auth = () => {
           GarageWizz
         </h1>
         {authError && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded">
-            {authError}
-          </div>
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Authentication Error</AlertTitle>
+            <AlertDescription>{authError}</AlertDescription>
+          </Alert>
         )}
         <AuthForm userType={userType} />
+        
+        {diagnosticResult && (
+          <Alert variant={diagnosticResult.includes("failed") || diagnosticResult.includes("Error") ? "destructive" : "default"} className="mt-4">
+            <AlertDescription>{diagnosticResult}</AlertDescription>
+          </Alert>
+        )}
         
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-6 text-center">

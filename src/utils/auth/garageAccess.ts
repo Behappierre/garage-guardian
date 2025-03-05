@@ -28,7 +28,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     // Then, get member relationships directly
     const { data: memberGarages, error: memberError } = await supabase
       .from('garage_members')
-      .select('garage_id, role, garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .select('garage_id, role, garages:garage_members.garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
       .eq('user_id', userId);
       
     if (memberError) {
@@ -38,7 +38,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     // Check user_roles table for direct garage association (new)
     const { data: roleGarageData, error: roleGarageError } = await supabase
       .from('user_roles')
-      .select('role, garage_id, garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .select('role, garage_id, garages:user_roles.garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
       .eq('user_id', userId)
       .not('garage_id', 'is', null);
       
@@ -49,7 +49,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     // Finally, get profile relationship
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('garage_id, garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .select('garage_id, garages:profiles.garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
       .eq('id', userId)
       .maybeSingle();
       
