@@ -51,8 +51,9 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     
     console.log("Accessible garages result:", data);
     
-    // First cast to unknown, then to Garage[] to avoid TypeScript error
-    return (data ? (data as unknown as Garage[]) : []);
+    // Proper TypeScript casting: first to unknown, then to Garage[]
+    const garages = data as unknown as Garage[];
+    return Array.isArray(garages) ? garages : [];
   } catch (err) {
     console.error("Exception in getAccessibleGarages:", err);
     return [];

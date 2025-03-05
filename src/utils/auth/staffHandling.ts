@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 import { ensureUserHasGarage } from "@/utils/auth/garageAssignment";
 import { toast } from "@/hooks/use-toast";
+import { logGarageAssignmentError } from "./garageDiagnostics";
 
 /**
  * Assigns a user to the default "tractic" garage or creates one if it doesn't exist
@@ -79,7 +80,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       return false;
     }
     
-    // 3. Update profile - separate operation
+    // 3. Update profile with garage_id - separate operation
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: garageId })
@@ -92,7 +93,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
     
     return true;
   } catch (error) {
-    console.error("Error assigning default garage:", error);
+    logGarageAssignmentError(error, "assignDefaultGarage");
     return false;
   }
 }
@@ -150,6 +151,11 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       const assigned = await assignDefaultGarage(userId, userRole);
       
       if (!assigned) {
+        toast({
+          variant: "destructive",
+          title: "Login Error",
+          description: "Could not create or assign a default garage. Please contact support."
+        });
         throw new Error("Could not create or assign a default garage");
       }
       
@@ -164,6 +170,11 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       .maybeSingle();
       
     if (!updatedProfile?.garage_id) {
+      toast({
+        variant: "destructive", 
+        title: "System Error",
+        description: "Failed to assign garage to your profile. Please contact support."
+      });
       throw new Error("System error: Failed to assign garage to your profile. Please contact support.");
     }
   } catch (error) {
