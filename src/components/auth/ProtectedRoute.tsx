@@ -2,6 +2,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 import { useRouteAccess } from "@/hooks/auth/useRouteAccess";
+import { AuthLoading } from "./AuthLoading";
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
@@ -15,7 +16,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   } = useRouteAccess();
 
   if (loading || isVerifyingRole) {
-    return <div>Loading...</div>;
+    return <AuthLoading />;
   }
 
   if (!user) {

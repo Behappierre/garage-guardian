@@ -51,6 +51,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
         if (profileData?.garage_id) {
           setGarageId(profileData.garage_id);
+        } else {
+          // Clear garage ID if none found
+          setGarageId(null);
         }
       } else {
         setUser(null);
@@ -69,7 +72,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     
     // Set up auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      console.log("Auth state changed:", event);
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         if (session?.user) {
           setUser(session.user);
           
@@ -82,6 +86,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             
           if (profileData?.garage_id) {
             setGarageId(profileData.garage_id);
+          } else {
+            setGarageId(null);
           }
         }
       }
