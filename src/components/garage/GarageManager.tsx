@@ -1,13 +1,38 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { LogOut, AlertCircle } from "lucide-react";
+import { LogOut, AlertCircle, Settings, Download, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GaragesList } from "./GaragesList";
 import { NewGarageForm } from "./NewGarageForm";
 import { useOwnerGarages } from "@/hooks/useOwnerGarages";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const GarageManager = () => {
   const navigate = useNavigate();
@@ -16,6 +41,8 @@ export const GarageManager = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [isMultiGarageAdmin, setIsMultiGarageAdmin] = useState(false);
   const [loginSource, setLoginSource] = useState<"owner" | "staff" | null>(null);
+  const [selectedGarageId, setSelectedGarageId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // Check if user came from staff login or owner login
   useEffect(() => {
@@ -104,6 +131,115 @@ export const GarageManager = () => {
     }
   };
 
+  const handleExportData = async (garageId: string) => {
+    try {
+      toast.info("Preparing garage data export...");
+      
+      // Get garage details
+      const { data: garageData, error: garageError } = await supabase
+        .from('garages')
+        .select('*')
+        .eq('id', garageId)
+        .single();
+        
+      if (garageError) {
+        throw new Error("Failed to fetch garage data");
+      }
+
+      // Get clients
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('garage_id', garageId);
+        
+      if (clientsError) {
+        throw new Error("Failed to fetch client data");
+      }
+
+      // Get vehicles
+      const { data: vehicles, error: vehiclesError } = await supabase
+        .from('vehicles')
+        .select('*')
+        .eq('garage_id', garageId);
+        
+      if (vehiclesError) {
+        throw new Error("Failed to fetch vehicle data");
+      }
+
+      // Get job tickets
+      const { data: jobTickets, error: ticketsError } = await supabase
+        .from('job_tickets')
+        .select('*')
+        .eq('garage_id', garageId);
+        
+      if (ticketsError) {
+        throw new Error("Failed to fetch job ticket data");
+      }
+
+      // Get appointments
+      const { data: appointments, error: appointmentsError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('garage_id', garageId);
+        
+      if (appointmentsError) {
+        throw new Error("Failed to fetch appointment data");
+      }
+
+      // Compile all data
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        garage: garageData,
+        clients,
+        vehicles,
+        jobTickets,
+        appointments
+      };
+
+      // Convert to JSON and trigger download
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileName = `${garageData.name.replace(/\s+/g, '_')}_export_${new Date().toISOString().split('T')[0]}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileName);
+      linkElement.click();
+      
+      toast.success("Garage data exported successfully");
+    } catch (error) {
+      console.error("Error exporting garage data:", error);
+      toast.error("Failed to export garage data");
+    }
+  };
+
+  const handleDeleteGarage = async () => {
+    if (!selectedGarageId) return;
+    
+    try {
+      toast.info("Deleting garage...");
+      
+      // Delete the garage
+      const { error: deleteError } = await supabase
+        .from('garages')
+        .delete()
+        .eq('id', selectedGarageId);
+        
+      if (deleteError) {
+        throw new Error("Failed to delete garage");
+      }
+      
+      // Close dialog and refresh list
+      setShowDeleteDialog(false);
+      refreshGarages();
+      toast.success("Garage deleted successfully");
+    } catch (error) {
+      console.error("Error deleting garage:", error);
+      toast.error("Failed to delete garage");
+    }
+  };
+
   if (showCreateForm) {
     return (
       <NewGarageForm
@@ -126,10 +262,12 @@ export const GarageManager = () => {
                 : "Get started by creating your first garage"}
           </p>
         </div>
-        <Button variant="outline" onClick={handleSignOut} className="gap-2">
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSignOut} className="gap-2">
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -162,8 +300,33 @@ export const GarageManager = () => {
           isLoading={isLoading}
           onSelectGarage={handleSelectGarage}
           onCreateGarage={() => setShowCreateForm(true)}
+          onSettingsClick={(garageId) => setSelectedGarageId(garageId)}
+          onExportData={handleExportData}
+          onDeleteClick={(garageId) => {
+            setSelectedGarageId(garageId);
+            setShowDeleteDialog(true);
+          }}
         />
       )}
+
+      {/* Delete Garage Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Garage</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the garage
+              and all associated data including clients, vehicles, job tickets, and appointments.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteGarage} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
