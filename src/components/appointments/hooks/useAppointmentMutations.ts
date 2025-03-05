@@ -1,12 +1,11 @@
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/auth/useAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { AppointmentFormData } from "./types";
 
 export const useAppointmentMutations = (onSuccess: () => void) => {
-  const queryClient = useQueryClient();
   const { garageId } = useAuth();
 
   const createAppointmentMutation = useMutation({
@@ -15,9 +14,14 @@ export const useAppointmentMutations = (onSuccess: () => void) => {
         throw new Error("No garage ID available");
       }
 
+      const appointmentData = {
+        ...data,
+        garage_id: garageId
+      };
+
       const { data: appointment, error } = await supabase
         .from('appointments')
-        .insert([{ ...data, garage_id: garageId }])
+        .insert([appointmentData])
         .select()
         .single();
 
@@ -28,12 +32,10 @@ export const useAppointmentMutations = (onSuccess: () => void) => {
       return appointment;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
       toast.success('Appointment created successfully');
       onSuccess();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error creating appointment:", error);
       toast.error('Failed to create appointment');
     },
@@ -55,12 +57,10 @@ export const useAppointmentMutations = (onSuccess: () => void) => {
       return appointment;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
       toast.success('Appointment updated successfully');
       onSuccess();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error updating appointment:", error);
       toast.error('Failed to update appointment');
     },
@@ -82,12 +82,10 @@ export const useAppointmentMutations = (onSuccess: () => void) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
       toast.success('Appointment cancelled successfully');
       onSuccess();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error cancelling appointment:", error);
       toast.error('Failed to cancel appointment');
     },

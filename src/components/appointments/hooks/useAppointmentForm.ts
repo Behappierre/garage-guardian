@@ -5,9 +5,11 @@ import type { UseAppointmentFormProps, AppointmentFormData } from "./types";
 import { useDateFormatting } from "./useDateFormatting";
 import { useAppointmentQueries } from "./useAppointmentQueries";
 import { useAppointmentMutations } from "./useAppointmentMutations";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAppointmentFormProps) => {
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
   const defaultDate = selectedDate || new Date();
   const { formatDateTimeForInput, formatDefaultDate } = useDateFormatting();
 
@@ -19,69 +21,54 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     notes: initialData?.notes || "",
     status: initialData?.status || "scheduled",
     vehicle_id: initialData?.vehicle_id || null,
+    garage_id: garageId || null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(initialData?.vehicle_id || null);
 
-  const { 
-    clients,
-    vehicles,
-    jobTickets,
-    appointmentTickets,
-    appointmentTicketsLoaded
-  } = useAppointmentQueries(formData.client_id, initialData?.id);
+  const { clients, vehicles } = useAppointmentQueries(formData.client_id);
 
-  const { handleSubmit: submitAppointment, handleCancel: cancelAppointment } = useAppointmentMutations();
-
-  // Set initial selected tickets and vehicle from appointment
-  useEffect(() => {
-    if (appointmentTicketsLoaded && appointmentTickets) {
-      setSelectedTickets(appointmentTickets.map(t => t.job_ticket_id));
-      
-      if (!selectedVehicleId) {
-        const ticketWithVehicle = appointmentTickets.find(t => t.job_tickets?.vehicle);
-        if (ticketWithVehicle?.job_tickets?.vehicle?.id) {
-          setSelectedVehicleId(ticketWithVehicle.job_tickets.vehicle.id);
-          setFormData(prev => ({ ...prev, vehicle_id: ticketWithVehicle.job_tickets.vehicle.id }));
-        }
-      }
-    }
-  }, [appointmentTickets, appointmentTicketsLoaded, selectedVehicleId]);
-
-  // Update vehicle when tickets change
-  useEffect(() => {
-    if (jobTickets && selectedTickets.length > 0 && !selectedVehicleId) {
-      const firstSelectedTicket = jobTickets.find(ticket => ticket.id === selectedTickets[0]);
-      if (firstSelectedTicket?.vehicle) {
-        setSelectedVehicleId(firstSelectedTicket.vehicle.id);
-        setFormData(prev => ({ ...prev, vehicle_id: firstSelectedTicket.vehicle.id }));
-      }
-    }
-  }, [selectedTickets, jobTickets, selectedVehicleId]);
+  const {
+    createAppointmentMutation,
+    updateAppointmentMutation,
+    cancelAppointmentMutation
+  } = useAppointmentMutations(onClose);
 
   // Update form data when vehicle changes
   useEffect(() => {
     setFormData(prev => ({ ...prev, vehicle_id: selectedVehicleId }));
   }, [selectedVehicleId]);
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await submitAppointment(formData, selectedTickets, initialData?.id, queryClient, onClose);
+      if (initialData?.id) {
+        await updateAppointmentMutation.mutateAsync({ 
+          ...formData, 
+          id: initialData.id 
+        });
+      } else {
+        await createAppointmentMutation.mutateAsync(formData);
+      }
+      onClose();
+    } catch (error) {
+      console.error("Error submitting appointment:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFormCancel = async () => {
+  const handleCancel = async () => {
     if (!initialData?.id) return;
     setIsCancelling(true);
     try {
-      await cancelAppointment(initialData.id, queryClient, onClose);
+      await cancelAppointmentMutation.mutateAsync(initialData.id);
+      onClose();
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
     } finally {
       setIsCancelling(false);
     }
@@ -92,14 +79,11 @@ export const useAppointmentForm = ({ initialData, selectedDate, onClose }: UseAp
     setFormData,
     isSubmitting,
     isCancelling,
-    selectedTickets,
-    setSelectedTickets,
     clients,
     vehicles,
-    jobTickets,
     selectedVehicleId,
     setSelectedVehicleId,
-    handleSubmit: handleFormSubmit,
-    handleCancel: handleFormCancel
+    handleSubmit,
+    handleCancel
   };
 };

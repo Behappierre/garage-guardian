@@ -1,12 +1,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/auth/useAuth";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const useAppointmentQueries = (clientId: string | null) => {
   const { garageId } = useAuth();
 
-  const { data: clients } = useQuery({
+  const { data: clients = [] } = useQuery({
     queryKey: ["clients", garageId],
     queryFn: async () => {
       if (!garageId) {
@@ -26,7 +26,7 @@ export const useAppointmentQueries = (clientId: string | null) => {
     enabled: !!garageId,
   });
 
-  const { data: vehicles } = useQuery({
+  const { data: vehicles = [] } = useQuery({
     queryKey: ["vehicles", clientId, garageId],
     queryFn: async () => {
       if (!clientId || !garageId) return [];
