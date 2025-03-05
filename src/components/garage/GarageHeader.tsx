@@ -16,7 +16,7 @@ export function GarageHeader({ isMultiGarageAdmin }: GarageHeaderProps) {
     try {
       await supabase.auth.signOut();
       toast.success("Signed out successfully");
-      navigate("/auth");
+      navigate("/"); // Changed from "/auth" to "/" to redirect to home page
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");

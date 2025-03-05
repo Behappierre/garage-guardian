@@ -13,7 +13,7 @@ export const SidebarFooter = ({ isCollapsed }: SidebarFooterProps) => {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/");
+    navigate("/"); // Changed from potentially navigating elsewhere to "/" home page
   };
 
   return (
