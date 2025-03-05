@@ -89,7 +89,7 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       if (totalGarages === 0) {
         console.log("No garages exist, creating a default one");
         
-        // Create a default garage as a last resort
+        // Create a default garage as a last resort - FIX: Use cleaner SQL to avoid ambiguous column issue
         const { data: newGarage, error: createError } = await supabase
           .from('garages')
           .insert({

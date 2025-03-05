@@ -48,13 +48,13 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
         try {
           await supabase.rpc('execute_read_only_query', {
             query_text: `
-              INSERT INTO garage_members (user_id, garage_id, role)
-              VALUES ('${userId}'::uuid, '${profileData.garage_id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
-              ON CONFLICT DO NOTHING
+              SELECT * FROM garage_members
+              WHERE user_id = '${userId}'::uuid 
+              AND garage_id = '${profileData.garage_id}'::uuid
             `
           });
         } catch (err) {
-          console.error("Error with direct SQL insert:", err);
+          console.error("Error with direct SQL check:", err);
         }
         
         // Also try the normal approach
@@ -181,20 +181,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     console.log("Found default 'tractic' garage:", defaultGarage.id);
     
     try {
-      // Try direct SQL insert as a workaround if the normal approach fails
-      try {
-        await supabase.rpc('execute_read_only_query', {
-          query_text: `
-            INSERT INTO garage_members (user_id, garage_id, role)
-            VALUES ('${userId}'::uuid, '${defaultGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
-            ON CONFLICT DO NOTHING
-          `
-        });
-      } catch (err) {
-        console.error("Error with direct SQL insert for default garage:", err);
-      }
-      
-      // Also try normal approach
+      // Try normal approach
       try {
         await supabase
           .from('garage_members')
@@ -254,20 +241,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     console.log("Found a garage to assign:", anyGarage.id);
     
     try {
-      // Try direct SQL insert as a workaround
-      try {
-        await supabase.rpc('execute_read_only_query', {
-          query_text: `
-            INSERT INTO garage_members (user_id, garage_id, role)
-            VALUES ('${userId}'::uuid, '${anyGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
-            ON CONFLICT DO NOTHING
-          `
-        });
-      } catch (err) {
-        console.error("Error with direct SQL insert for any garage:", err);
-      }
-      
-      // Also try normal approach
+      // Try normal approach
       try {
         await supabase
           .from('garage_members')

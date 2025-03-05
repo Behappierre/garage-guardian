@@ -14,7 +14,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
   try {
     console.log("Getting accessible garages for user:", userId);
     
-    // This query considers ALL possible relationships at once
+    // This query considers ALL possible relationships at once - FIX: avoid ambiguous column references
     const { data, error } = await supabase.rpc('execute_read_only_query', {
       query_text: `
         WITH user_garages AS (
