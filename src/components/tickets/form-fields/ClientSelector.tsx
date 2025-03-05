@@ -78,11 +78,15 @@ export const ClientSelector = ({
         </SelectTrigger>
         <SelectContent>
           <ScrollArea className="h-[200px]">
-            {clients?.map((client) => (
-              <SelectItem key={client.id} value={client.id}>
-                {client.first_name} {client.last_name}
-              </SelectItem>
-            ))}
+            {clients && clients.length > 0 ? (
+              clients.map((client) => (
+                <SelectItem key={client.id} value={client.id || "placeholder-key"}>
+                  {client.first_name} {client.last_name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="no-clients">No clients available</SelectItem>
+            )}
           </ScrollArea>
         </SelectContent>
       </Select>
