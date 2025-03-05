@@ -54,7 +54,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
           },
         });
 
-        console.log('Response from create-user function:', { data, error });
+        console.log('Response from create-user function:', data, error);
 
         if (error) {
           console.error('Error from create-user function:', error);
@@ -67,7 +67,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
         }
 
         return data;
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error in createUserMutation:', err);
         throw err;
       } finally {

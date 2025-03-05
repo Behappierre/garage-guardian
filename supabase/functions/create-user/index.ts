@@ -159,18 +159,16 @@ serve(async (req: Request) => {
     console.log('User role assigned successfully:', role);
 
     // Also update the user's profile with the garage_id
-    if (garageId) {
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userData.user.id);
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .update({ garage_id: garageId })
+      .eq('id', userData.user.id);
 
-      if (profileError) {
-        console.error('Error updating user profile with garage_id:', profileError);
-        // Don't fail the entire operation, just log the error
-      } else {
-        console.log('Updated user profile with garage_id:', garageId);
-      }
+    if (profileError) {
+      console.error('Error updating user profile with garage_id:', profileError);
+      // Don't fail the entire operation, just log the error
+    } else {
+      console.log('Updated user profile with garage_id:', garageId);
     }
 
     console.log('User created and role assigned successfully');
@@ -187,7 +185,7 @@ serve(async (req: Request) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Unexpected error in create-user function:', error);
     return new Response(
       JSON.stringify({ 
