@@ -27,7 +27,10 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       throw new Error("Default garage not found");
     }
     
-    const garageId = defaultGarageResult[0].id;
+    // Fix: Properly access the id property from the JSON result
+    // Type assertion to inform TypeScript that we expect an object with an id property
+    const garageIdObj = defaultGarageResult[0] as { id: string };
+    const garageId = garageIdObj.id;
     console.log(`Found default garage: ${garageId}`);
     
     // 2. Add user as member with SEPARATE query (no joins)
