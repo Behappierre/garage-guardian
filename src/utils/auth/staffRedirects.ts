@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -49,11 +50,12 @@ export async function handleAdminOnStaffLogin(userId: string) {
   // Remove duplicates
   const uniqueGarageIds = [...new Set(totalGarages)];
   
-  console.log("Admin has access to garages as owner:", uniqueGarageIds.length);
+  console.log("Admin has access to garages as owner:", uniqueGarageIds);
   
   // If admin has multiple garages where they're an owner, send them to garage selection
   if (uniqueGarageIds.length > 1) {
     console.log("Admin has multiple garages as owner, redirecting to garage selection");
+    // Add source=staff param to indicate we're coming from staff login
     return { shouldRedirect: true, path: "/garage-management?source=staff" };
   }
   
