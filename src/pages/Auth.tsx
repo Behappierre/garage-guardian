@@ -20,7 +20,9 @@ const Auth = () => {
       const { data } = await supabase.auth.getUser();
       
       if (data.user) {
+        // Execute the diagnostics but don't test its return value directly in an if statement
         const result = await runGarageDiagnostics(data.user.id);
+        // Set the result based on the boolean return value
         setDiagnosticResult(result ? "Diagnostics completed successfully" : "Diagnostics failed");
         console.log("Diagnostics completed for user:", data.user.id);
       } else {
