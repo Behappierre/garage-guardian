@@ -32,9 +32,6 @@ const Home = () => {
             >
               Staff Sign In
             </Button>
-            <p className="text-xs text-gray-500 mt-2">
-              Staff accounts are created by garage administrators
-            </p>
           </div>
         </div>
       </div>

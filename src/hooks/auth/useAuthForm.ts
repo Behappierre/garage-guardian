@@ -31,11 +31,6 @@ export const useAuthForm = (userType: UserType) => {
   }, [userType]);
 
   const toggleMode = () => {
-    // For staff users, only allow signin mode
-    if (userType === "staff" && mode === "signin") {
-      // No-op for staff trying to toggle to signup
-      return;
-    }
     setMode(mode === "signin" ? "signup" : "signin");
   };
 

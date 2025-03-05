@@ -39,9 +39,7 @@ serve(async (req: Request) => {
       },
     });
 
-    const { email, password, firstName, lastName, role, garageId } = await req.json();
-    
-    console.log('Creating user with data:', { email, firstName, lastName, role, garageId });
+    const { email, password, firstName, lastName, role } = await req.json();
     
     if (!email || !password || !firstName || !lastName || !role) {
       return new Response(
@@ -56,20 +54,7 @@ serve(async (req: Request) => {
       );
     }
 
-    if (!garageId) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Missing garage ID. Cannot assign user to a garage.',
-          status: 'error'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
-
-    console.log('Creating user with email:', email, 'for garage:', garageId);
+    console.log('Creating user with email:', email);
 
     // Create the user
     const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
@@ -109,16 +94,10 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log('User created successfully, now assigning role with garage ID:', garageId);
-
-    // Assign the role AND the garage ID
+    // Assign the role
     const { error: roleError } = await supabaseClient
       .from('user_roles')
-      .insert([{ 
-        user_id: userData.user.id, 
-        role,
-        garage_id: garageId 
-      }]);
+      .insert([{ user_id: userData.user.id, role }]);
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
@@ -134,38 +113,12 @@ serve(async (req: Request) => {
       );
     }
 
-    // Also update the user's profile with the garage ID for consistency
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userData.user.id);
-      
-    if (profileError) {
-      console.error('Error updating profile with garage ID:', profileError);
-      // Don't fail the request since the user_roles update was successful
-    }
-
-    // Add user as a member of the garage
-    const { error: memberError } = await supabaseClient
-      .from('garage_members')
-      .insert([{
-        user_id: userData.user.id,
-        garage_id: garageId,
-        role: 'staff'
-      }]);
-
-    if (memberError) {
-      console.error('Error adding user as garage member:', memberError);
-      // Don't fail the request since the primary user creation was successful
-    }
-
-    console.log('User created and assigned to garage successfully');
+    console.log('User created and role assigned successfully');
 
     return new Response(
       JSON.stringify({ 
         message: 'User created successfully',
         userId: userData.user.id,
-        garageId: garageId,
         status: 'success'
       }),
       { 

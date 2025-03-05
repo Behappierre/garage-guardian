@@ -9,7 +9,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
-import { useAuth } from "@/components/auth/AuthProvider";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -25,15 +24,10 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("front_desk");
   const queryClient = useQueryClient();
-  const { garageId } = useAuth(); // Access the current garage ID
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
-      if (!garageId) {
-        throw new Error("No garage ID available. Please select a garage first.");
-      }
-
-      console.log('Attempting to create user:', { email, firstName, lastName, role, garageId });
+      console.log('Attempting to create user:', { email, firstName, lastName, role });
       
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
@@ -42,7 +36,6 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
           firstName,
           lastName,
           role,
-          garageId, // Pass the current garage ID to the function
         },
       });
 
@@ -61,7 +54,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users", garageId] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast.success("User created successfully");
       onOpenChange(false);
       // Reset form
