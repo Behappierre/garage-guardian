@@ -1,7 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
-type Role = "administrator" | "technician" | "front_desk";
+type Role = Database['public']['Enums']['app_role'];
 type UserType = "owner" | "staff";
 
 export const useSignUp = () => {

@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { AlertCircle } from "lucide-react";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -24,41 +25,54 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("front_desk");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const queryClient = useQueryClient();
   const { garageId } = useAuth();
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
+      setSubmitting(true);
+      setError(null);
+      
       if (!garageId) {
         throw new Error("No garage selected. Please select a garage first.");
       }
       
       console.log('Attempting to create user:', { email, firstName, lastName, role, garageId });
       
-      const { data, error } = await supabase.functions.invoke('create-user', {
-        body: {
-          email,
-          password,
-          firstName,
-          lastName,
-          role,
-          garageId,
-        },
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('create-user', {
+          body: {
+            email,
+            password,
+            firstName,
+            lastName,
+            role,
+            garageId,
+          },
+        });
 
-      console.log('Response from create-user function:', { data, error });
+        console.log('Response from create-user function:', { data, error });
 
-      if (error) {
-        console.error('Error from create-user function:', error);
-        throw new Error(error.message || 'Failed to create user');
+        if (error) {
+          console.error('Error from create-user function:', error);
+          throw new Error(error.message || 'Failed to create user');
+        }
+        
+        if (!data || data.status === 'error') {
+          console.error('Error response from create-user function:', data);
+          throw new Error(data?.error || 'Failed to create user');
+        }
+
+        return data;
+      } catch (err) {
+        console.error('Error in createUserMutation:', err);
+        throw err;
+      } finally {
+        setSubmitting(false);
       }
-      
-      if (!data || data.status === 'error') {
-        console.error('Error response from create-user function:', data);
-        throw new Error(data?.error || 'Failed to create user');
-      }
-
-      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -70,9 +84,11 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
       setFirstName("");
       setLastName("");
       setRole("front_desk");
+      setError(null);
     },
     onError: (error: Error) => {
       console.error('Error in createUserMutation:', error);
+      setError(error.message);
       toast.error(`Error creating user: ${error.message}`);
     },
   });
@@ -80,9 +96,17 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!garageId) {
+      setError("No garage selected. Please select a garage first.");
       toast.error("No garage selected. Please select a garage first.");
       return;
     }
+    
+    if (!email || !password || !firstName || !lastName) {
+      setError("All fields are required.");
+      toast.error("All fields are required.");
+      return;
+    }
+    
     try {
       await createUserMutation.mutate();
     } catch (error) {
@@ -156,6 +180,16 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
               </div>
             </RadioGroup>
           </div>
+          
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-4 border border-destructive/20">
+              <div className="flex items-center">
+                <AlertCircle className="h-4 w-4 text-destructive mr-2" />
+                <p className="text-destructive text-sm">{error}</p>
+              </div>
+            </div>
+          )}
+          
           {!garageId && (
             <div className="rounded-md bg-amber-50 p-4 border border-amber-200">
               <p className="text-amber-800 text-sm">
@@ -163,15 +197,16 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
               </p>
             </div>
           )}
+          
           <div className="flex justify-end space-x-2">
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button 
               type="submit" 
-              disabled={createUserMutation.isPending || !garageId}
+              disabled={submitting || !garageId}
             >
-              {createUserMutation.isPending ? "Creating..." : "Create User"}
+              {submitting ? "Creating..." : "Create User"}
             </Button>
           </div>
         </form>

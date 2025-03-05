@@ -20,6 +20,7 @@ serve(async (req: Request) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing required environment variables');
       return new Response(
         JSON.stringify({ 
           error: 'Server configuration error',
@@ -39,12 +40,46 @@ serve(async (req: Request) => {
       },
     });
 
-    const { email, password, firstName, lastName, role, garageId } = await req.json();
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+      console.log('Request body:', JSON.stringify(body));
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request body',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    const { email, password, firstName, lastName, role, garageId } = body;
     
     if (!email || !password || !firstName || !lastName || !role) {
+      console.error('Missing required fields:', { email: !!email, password: !!password, firstName: !!firstName, lastName: !!lastName, role: !!role });
       return new Response(
         JSON.stringify({ 
           error: 'Missing required fields',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
+    if (!garageId) {
+      console.error('No garage ID provided');
+      return new Response(
+        JSON.stringify({ 
+          error: 'No garage ID provided. Please select a garage first.',
           status: 'error'
         }),
         { 
@@ -83,6 +118,7 @@ serve(async (req: Request) => {
     }
 
     if (!userData?.user) {
+      console.error('User creation failed - no user data returned');
       return new Response(
         JSON.stringify({ 
           error: 'User creation failed - no user data returned',
@@ -94,6 +130,8 @@ serve(async (req: Request) => {
         }
       );
     }
+
+    console.log('User created:', userData.user.id);
 
     // Assign the role and garage_id
     const { error: roleError } = await supabaseClient
@@ -117,6 +155,8 @@ serve(async (req: Request) => {
         }
       );
     }
+
+    console.log('User role assigned successfully:', role);
 
     // Also update the user's profile with the garage_id
     if (garageId) {
