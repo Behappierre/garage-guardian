@@ -54,13 +54,9 @@ export function ThemeSettings() {
   const isDarkMode = theme === "dark";
 
   return (
-    <div className={`flex flex-col p-6 border rounded-lg ${
-      isDarkMode 
-        ? "border-gray-800 bg-black" 
-        : "border-gray-200 bg-card"
-    }`}>
+    <div className="flex flex-col p-6 border rounded-lg border-border bg-card">
       <div className="flex items-center justify-between mb-4">
-        <h2 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-foreground"}`}>
+        <h2 className="text-lg font-medium text-foreground">
           Dark Mode
         </h2>
         <div className="flex items-center space-x-2">
@@ -73,7 +69,7 @@ export function ThemeSettings() {
           <Moon className={`h-5 w-5 ${isDarkMode ? "text-gray-400" : "text-gray-400"}`} />
         </div>
       </div>
-      <p className={`text-sm ${isDarkMode ? "text-gray-400" : "text-muted-foreground"}`}>
+      <p className="text-sm text-muted-foreground">
         Toggle between light and dark theme
       </p>
     </div>

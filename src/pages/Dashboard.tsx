@@ -30,7 +30,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className={`flex min-h-screen ${isDarkMode ? "bg-black" : "bg-gray-50"}`}>
+    <div className={`flex min-h-screen bg-background`}>
       <Sidebar isCollapsed={isCollapsed} onCollapse={setIsCollapsed} />
       <main className={cn(
         "flex-1 transition-all duration-300 w-full",

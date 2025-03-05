@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { JobTicket, TicketStatus } from "@/types/job-ticket";
@@ -27,7 +26,6 @@ const MyWork = () => {
   const [showTicketForm, setShowTicketForm] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch assigned tickets
   const { data: tickets, isLoading } = useQuery({
     queryKey: ["assigned_tickets"],
     queryFn: async () => {
@@ -46,7 +44,6 @@ const MyWork = () => {
     },
   });
 
-  // Update ticket status mutation
   const updateTicketStatus = useMutation({
     mutationFn: async ({ ticketId, newStatus }: { ticketId: string, newStatus: TicketStatus }) => {
       const { error } = await supabase
@@ -74,11 +71,9 @@ const MyWork = () => {
   };
 
   const handleStatusChange = (ticketId: string, newStatus: TicketStatus) => {
-    // Find the ticket to ensure it exists
     const ticket = tickets?.find(t => t.id === ticketId);
     if (!ticket) return;
     
-    // Only update if status actually changed
     if (ticket.status !== newStatus) {
       updateTicketStatus.mutate({ ticketId, newStatus });
     }
@@ -94,11 +89,10 @@ const MyWork = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
+      <div className="flex flex-col w-full h-full bg-background">
         <PageHeader
           title="My Work"
           description="Manage your assigned job tickets"
-          className={isDarkMode ? "bg-black" : ""}
         />
 
         <div className="px-8 pb-8">

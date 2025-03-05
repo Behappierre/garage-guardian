@@ -30,14 +30,9 @@ export default function Settings() {
     }
   }, [settings?.dark_mode, setTheme]);
 
-  const isDarkMode = theme === "dark";
-
   return (
-    <div className={`flex flex-col w-full h-full ${isDarkMode ? "bg-black" : "bg-background"}`}>
-      <PageHeader
-        title="Settings"
-        className={isDarkMode ? "bg-black" : ""}
-      />
+    <div className="flex flex-col w-full h-full bg-background">
+      <PageHeader title="Settings" />
       
       <div className="px-8 pb-8 space-y-6">
         <ThemeSettings />
