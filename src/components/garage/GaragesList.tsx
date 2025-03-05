@@ -1,6 +1,5 @@
-
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, Download, Trash2 } from "lucide-react";
+import { Plus, Settings, Download, Trash2, Edit } from "lucide-react";
 import type { Garage } from "@/types/garage";
 import {
   DropdownMenu,
@@ -17,6 +16,7 @@ interface GaragesListProps {
   onSettingsClick?: (garageId: string) => void;
   onExportData?: (garageId: string) => void;
   onDeleteClick?: (garageId: string) => void;
+  onEditDetails?: (garage: Garage) => void;
 }
 
 export const GaragesList = ({ 
@@ -26,7 +26,8 @@ export const GaragesList = ({
   onCreateGarage,
   onSettingsClick,
   onExportData,
-  onDeleteClick
+  onDeleteClick,
+  onEditDetails
 }: GaragesListProps) => {
   if (isLoading) {
     return (
@@ -56,6 +57,15 @@ export const GaragesList = ({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {onEditDetails && (
+                      <DropdownMenuItem onClick={(e) => {
+                        e.stopPropagation();
+                        onEditDetails(garage);
+                      }}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Details
+                      </DropdownMenuItem>
+                    )}
                     {onExportData && (
                       <DropdownMenuItem onClick={(e) => {
                         e.stopPropagation();

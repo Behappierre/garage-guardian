@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { LogOut, AlertCircle, Settings, Download, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { GaragesList } from "./GaragesList";
 import { NewGarageForm } from "./NewGarageForm";
+import { EditGarageDetailsDialog } from "./EditGarageDetailsDialog";
 import { useOwnerGarages } from "@/hooks/useOwnerGarages";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Garage } from "@/types/garage";
 
 export const GarageManager = () => {
   const navigate = useNavigate();
@@ -43,8 +44,9 @@ export const GarageManager = () => {
   const [loginSource, setLoginSource] = useState<"owner" | "staff" | null>(null);
   const [selectedGarageId, setSelectedGarageId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [selectedGarage, setSelectedGarage] = useState<Garage | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   
-  // Check if user came from staff login or owner login
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const source = params.get('source');
@@ -85,7 +87,6 @@ export const GarageManager = () => {
       
       console.log(`User ${userData.user.id} selecting garage ${garageId}`);
       
-      // Update user_roles with garage_id
       const { error: roleError } = await supabase
         .from('user_roles')
         .update({ garage_id: garageId })
@@ -97,7 +98,6 @@ export const GarageManager = () => {
         return;
       }
       
-      // Ensure user is in garage_members table as owner
       const { error: membershipError } = await supabase
         .from('garage_members')
         .upsert({
@@ -112,7 +112,6 @@ export const GarageManager = () => {
         console.error("Error creating garage membership:", membershipError);
       }
       
-      // Update profile with garage_id
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ garage_id: garageId })
@@ -135,7 +134,6 @@ export const GarageManager = () => {
     try {
       toast.info("Preparing garage data export...");
       
-      // Get garage details
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
         .select('*')
@@ -146,7 +144,6 @@ export const GarageManager = () => {
         throw new Error("Failed to fetch garage data");
       }
 
-      // Get clients
       const { data: clients, error: clientsError } = await supabase
         .from('clients')
         .select('*')
@@ -156,7 +153,6 @@ export const GarageManager = () => {
         throw new Error("Failed to fetch client data");
       }
 
-      // Get vehicles
       const { data: vehicles, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('*')
@@ -166,7 +162,6 @@ export const GarageManager = () => {
         throw new Error("Failed to fetch vehicle data");
       }
 
-      // Get job tickets
       const { data: jobTickets, error: ticketsError } = await supabase
         .from('job_tickets')
         .select('*')
@@ -176,7 +171,6 @@ export const GarageManager = () => {
         throw new Error("Failed to fetch job ticket data");
       }
 
-      // Get appointments
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select('*')
@@ -186,7 +180,6 @@ export const GarageManager = () => {
         throw new Error("Failed to fetch appointment data");
       }
 
-      // Compile all data
       const exportData = {
         exportDate: new Date().toISOString(),
         garage: garageData,
@@ -196,7 +189,6 @@ export const GarageManager = () => {
         appointments
       };
 
-      // Convert to JSON and trigger download
       const dataStr = JSON.stringify(exportData, null, 2);
       const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
       
@@ -220,7 +212,6 @@ export const GarageManager = () => {
     try {
       toast.info("Deleting garage...");
       
-      // Delete the garage
       const { error: deleteError } = await supabase
         .from('garages')
         .delete()
@@ -230,7 +221,6 @@ export const GarageManager = () => {
         throw new Error("Failed to delete garage");
       }
       
-      // Close dialog and refresh list
       setShowDeleteDialog(false);
       refreshGarages();
       toast.success("Garage deleted successfully");
@@ -238,6 +228,11 @@ export const GarageManager = () => {
       console.error("Error deleting garage:", error);
       toast.error("Failed to delete garage");
     }
+  };
+
+  const handleEditDetails = (garage: Garage) => {
+    setSelectedGarage(garage);
+    setShowEditDialog(true);
   };
 
   if (showCreateForm) {
@@ -306,10 +301,10 @@ export const GarageManager = () => {
             setSelectedGarageId(garageId);
             setShowDeleteDialog(true);
           }}
+          onEditDetails={handleEditDetails}
         />
       )}
 
-      {/* Delete Garage Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -327,6 +322,13 @@ export const GarageManager = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <EditGarageDetailsDialog
+        garage={selectedGarage}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onGarageUpdated={refreshGarages}
+      />
     </div>
   );
 };
