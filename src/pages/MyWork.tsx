@@ -1,7 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { JobTicket } from "@/types/job-ticket";
+import type { JobTicket, TicketStatus } from "@/types/job-ticket";
 import { StatusColumn } from "@/components/tickets/StatusColumn";
 import { useClockEvents } from "@/hooks/use-clock-events";
 import { PageHeader } from "@/components/ui/page-header";
@@ -48,7 +48,7 @@ const MyWork = () => {
 
   // Update ticket status mutation
   const updateTicketStatus = useMutation({
-    mutationFn: async ({ ticketId, newStatus }: { ticketId: string, newStatus: string }) => {
+    mutationFn: async ({ ticketId, newStatus }: { ticketId: string, newStatus: TicketStatus }) => {
       const { error } = await supabase
         .from("job_tickets")
         .update({ status: newStatus })
@@ -73,7 +73,7 @@ const MyWork = () => {
     setShowTicketForm(true);
   };
 
-  const handleStatusChange = (ticketId: string, newStatus: string) => {
+  const handleStatusChange = (ticketId: string, newStatus: TicketStatus) => {
     // Find the ticket to ensure it exists
     const ticket = tickets?.find(t => t.id === ticketId);
     if (!ticket) return;
@@ -88,7 +88,7 @@ const MyWork = () => {
     return <div className="p-8">Loading...</div>;
   }
 
-  const getTicketsByStatus = (status: string) => {
+  const getTicketsByStatus = (status: TicketStatus) => {
     return tickets?.filter(ticket => ticket.status === status) || [];
   };
 

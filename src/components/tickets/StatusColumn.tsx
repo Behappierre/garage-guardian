@@ -1,16 +1,16 @@
 
-import type { JobTicket } from "@/types/job-ticket";
+import type { JobTicket, TicketStatus } from "@/types/job-ticket";
 import { JobTicketCard } from "./JobTicketCard";
 import { useDrop } from "react-dnd";
 
 interface StatusColumnProps {
   label: string;
-  status: string;
+  status: TicketStatus;
   tickets: JobTicket[];
   getLatestClockEvent: (ticketId: string) => any;
   onClockAction: (ticket: JobTicket) => void;
   onTicketClick: (ticket: JobTicket) => void;
-  onStatusChange: (ticketId: string, newStatus: string) => void;
+  onStatusChange: (ticketId: string, newStatus: TicketStatus) => void;
 }
 
 export const StatusColumn = ({ 
