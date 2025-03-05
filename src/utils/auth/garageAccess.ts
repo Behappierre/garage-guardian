@@ -104,7 +104,31 @@ export async function repairUserGarageRelationships(userId: string): Promise<boo
   try {
     console.log("Repairing garage relationships for user:", userId);
     
-    // Check if user already has a garage in user_roles
+    // First check if user is an owner in garage_members
+    const { data: memberData } = await supabase
+      .from('garage_members')
+      .select('garage_id')
+      .eq('user_id', userId)
+      .eq('role', 'owner')
+      .maybeSingle();
+      
+    if (memberData?.garage_id) {
+      console.log(`User is an owner of garage: ${memberData.garage_id}`);
+      
+      // Update profile with this garage_id
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: memberData.garage_id })
+        .eq('id', userId);
+        
+      if (profileError) {
+        console.error("Error updating profile with garage_id:", profileError);
+      }
+      
+      return true;
+    }
+    
+    // If no garage found as owner, check user_roles
     const { data: userRoleData } = await supabase
       .from('user_roles')
       .select('role, garage_id')
@@ -121,6 +145,17 @@ export async function repairUserGarageRelationships(userId: string): Promise<boo
         
       if (garageExists) {
         console.log(`User already has valid garage_id: ${userRoleData.garage_id}`);
+        
+        // Update profile with this garage_id
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ garage_id: userRoleData.garage_id })
+          .eq('id', userId);
+          
+        if (profileError) {
+          console.error("Error updating profile with garage_id:", profileError);
+        }
+        
         return true;
       }
     }
@@ -135,11 +170,15 @@ export async function repairUserGarageRelationships(userId: string): Promise<boo
     if (anyGarage) {
       console.log(`Assigning garage ${anyGarage.id} to user`);
       
-      // Update user_roles with garage_id
-      await supabase
-        .from('user_roles')
+      // Update profile with this garage_id
+      const { error: profileError } = await supabase
+        .from('profiles')
         .update({ garage_id: anyGarage.id })
-        .eq('user_id', userId);
+        .eq('id', userId);
+        
+      if (profileError) {
+        console.error("Error updating profile with garage_id:", profileError);
+      }
       
       return true;
     }
