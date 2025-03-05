@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Garage } from "@/types/garage";
+import { getAccessibleGarages, repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 
 export interface OwnerGaragesResult {
   garages: Garage[];
@@ -39,46 +40,20 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         return;
       }
 
-      console.log("AUTH USER ID:", userData.user.id);
-      console.log("User email:", userData.user.email);
-
-      // DEBUGGING: Check raw database state
-      const { data: ownerCheck } = await supabase.rpc('execute_read_only_query', {
-        query_text: `SELECT COUNT(*) FROM garages WHERE owner_id = '${userData.user.id}'::uuid`
-      });
-      console.log("DIRECT OWNER COUNT:", ownerCheck);
-
-      const { data: memberCheck } = await supabase.rpc('execute_read_only_query', {
-        query_text: `SELECT COUNT(*) FROM garage_members WHERE user_id = '${userData.user.id}'::uuid`
-      });
-      console.log("DIRECT MEMBER COUNT:", memberCheck);
-
-      const { data: profileCheck } = await supabase.rpc('execute_read_only_query', {
-        query_text: `SELECT garage_id FROM profiles WHERE id = '${userData.user.id}'::uuid`
-      });
-      console.log("DIRECT PROFILE GARAGE:", profileCheck);
-
-      // Use a single SQL query with explicit UUID casting
-      const { data: directResults } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT DISTINCT g.* FROM garages g
-          LEFT JOIN garage_members gm ON g.id = gm.garage_id
-          LEFT JOIN profiles p ON g.id = p.garage_id
-          WHERE 
-            g.owner_id = '${userData.user.id}'::uuid OR
-            gm.user_id = '${userData.user.id}'::uuid OR
-            (p.id = '${userData.user.id}'::uuid AND p.garage_id IS NOT NULL)
-        `
-      });
+      console.log("Fetching garages for user:", userData.user.id);
       
-      console.log("DIRECT QUERY RESULTS:", JSON.stringify(directResults));
+      // Try to repair relationships first
+      await repairUserGarageRelationships(userData.user.id);
       
-      if (directResults && Array.isArray(directResults) && directResults.length > 0) {
-        console.log("Found garages for user:", directResults.length);
-        // Cast the JSON results to Garage[] type
-        setGarages(directResults as unknown as Garage[]);
+      // Then fetch all accessible garages
+      const accessibleGarages = await getAccessibleGarages(userData.user.id);
+      
+      console.log("Accessible garages:", accessibleGarages.length);
+      
+      if (accessibleGarages.length > 0) {
+        setGarages(accessibleGarages);
       } else {
-        console.log("No garages found for user");
+        console.log("No garages found, checking for default garage");
         
         // Fallback check for a default "tractic" garage
         const { data: defaultGarage } = await supabase.rpc('execute_read_only_query', {
@@ -89,7 +64,6 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         
         if (defaultGarage && Array.isArray(defaultGarage) && defaultGarage.length > 0) {
           console.log("Using default 'tractic' garage");
-          // Cast the JSON result to Garage[] type
           setGarages(defaultGarage as unknown as Garage[]);
           
           // Add user to this garage if not already a member

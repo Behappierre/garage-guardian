@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { repairUserGarageRelationships } from "./garageAccess";
 
 /**
  * Handles owner-specific sign-in logic
@@ -7,6 +9,15 @@ export async function handleOwnerSignIn(userId: string) {
   console.log("Handling owner sign in for user:", userId);
   
   try {
+    // First try to repair any garage relationships
+    const relationshipsRepaired = await repairUserGarageRelationships(userId);
+    console.log("Owner relationships repaired:", relationshipsRepaired);
+    
+    if (relationshipsRepaired) {
+      // If relationships were repaired successfully, we're done
+      return;
+    }
+    
     // Check for owned garages first - most reliable approach
     const { data: ownedGarages } = await supabase
       .from('garages')

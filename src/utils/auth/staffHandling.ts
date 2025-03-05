@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 import { ensureUserHasGarage } from "@/utils/auth/garageAssignment";
 
 /**
@@ -9,6 +10,16 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
   console.log("Handling staff sign in for user:", userId, "with role:", userRole);
   
   try {
+    // First try to repair any garage relationships
+    const relationshipsRepaired = await repairUserGarageRelationships(userId);
+    console.log("Staff relationships repaired:", relationshipsRepaired);
+    
+    if (relationshipsRepaired) {
+      // If relationships were repaired successfully, we're done
+      console.log("Staff garage relationships were repaired successfully");
+      return;
+    }
+    
     // First check if user already has a garage assignment
     const { data: profileData } = await supabase
       .from('profiles')
@@ -59,10 +70,9 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
       });
       console.log("TOTAL GARAGE COUNT:", garageCountResult);
       
-      // Fixed: Check if garageCount is an array and get the count value safely
+      // Extract count using string key from the first object
       let totalGarages = 0;
       if (Array.isArray(garageCountResult) && garageCountResult.length > 0) {
-        // Extract count using string key from the first object
         const countObj = garageCountResult[0];
         if (typeof countObj === 'object' && countObj !== null) {
           // Find the count key (might be 'count' or another name)

@@ -1,8 +1,8 @@
-
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
+import { getAccessibleGarages, repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 
 interface AuthContextType {
   session: Session | null;
@@ -33,6 +33,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
+      // Try to repair relationships first
+      await repairUserGarageRelationships(userId);
+      
       // First check if user has a garage in their profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -53,79 +56,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       
-      // Check user role
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-        
-      console.log("User role data:", roleData);
+      // Fetch all accessible garages
+      const accessibleGarages = await getAccessibleGarages(userId);
       
-      if (roleError) {
-        console.error("Error fetching user role:", roleError);
-      }
-      
-      const isAdmin = roleData?.role === 'administrator';
-      console.log("Is user admin:", isAdmin);
-      
-      if (isAdmin) {
-        const { data: ownedGarages, error: ownedError } = await supabase
-          .from('garages')
-          .select('id')
-          .eq('owner_id', userId)
-          .limit(1);
-        
-        console.log("Owned garages for admin:", ownedGarages, "Error:", ownedError);  
-          
-        if (!ownedError && ownedGarages && ownedGarages.length > 0) {
-          const ownedGarageId = ownedGarages[0].id;
-          console.log("Found owned garage for admin:", ownedGarageId);
-          
-          // Update profile with garage_id
-          await supabase
-            .from('profiles')
-            .update({ garage_id: ownedGarageId })
-            .eq('id', userId);
-          
-          // Ensure user is a member of their owned garage
-          await supabase
-            .from('garage_members')
-            .upsert([{
-              user_id: userId,
-              garage_id: ownedGarageId,
-              role: 'owner'
-            }]);
-          
-          setGarageId(ownedGarageId);
-          setLoading(false);
-          setHasFetchedGarage(true);
-          setFetchingGarage(false);
-          return;
-        }
-      }
-      
-      // Check if user is a member of any garage
-      const { data: memberships, error: membershipError } = await supabase
-        .from('garage_members')
-        .select('garage_id, role')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      console.log("Garage memberships:", memberships, "Error:", membershipError);
-        
-      if (!membershipError && memberships && memberships.length > 0) {
-        const memberGarageId = memberships[0].garage_id;
-        console.log("Found membership garage:", memberGarageId);
+      if (accessibleGarages.length > 0) {
+        const firstGarage = accessibleGarages[0];
+        console.log("Using first accessible garage:", firstGarage.id);
         
         // Update profile with garage_id
         await supabase
           .from('profiles')
-          .update({ garage_id: memberGarageId })
+          .update({ garage_id: firstGarage.id })
           .eq('id', userId);
         
-        setGarageId(memberGarageId);
+        setGarageId(firstGarage.id);
         setLoading(false);
         setHasFetchedGarage(true);
         setFetchingGarage(false);
