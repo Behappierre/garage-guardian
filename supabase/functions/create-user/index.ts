@@ -1,11 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from './utils.ts';
+import { validateRequest, createUserAccount, assignUserRole } from './userManagement.ts';
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
@@ -40,194 +37,52 @@ serve(async (req: Request) => {
       },
     });
 
-    // Parse request body
-    let body;
-    try {
-      body = await req.json();
-      console.log('Request body:', JSON.stringify(body));
-    } catch (e) {
-      console.error('Error parsing request body:', e);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid request body',
-          status: 'error'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
+    // Parse and validate request
+    const { body, error: requestError } = await validateRequest(req);
+    if (requestError) {
+      return requestError;
     }
 
     const { email, password, firstName, lastName, role, garageId } = body;
     
-    // Log all received parameters for debugging
-    console.log('Creating user with parameters:', { 
+    // Create user account
+    const { userData, error: createUserError } = await createUserAccount(
+      supabaseClient, 
       email, 
-      password: password ? '******' : undefined, 
+      password, 
       firstName, 
-      lastName, 
+      lastName
+    );
+    
+    if (createUserError) {
+      return createUserError;
+    }
+
+    // Assign role and garage to user
+    const { result, error: assignRoleError } = await assignUserRole(
+      supabaseClient,
+      userData.user.id,
       role,
       garageId
-    });
+    );
     
-    if (!email || !password || !firstName || !lastName || !role) {
-      console.error('Missing required fields:', { 
-        email: !!email, 
-        password: !!password, 
-        firstName: !!firstName, 
-        lastName: !!lastName, 
-        role: !!role 
-      });
-      
+    if (assignRoleError) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Missing required fields',
-          status: 'error',
-          details: { 
-            email: !!email, 
-            password: !!password, 
-            firstName: !!firstName, 
-            lastName: !!lastName, 
-            role: !!role 
-          }
-        }),
+        JSON.stringify(result),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
+          status: 201, // Still return success since user was created
         }
       );
     }
 
-    if (!garageId) {
-      console.error('No garage ID provided');
-      return new Response(
-        JSON.stringify({ 
-          error: 'No garage ID provided. Please select a garage first.',
-          status: 'error'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
-
-    console.log('Creating user with email:', email, 'to be assigned to garage:', garageId);
-    console.log('Role selected:', role);
-
-    // Create the user
-    const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
+    return new Response(
+      JSON.stringify(result),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 201,
       }
-    });
-
-    if (createUserError) {
-      console.error('Error creating user:', createUserError);
-      return new Response(
-        JSON.stringify({ 
-          error: createUserError.message,
-          status: 'error'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400,
-        }
-      );
-    }
-
-    if (!userData?.user) {
-      console.error('User creation failed - no user data returned');
-      return new Response(
-        JSON.stringify({ 
-          error: 'User creation failed - no user data returned',
-          status: 'error'
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500,
-        }
-      );
-    }
-
-    console.log('User created successfully with ID:', userData.user.id);
-
-    // Assign the role and garage_id - Using a more explicit approach with proper error handling
-    try {
-      // Step 1: Insert role into user_roles with garage_id
-      console.log('Assigning role and garage_id:', { 
-        user_id: userData.user.id, 
-        role,
-        garage_id: garageId 
-      });
-      
-      const { error: roleError } = await supabaseClient
-        .from('user_roles')
-        .insert([{ 
-          user_id: userData.user.id, 
-          role,
-          garage_id: garageId 
-        }]);
-
-      if (roleError) {
-        console.error('Error assigning role:', roleError);
-        throw new Error(`Error assigning role: ${roleError.message}`);
-      }
-      
-      console.log('Successfully assigned role:', role, 'with garage:', garageId);
-
-      // Step 2: Update profile with garage_id
-      console.log('Updating profile with garage_id:', garageId);
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userData.user.id);
-
-      if (profileError) {
-        console.warn('Warning: Error updating profile with garage_id:', profileError);
-        // Continue even if profile update fails
-      } else {
-        console.log('Successfully updated profile with garage_id:', garageId);
-      }
-      
-      // DO NOT add any users to garage_members table when creating users
-      // garage_members should only be populated when creating a garage
-      console.log('Skipping garage_members entry - only populate when creating garages');
-      
-      // If everything succeeded, return success response
-      return new Response(
-        JSON.stringify({ 
-          message: 'User created successfully',
-          userId: userData.user.id,
-          status: 'success' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 201,
-        }
-      );
-    } catch (error: any) {
-      console.error('Error in role assignment or profile update:', error);
-      
-      // Still return a success since user was created
-      return new Response(
-        JSON.stringify({ 
-          message: 'User created but role assignment had issues',
-          userId: userData.user.id,
-          error: error.message,
-          status: 'partial_success' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 201, // Still return success status since user was created
-        }
-      );
-    }
+    );
   } catch (error: any) {
     console.error('Unexpected error in create-user function:', error);
     return new Response(
