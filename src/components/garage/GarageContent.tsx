@@ -75,7 +75,7 @@ export const GarageContent = ({
         <GarageAlerts 
           debugInfo={debugInfo} 
           error={error} 
-          garagesEmpty={garages.length === 0} 
+          isMultiGarageAdmin={garages.length > 1} 
         />
         
         <GarageList 
@@ -105,4 +105,4 @@ export const GarageContent = ({
       </div>
     </div>
   );
-};
+}
