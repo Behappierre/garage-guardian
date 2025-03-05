@@ -13,6 +13,7 @@ export async function selectGarage(garageId: string, navigate: ReturnType<typeof
     
     console.log(`User ${userData.user.id} selecting garage ${garageId}`);
     
+    // Update user_roles table
     const { error: roleError } = await supabase
       .from('user_roles')
       .update({ garage_id: garageId })
@@ -24,6 +25,7 @@ export async function selectGarage(garageId: string, navigate: ReturnType<typeof
       return;
     }
     
+    // Update garage_members (ensure the user is a member of the selected garage)
     const { error: membershipError } = await supabase
       .from('garage_members')
       .upsert({
@@ -38,6 +40,7 @@ export async function selectGarage(garageId: string, navigate: ReturnType<typeof
       console.error("Error creating garage membership:", membershipError);
     }
     
+    // Update profile table
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: garageId })
@@ -47,9 +50,9 @@ export async function selectGarage(garageId: string, navigate: ReturnType<typeof
       console.error("Error updating profile:", profileError);
     }
     
+    // Force a page reload to ensure context is updated with new garage_id
     toast.success("Successfully associated with garage");
-    
-    navigate("/dashboard");
+    window.location.href = "/dashboard";
   } catch (error) {
     console.error("Error selecting garage:", error);
     toast.error("Failed to select garage");

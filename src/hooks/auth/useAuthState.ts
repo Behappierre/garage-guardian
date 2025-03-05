@@ -15,6 +15,7 @@ export const useAuthState = () => {
     if (user) {
       setFetchingGarage(true);
       const newGarageId = await fetchUserGarage(user.id, false);
+      console.log("Refreshed garage ID:", newGarageId);
       setGarageId(newGarageId);
       setFetchingGarage(false);
     }
@@ -36,6 +37,7 @@ export const useAuthState = () => {
             setFetchingGarage(true);
             const foundGarageId = await fetchUserGarage(session.user.id, false);
             if (mounted) {
+              console.log("Initial garage ID fetch:", foundGarageId);
               setGarageId(foundGarageId);
               setFetchingGarage(false);
               setLoading(false);
@@ -66,6 +68,7 @@ export const useAuthState = () => {
             setFetchingGarage(true);
             const foundGarageId = await fetchUserGarage(session.user.id, false);
             if (mounted) {
+              console.log("Auth state change garage ID:", foundGarageId);
               setGarageId(foundGarageId);
               setFetchingGarage(false);
               setLoading(false);
