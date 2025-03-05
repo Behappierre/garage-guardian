@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserHasGarage } from "@/utils/auth/garageAssignment";
 
@@ -40,33 +39,25 @@ export const useSignIn = () => {
     console.log("Handling owner sign in for user:", userId);
     
     try {
-      // Check for owned garages
-      const { data: ownedGarages, error: ownedError } = await supabase
+      // Check for owned garages first - most reliable approach
+      const { data: ownedGarages } = await supabase
         .from('garages')
         .select('id')
-        .eq('owner_id', userId)
-        .order('created_at', { ascending: false });
+        .eq('owner_id', userId);
       
       console.log("Owner sign in - owned garages:", JSON.stringify(ownedGarages));
-      console.log("Owner sign in - owned error:", ownedError);
         
-      if (ownedError) {
-        console.error("Error checking owned garages:", ownedError);
-      }
-      
       if (ownedGarages && ownedGarages.length > 0) {
         console.log("Owner has owned garages:", ownedGarages.length);
         
         // Ensure user's profile has the garage_id set
-        const { error: updateError } = await supabase
+        await supabase
           .from('profiles')
           .update({ garage_id: ownedGarages[0].id })
           .eq('id', userId);
-        
-        console.log("Profile update error:", updateError);
           
         // Add user as member of their owned garage if not already
-        const { error: upsertError } = await supabase
+        await supabase
           .from('garage_members')
           .upsert([{ 
             user_id: userId, 
@@ -74,12 +65,10 @@ export const useSignIn = () => {
             role: 'owner'
           }]);
         
-        console.log("Garage member upsert error:", upsertError);
-      } else {
-        console.log("Owner has no owned garages");
+        return;
       }
       
-      // Double check if the user is a member of any garage
+      // Check if user is a member of any garage
       const { data: memberData } = await supabase
         .from('garage_members')
         .select('garage_id, role')
@@ -89,17 +78,28 @@ export const useSignIn = () => {
       console.log("Owner sign in - existing memberships:", JSON.stringify(memberData));
       
       if (memberData?.garage_id) {
-        // Update profile with this garage_id
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ garage_id: memberData.garage_id })
-          .eq('id', userId);
-        
-        console.log("Profile update with existing membership error:", updateError);
+        // Verify this garage exists
+        const { data: garageExists } = await supabase
+          .from('garages')
+          .select('id')
+          .eq('id', memberData.garage_id)
+          .maybeSingle();
+          
+        if (garageExists) {
+          // Update profile with this garage_id
+          await supabase
+            .from('profiles')
+            .update({ garage_id: memberData.garage_id })
+            .eq('id', userId);
+        }
       }
+      
+      // Keep going - we don't need to throw an error 
+      // If no garage is found, the garage management page 
+      // will show an empty state and allow creating one
     } catch (error) {
       console.error("Error in handleOwnerSignIn:", error);
-      // Continue execution, as this is not critical
+      // Continue execution, as this is not critical for navigation
     }
   };
 
@@ -107,78 +107,56 @@ export const useSignIn = () => {
     console.log("Handling staff sign in for user:", userId, "with role:", userRole);
     
     try {
-      // Ensure the user has a garage assignment with improved error handling
-      const hasGarage = await ensureUserHasGarage(userId, userRole);
-      console.log("Staff ensureUserHasGarage result:", hasGarage);
-      
-      if (!hasGarage) {
-        console.log("Staff has no garage assignment");
-        throw new Error("You don't have access to any garages. Please contact an administrator.");
-      }
-      
-      // Double-check that profile has garage_id
-      const { data: profileData, error: profileError } = await supabase
+      // First check if user already has a garage assignment
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('garage_id')
         .eq('id', userId)
         .maybeSingle();
       
       console.log("Staff profile data:", JSON.stringify(profileData));
-      console.log("Profile error:", profileError);
         
-      if (!profileData?.garage_id) {
-        console.log("Staff has no garage_id in profile after ensureUserHasGarage");
-        
-        // One last attempt - check memberships directly
-        const { data: memberData, error: memberError } = await supabase
-          .from('garage_members')
-          .select('garage_id')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        
-        console.log("Last resort membership check:", JSON.stringify(memberData));
-        console.log("Membership error:", memberError);
-          
-        if (memberData && memberData.length > 0) {
-          // First verify the garage exists
-          const { data: garageExists, error: garageExistsError } = await supabase
-            .from('garages')
-            .select('id')
-            .eq('id', memberData[0].garage_id)
-            .maybeSingle();
-          
-          console.log("Last resort garage check:", JSON.stringify(garageExists));
-          console.log("Garage exists error:", garageExistsError);
-            
-          if (garageExists) {
-            // Update profile with this garage_id
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ garage_id: memberData[0].garage_id })
-              .eq('id', userId);
-            
-            console.log("Last resort profile update error:", updateError);
-          } else {
-            throw new Error("Your assigned garage no longer exists. Please contact an administrator.");
-          }
-        } else {
-          throw new Error("You don't have access to any garages. Please contact an administrator.");
-        }
-      } else {
-        // Verify the garage_id in profile actually exists
-        const { data: garageExists, error: garageExistsError } = await supabase
+      // If profile has a garage_id, verify it exists
+      if (profileData?.garage_id) {
+        const { data: garageExists } = await supabase
           .from('garages')
           .select('id')
           .eq('id', profileData.garage_id)
           .maybeSingle();
-        
-        console.log("Staff garage existence check:", JSON.stringify(garageExists));
-        console.log("Garage exists error:", garageExistsError);
           
-        if (!garageExists) {
-          throw new Error("Your assigned garage no longer exists. Please contact an administrator.");
+        if (garageExists) {
+          console.log("Staff garage exists, ensuring membership");
+          
+          // Ensure user is a member of this garage
+          await supabase
+            .from('garage_members')
+            .upsert([{
+              user_id: userId,
+              garage_id: profileData.garage_id,
+              role: userRole
+            }]);
+            
+          return;
         }
+      }
+        
+      // Try to ensure user has a garage
+      const hasGarage = await ensureUserHasGarage(userId, userRole);
+      console.log("Staff ensureUserHasGarage result:", hasGarage);
+      
+      if (!hasGarage) {
+        throw new Error("You don't have access to any garages. Please contact an administrator.");
+      }
+      
+      // Re-verify that profile now has a garage_id after ensureUserHasGarage
+      const { data: updatedProfile } = await supabase
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .maybeSingle();
+        
+      if (!updatedProfile?.garage_id) {
+        throw new Error("System error: Failed to assign garage to your profile. Please contact support.");
       }
     } catch (error) {
       console.error("Error in handleStaffSignIn:", error);
