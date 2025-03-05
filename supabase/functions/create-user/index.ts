@@ -195,28 +195,9 @@ serve(async (req: Request) => {
         console.log('Successfully updated profile with garage_id:', garageId);
       }
       
-      // Step 3: Add ONLY administrators to garage_members table
-      if (role === 'administrator') {
-        // If administrator, add as owner in garage_members
-        console.log('Adding administrator to garage_members as owner');
-        const { error: memberError } = await supabaseClient
-          .from('garage_members')
-          .insert([{
-            user_id: userData.user.id,
-            garage_id: garageId,
-            role: 'owner'
-          }]);
-          
-        if (memberError) {
-          console.warn('Warning: Error adding administrator to garage_members:', memberError);
-          // Continue even if this fails
-        } else {
-          console.log('Successfully added administrator to garage_members as owner');
-        }
-      } else {
-        // For non-administrator roles, DO NOT add to garage_members
-        console.log('User is not an administrator, skipping garage_members entry');
-      }
+      // DO NOT add any users to garage_members table when creating users
+      // garage_members should only be populated when creating a garage
+      console.log('Skipping garage_members entry - only populate when creating garages');
       
       // If everything succeeded, return success response
       return new Response(
