@@ -1,15 +1,14 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Garage } from "@/types/garage";
 
 /**
  * Ensures a user has a garage assigned to their profile
- * Using a simplified approach to reduce complexity
+ * Using a simplified approach to reduce complexity and avoid ambiguous column references
  */
 export async function ensureUserHasGarage(userId: string, userRole: string) {
   console.log(`Ensuring user ${userId} with role ${userRole} has a garage assigned`);
   
-  // CHECK 1: First check for a valid garage in the user's profile
+  // CHECK 1: First check for a valid garage in the user's profile - simple query
   const { data: profileData } = await supabase
     .from('profiles')
     .select('garage_id')
@@ -21,7 +20,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
   if (profileData?.garage_id) {
     console.log("User has garage_id in profile:", profileData.garage_id);
     
-    // Verify this garage exists
+    // Verify this garage exists - separate query
     const { data: garageExists } = await supabase
       .from('garages')
       .select('id')
@@ -33,54 +32,19 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     if (garageExists) {
       console.log("Verified garage exists:", garageExists.id);
       
-      // Ensure user is in garage_members for this garage
-      const { data: memberExists } = await supabase
+      // Ensure user is in garage_members for this garage - separate operation
+      const { error: memberError } = await supabase
         .from('garage_members')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('garage_id', profileData.garage_id)
-        .maybeSingle();
+        .upsert([
+          { 
+            user_id: userId, 
+            garage_id: profileData.garage_id, 
+            role: userRole === 'administrator' ? 'owner' : userRole 
+          }
+        ]);
       
-      if (!memberExists) {
-        console.log("Adding user to garage_members for consistency");
-        
-        // DEBUGGING: Try direct SQL insertion if the supabase.from approach fails
-        try {
-          await supabase.rpc('execute_read_only_query', {
-            query_text: `
-              SELECT * FROM garage_members
-              WHERE user_id = '${userId}'::uuid 
-              AND garage_id = '${profileData.garage_id}'::uuid
-            `
-          });
-        } catch (err) {
-          console.error("Error with direct SQL check:", err);
-        }
-        
-        // Also try the normal approach
-        try {
-          await supabase
-            .from('garage_members')
-            .upsert([
-              { 
-                user_id: userId, 
-                garage_id: profileData.garage_id, 
-                role: userRole === 'administrator' ? 'owner' : userRole 
-              }
-            ]);
-        } catch (err) {
-          console.error("Error with normal upsert:", err);
-        }
-          
-        // Verify the insert worked
-        const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
-          query_text: `
-            SELECT * FROM garage_members 
-            WHERE user_id = '${userId}'::uuid 
-            AND garage_id = '${profileData.garage_id}'::uuid
-          `
-        });
-        console.log("VERIFY MEMBER INSERT RESULT:", verifyInsert);
+      if (memberError) {
+        console.error("Error ensuring garage membership:", memberError);
       }
       
       return true;
@@ -89,7 +53,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     console.log("Garage in profile does not exist, will try other options");
   }
   
-  // CHECK 2: Check if user is a member of any garage
+  // CHECK 2: Check if user is a member of any garage - simple query
   const { data: membershipData } = await supabase
     .from('garage_members')
     .select('garage_id, role')
@@ -102,7 +66,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     const garageId = membershipData[0].garage_id;
     console.log("User is member of garage:", garageId);
     
-    // Verify this garage exists
+    // Verify this garage exists - separate query
     const { data: garageExists } = await supabase
       .from('garages')
       .select('id')
@@ -112,21 +76,21 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     if (garageExists) {
       console.log("Verified member's garage exists:", garageExists.id);
       
-      // Update profile with garage_id
-      try {
-        await supabase
-          .from('profiles')
-          .update({ garage_id: garageId })
-          .eq('id', userId);
-      } catch (error) {
-        console.error("Error updating profile with garage_id:", error);
+      // Update profile with garage_id - separate operation
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error("Error updating profile with garage_id:", updateError);
       }
       
       return true;
     }
   }
   
-  // CHECK 3: If user is an administrator, check for owned garages
+  // CHECK 3: If user is an administrator, check for owned garages - simple query
   if (userRole === 'administrator') {
     console.log("Checking if admin owns any garages");
     
@@ -141,32 +105,32 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       const garageId = ownedGarages[0].id;
       console.log("Admin owns garage:", garageId);
       
-      // Make sure admin is a member of their owned garage
-      try {
-        await supabase
-          .from('garage_members')
-          .upsert([
-            { user_id: userId, garage_id: garageId, role: 'owner' }
-          ]);
-      } catch (err) {
-        console.error("Error upserting garage member:", err);
+      // Make sure admin is a member of their owned garage - separate operation
+      const { error: memberError } = await supabase
+        .from('garage_members')
+        .upsert([
+          { user_id: userId, garage_id: garageId, role: 'owner' }
+        ]);
+      
+      if (memberError) {
+        console.error("Error upserting garage member:", memberError);
       }
       
-      // Update profile
-      try {
-        await supabase
-          .from('profiles')
-          .update({ garage_id: garageId })
-          .eq('id', userId);
-      } catch (error) {
-        console.error("Error updating profile for admin:", error);
+      // Update profile - separate operation
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
+      
+      if (updateError) {
+        console.error("Error updating profile for admin:", updateError);
       }
       
       return true;
     }
   }
   
-  // CHECK 4: Look for a default garage by slug
+  // CHECK 4: Look for a default garage by slug - simple query
   console.log("Checking for default 'tractic' garage");
   
   const { data: defaultGarage } = await supabase
@@ -180,53 +144,35 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
   if (defaultGarage) {
     console.log("Found default 'tractic' garage:", defaultGarage.id);
     
-    try {
-      // Try normal approach
-      try {
-        await supabase
-          .from('garage_members')
-          .upsert([
-            { 
-              user_id: userId, 
-              garage_id: defaultGarage.id, 
-              role: userRole === 'administrator' ? 'owner' : userRole 
-            }
-          ]);
-      } catch (err) {
-        console.error("Error with normal upsert for default garage:", err);
-      }
-      
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: defaultGarage.id })
-        .eq('id', userId);
-        
-      // Verify both operations worked
-      const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT * FROM garage_members 
-          WHERE user_id = '${userId}'::uuid 
-          AND garage_id = '${defaultGarage.id}'::uuid
-        `
-      });
-      console.log("VERIFY DEFAULT GARAGE MEMBER INSERT:", verifyInsert);
-      
-      const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT garage_id FROM profiles 
-          WHERE id = '${userId}'::uuid
-        `
-      });
-      console.log("VERIFY DEFAULT GARAGE PROFILE UPDATE:", verifyProfileUpdate);
-      
-      return true;
-    } catch (error) {
-      console.error("Error adding user to default garage:", error);
+    // Add user as member - separate operation
+    const { error: memberError } = await supabase
+      .from('garage_members')
+      .upsert([
+        { 
+          user_id: userId, 
+          garage_id: defaultGarage.id, 
+          role: userRole === 'administrator' ? 'owner' : userRole 
+        }
+      ]);
+    
+    if (memberError) {
+      console.error("Error adding user to default garage:", memberError);
     }
+    
+    // Update profile - separate operation
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ garage_id: defaultGarage.id })
+      .eq('id', userId);
+    
+    if (updateError) {
+      console.error("Error updating profile with default garage:", updateError);
+    }
+    
+    return true;
   }
   
-  // CHECK 5: Last resort - find any garage in the system
+  // CHECK 5: Last resort - find any garage in the system - simple query
   console.log("Looking for any garage as last resort");
   
   const { data: anyGarage } = await supabase
@@ -240,50 +186,32 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
   if (anyGarage) {
     console.log("Found a garage to assign:", anyGarage.id);
     
-    try {
-      // Try normal approach
-      try {
-        await supabase
-          .from('garage_members')
-          .upsert([
-            { 
-              user_id: userId, 
-              garage_id: anyGarage.id, 
-              role: userRole === 'administrator' ? 'owner' : userRole 
-            }
-          ]);
-      } catch (err) {
-        console.error("Error with normal upsert for any garage:", err);
-      }
-      
-      // Update profile
-      await supabase
-        .from('profiles')
-        .update({ garage_id: anyGarage.id })
-        .eq('id', userId);
-        
-      // Verify both operations
-      const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT * FROM garage_members 
-          WHERE user_id = '${userId}'::uuid 
-          AND garage_id = '${anyGarage.id}'::uuid
-        `
-      });
-      console.log("VERIFY ANY GARAGE MEMBER INSERT:", verifyInsert);
-      
-      const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
-        query_text: `
-          SELECT garage_id FROM profiles 
-          WHERE id = '${userId}'::uuid
-        `
-      });
-      console.log("VERIFY ANY GARAGE PROFILE UPDATE:", verifyProfileUpdate);
-      
-      return true;
-    } catch (error) {
-      console.error("Error adding user to last resort garage:", error);
+    // Add user as member - separate operation
+    const { error: memberError } = await supabase
+      .from('garage_members')
+      .upsert([
+        { 
+          user_id: userId, 
+          garage_id: anyGarage.id, 
+          role: userRole === 'administrator' ? 'owner' : userRole 
+        }
+      ]);
+    
+    if (memberError) {
+      console.error("Error adding user to last resort garage:", memberError);
     }
+    
+    // Update profile - separate operation
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ garage_id: anyGarage.id })
+      .eq('id', userId);
+    
+    if (updateError) {
+      console.error("Error updating profile with last resort garage:", updateError);
+    }
+    
+    return true;
   }
   
   // No garage found
@@ -303,7 +231,7 @@ export async function assignUserToGarage(userId: string, garageId: string, userR
   try {
     console.log(`Assigning user ${userId} to garage ${garageId} with role ${userRole}`);
     
-    // Verify the garage exists
+    // Verify the garage exists - separate query
     const { data: garageCheck } = await supabase
       .from('garages')
       .select('id')
@@ -317,7 +245,7 @@ export async function assignUserToGarage(userId: string, garageId: string, userR
       return false;
     }
     
-    // Add user as member
+    // Add user as member - separate operation
     const { error: memberError } = await supabase
       .from('garage_members')
       .upsert([
@@ -331,7 +259,7 @@ export async function assignUserToGarage(userId: string, garageId: string, userR
       return false;
     }
     
-    // Update profile with garage ID
+    // Update profile with garage ID - separate operation
     const { error: profileError } = await supabase
       .from('profiles')
       .update({ garage_id: garageId })
