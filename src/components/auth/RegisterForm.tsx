@@ -41,6 +41,35 @@ export const RegisterForm = ({
   onToggleMode,
   navigateToOtherLogin
 }: RegisterFormProps) => {
+  // Only render the registration form for owner type
+  if (userType === "staff") {
+    return (
+      <div className="mt-8 space-y-6 text-center">
+        <div className="p-4 border border-yellow-200 bg-yellow-50 rounded-md text-yellow-800">
+          <p>Staff accounts can only be created by garage administrators.</p>
+          <p className="mt-2">Please contact your garage administrator for access.</p>
+        </div>
+        
+        <Button 
+          onClick={onToggleMode} 
+          className="w-full"
+        >
+          Sign In Instead
+        </Button>
+        
+        <div className="text-center text-sm pt-4 border-t border-gray-200">
+          <button
+            type="button"
+            onClick={navigateToOtherLogin}
+            className="text-gray-600 hover:underline"
+          >
+            Return to Home Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-6">
       <div className="grid grid-cols-2 gap-4">
