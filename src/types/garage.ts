@@ -8,4 +8,5 @@ export interface Garage {
   phone: string | null;
   created_at: string;
   owner_id: string;
+  relationship_type?: string; // Added optional relationship_type property
 }
