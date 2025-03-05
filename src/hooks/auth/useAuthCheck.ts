@@ -107,7 +107,11 @@ export function useAuthCheck() {
               const result = await handleAdminOnStaffLogin(session.user.id);
               
               if (result.shouldRedirect && result.path) {
-                navigate(result.path);
+                if (result.path === "/garage-management") {
+                  navigate(`${result.path}?source=staff`);
+                } else {
+                  navigate(result.path);
+                }
                 return;
               }
               

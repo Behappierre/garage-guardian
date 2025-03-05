@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -13,6 +14,20 @@ export const GarageManager = () => {
   const navigate = useNavigate();
   const { garages, isLoading, error, refreshGarages } = useOwnerGarages();
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isMultiGarageAdmin, setIsMultiGarageAdmin] = useState(false);
+  const [loginSource, setLoginSource] = useState<"owner" | "staff" | null>(null);
+  
+  // Check if user came from staff login or owner login
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('source');
+    if (source === 'staff') {
+      setLoginSource('staff');
+      setIsMultiGarageAdmin(true);
+    } else {
+      setLoginSource('owner');
+    }
+  }, []);
   
   const handleSignOut = async () => {
     try {
@@ -97,9 +112,11 @@ export const GarageManager = () => {
         <div>
           <h1 className="text-3xl font-bold">Your Garages</h1>
           <p className="text-gray-500">
-            {garages.length > 0 
-              ? "Select a garage to manage or create a new one" 
-              : "Get started by creating your first garage"}
+            {isMultiGarageAdmin 
+              ? "Select which garage you want to manage" 
+              : garages.length > 0 
+                ? "Select a garage to manage or create a new one" 
+                : "Get started by creating your first garage"}
           </p>
         </div>
         <Button variant="outline" onClick={handleSignOut} className="gap-2">
@@ -113,6 +130,15 @@ export const GarageManager = () => {
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {isMultiGarageAdmin && (
+        <Alert className="mb-6">
+          <AlertTitle>Multiple Garages Detected</AlertTitle>
+          <AlertDescription>
+            You have access to multiple garages. Please select which garage you want to manage.
+          </AlertDescription>
         </Alert>
       )}
 

@@ -24,6 +24,33 @@ export async function handleAdminOnStaffLogin(userId: string) {
     return { shouldRedirect: false, path: null };
   }
   
+  // Check if admin has access to multiple garages
+  const { data: ownerGarages } = await supabase
+    .from('garages')
+    .select('id')
+    .eq('owner_id', userId);
+    
+  const { data: memberGarages } = await supabase
+    .from('garage_members')
+    .select('garage_id')
+    .eq('user_id', userId);
+    
+  const totalGarages = [
+    ...(ownerGarages || []).map(g => g.id),
+    ...(memberGarages || []).map(g => g.garage_id)
+  ];
+  
+  // Remove duplicates
+  const uniqueGarageIds = [...new Set(totalGarages)];
+  
+  console.log("Admin has access to garages:", uniqueGarageIds.length);
+  
+  // If admin has multiple garages, send them to garage selection page
+  if (uniqueGarageIds.length > 1) {
+    console.log("Admin has multiple garages, redirecting to garage selection");
+    return { shouldRedirect: true, path: "/garage-management" };
+  }
+  
   // If admin has a garage_id in user_roles, use it directly
   if (roleData.garage_id) {
     console.log("Admin has garage_id in user_roles:", roleData.garage_id);
