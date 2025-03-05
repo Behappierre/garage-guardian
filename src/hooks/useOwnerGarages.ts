@@ -54,7 +54,8 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
       
       if (directResults && Array.isArray(directResults) && directResults.length > 0) {
         console.log("Found garages for user:", directResults.length);
-        setGarages(directResults as Garage[]);
+        // Cast the JSON results to Garage[] type
+        setGarages(directResults as unknown as Garage[]);
       } else {
         console.log("No garages found for user");
         
@@ -67,19 +68,20 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         
         if (defaultGarage && Array.isArray(defaultGarage) && defaultGarage.length > 0) {
           console.log("Using default 'tractic' garage");
-          setGarages(defaultGarage as Garage[]);
+          // Cast the JSON result to Garage[] type
+          setGarages(defaultGarage as unknown as Garage[]);
           
           // Add user to this garage if not already a member
           await supabase.from('garage_members')
             .upsert([{ 
               user_id: userData.user.id, 
-              garage_id: defaultGarage[0].id,
+              garage_id: (defaultGarage[0] as unknown as Garage).id,
               role: 'member'
             }]);
             
           // Update profile
           await supabase.from('profiles')
-            .update({ garage_id: defaultGarage[0].id })
+            .update({ garage_id: (defaultGarage[0] as unknown as Garage).id })
             .eq('id', userData.user.id);
         } else {
           setGarages([]);

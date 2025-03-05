@@ -35,7 +35,7 @@ export async function getUserGarages(userId: string): Promise<Garage[]> {
       return [];
     }
     
-    return results as Garage[];
+    return results as unknown as Garage[];
   } catch (error) {
     console.error("Exception in getUserGarages:", error);
     return [];
@@ -68,7 +68,8 @@ export async function userHasGarageAccess(userId: string, garageId: string): Pro
       return false;
     }
     
-    return !!result[0].has_access;
+    const accessResult = result[0] as unknown as { has_access: boolean };
+    return !!accessResult.has_access;
   } catch (error) {
     console.error("Error checking garage access:", error);
     return false;
@@ -96,16 +97,16 @@ export async function getUserDefaultGarage(userId: string): Promise<Garage | nul
       await supabase.from('garage_members')
         .upsert([{ 
           user_id: userId, 
-          garage_id: defaultGarage[0].id,
+          garage_id: (defaultGarage[0] as unknown as Garage).id,
           role: 'member'
         }]);
         
       // Update profile
       await supabase.from('profiles')
-        .update({ garage_id: defaultGarage[0].id })
+        .update({ garage_id: (defaultGarage[0] as unknown as Garage).id })
         .eq('id', userId);
         
-      return defaultGarage[0] as Garage;
+      return defaultGarage[0] as unknown as Garage;
     }
   } catch (error) {
     console.error("Error finding default garage:", error);
