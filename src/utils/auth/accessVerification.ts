@@ -1,55 +1,79 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 /**
- * Verifies if a user has the appropriate role to access a specific route
+ * Verifies a user's role
  */
 export async function verifyUserRole(userId: string) {
   try {
     console.log("Fetching user role for:", userId);
     
+    // Check user_roles table
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role, garage_id')
       .eq('user_id', userId)
       .maybeSingle();
-    
+      
     if (roleError) {
-      console.error("Error fetching user role:", roleError.message);
-      toast.error("Could not verify your account role");
+      console.error("Error fetching user role:", roleError);
       return { hasError: true, role: null };
     }
-
+    
+    // Also check for owner role in garage_members
+    const { data: ownerData, error: ownerError } = await supabase
+      .from('garage_members')
+      .select('role, garage_id')
+      .eq('user_id', userId)
+      .eq('role', 'owner')
+      .maybeSingle();
+      
+    if (ownerError) {
+      console.error("Error checking owner status:", ownerError);
+    }
+    
+    // If user is an owner in garage_members, override role to administrator
+    if (ownerData?.role === 'owner') {
+      console.log("User is an owner in garage_members");
+      console.log("User role: administrator", "Garage ID:", ownerData.garage_id);
+      return { hasError: false, role: 'administrator' };
+    }
+    
     console.log("User role:", roleData?.role, "Garage ID:", roleData?.garage_id);
-    return { hasError: false, role: roleData?.role || null };
+    return { hasError: false, role: roleData?.role };
   } catch (error: any) {
-    console.error("Error in verifyUserRole:", error.message);
+    console.error("Error verifying user role:", error.message);
     return { hasError: true, role: null };
   }
 }
 
 /**
- * Verifies if a user has access to garage management routes
+ * Verifies a user's access to garage management
  */
-export async function verifyGarageManagementAccess(userId: string, userRole: string | null) {
-  // Only administrators can access garage management
-  if (userRole !== 'administrator') {
-    console.log("User is not an administrator, blocking access to garage management");
-    toast.error("You don't have permission to access garage management");
-    return false;
+export async function verifyGarageManagementAccess(userId: string, role: string | null) {
+  // Owner check from garage_members
+  const { data: ownerCheck } = await supabase
+    .from('garage_members')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('role', 'owner')
+    .maybeSingle();
+    
+  // If user is an owner in garage_members, allow access regardless of role
+  if (ownerCheck) {
+    return true;
   }
   
-  return true;
+  // Otherwise, only allow administrators from user_roles
+  return role === 'administrator';
 }
 
 /**
- * Verifies if a user has access to dashboard routes
+ * Verifies a user's access to the dashboard
  */
-export async function verifyDashboardAccess(userId: string, userRole: string | null) {
+export async function verifyDashboardAccess(userId: string, role: string | null) {
   // Check if role is valid for dashboard access
-  if (!['administrator', 'technician', 'front_desk'].includes(userRole || '')) {
-    console.log("User has invalid role for dashboard:", userRole);
+  if (!['administrator', 'technician', 'front_desk'].includes(role || '')) {
+    console.log("User has invalid role for dashboard:", role);
     toast.error("You don't have permission to access this area");
     return false;
   }
@@ -58,10 +82,9 @@ export async function verifyDashboardAccess(userId: string, userRole: string | n
 }
 
 /**
- * Ensures the user has a garage assigned to their profile and user_role
- * Uses the new direct garage_id in user_roles table
+ * Ensures a user has a garage_id in their profile
  */
-export async function ensureUserHasGarage(userId: string, userRole: string) {
+export async function ensureUserHasGarage(userId: string, role: string) {
   try {
     // First check user_roles for a garage_id - direct association
     const { data: userRoleData } = await supabase
@@ -102,7 +125,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     }
     
     // If admin, check owned garages first
-    if (userRole === 'administrator') {
+    if (role === 'administrator') {
       const { data: ownedGarages } = await supabase
         .from('garages')
         .select('id')
@@ -174,7 +197,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       await supabase
         .from('garage_members')
         .upsert([
-          { user_id: userId, garage_id: defaultGarageId, role: userRole }
+          { user_id: userId, garage_id: defaultGarageId, role: role }
         ]);
         
       // Update profile
@@ -205,7 +228,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       await supabase
         .from('garage_members')
         .upsert([
-          { user_id: userId, garage_id: anyGarage[0].id, role: userRole }
+          { user_id: userId, garage_id: anyGarage[0].id, role: role }
         ]);
         
       // Update profile
