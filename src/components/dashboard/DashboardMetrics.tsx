@@ -27,11 +27,12 @@ export const DashboardMetrics = () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
 
       // Get active repairs (open job tickets) for this garage
+      // Fixed query: using 'neq' operator with 'or' condition instead of 'not.in'
       const { data: activeTickets, count: activeRepairs, error: activeRepairsError } = await supabase
         .from('job_tickets')
         .select('*', { count: 'exact' })
         .eq('garage_id', garageId)
-        .not('status', 'in', ['completed', 'cancelled']);
+        .or('status.neq.completed,status.neq.cancelled');
       
       // Log data for debugging
       console.log('Active repairs query result:', { activeTickets, activeRepairs, error: activeRepairsError });
