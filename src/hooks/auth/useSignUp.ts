@@ -32,6 +32,12 @@ export const useSignUp = () => {
     
     if (signUpData.user) {
       await assignRole(signUpData.user.id, userRole);
+      
+      // If this is a staff member (not an owner), automatically assign them to a garage
+      if (userType === "staff") {
+        await assignStaffToGarage(signUpData.user.id, userRole);
+      }
+      
       return signUpData.user;
     }
     
@@ -54,7 +60,7 @@ export const useSignUp = () => {
     // Find any garage
     const { data: anyGarage, error: anyGarageError } = await supabase
       .from('garages')
-      .select('id')
+      .select('id, name')
       .limit(1);
       
     if (anyGarageError) {
@@ -65,6 +71,7 @@ export const useSignUp = () => {
     
     if (anyGarage && anyGarage.length > 0) {
       garageId = anyGarage[0].id;
+      console.log(`Assigning staff to garage: ${anyGarage[0].name} (${garageId})`);
     } else {
       throw new Error("No garages exist in the system. Please contact an administrator.");
     }
@@ -76,6 +83,17 @@ export const useSignUp = () => {
       .eq('user_id', userId);
       
     if (userRoleError) throw userRoleError;
+    
+    // Also update the user's profile with the garage ID for consistency
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ garage_id: garageId })
+      .eq('id', userId);
+      
+    if (profileError) {
+      console.error("Error updating profile with garage ID:", profileError);
+      // Don't throw here - the user_roles update is more important
+    }
     
     return garageId;
   };
