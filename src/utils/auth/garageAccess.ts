@@ -14,46 +14,75 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
   try {
     console.log("Getting accessible garages for user:", userId);
     
-    // This query considers ALL possible relationships at once - FIX: avoid ambiguous column references
-    const { data, error } = await supabase.rpc('execute_read_only_query', {
-      query_text: `
-        WITH user_garages AS (
-          -- Owner relationships
-          SELECT g.id, g.name, g.slug, g.address, g.email, g.phone, g.created_at, g.owner_id, 'owner' AS relationship_type
-          FROM garages g
-          WHERE g.owner_id = '${userId}'::uuid
-          
-          UNION
-          
-          -- Member relationships
-          SELECT g.id, g.name, g.slug, g.address, g.email, g.phone, g.created_at, g.owner_id, gm.role AS relationship_type
-          FROM garages g
-          JOIN garage_members gm ON g.id = gm.garage_id
-          WHERE gm.user_id = '${userId}'::uuid
-          
-          UNION
-          
-          -- Profile relationships
-          SELECT g.id, g.name, g.slug, g.address, g.email, g.phone, g.created_at, g.owner_id, 'profile' AS relationship_type
-          FROM garages g
-          JOIN profiles p ON g.id = p.garage_id
-          WHERE p.id = '${userId}'::uuid AND p.garage_id IS NOT NULL
-        )
-        SELECT DISTINCT id, name, slug, address, email, phone, created_at, owner_id
-        FROM user_garages
-      `
-    });
-    
-    if (error) {
-      console.error("Error fetching accessible garages:", error);
-      return [];
+    // First, try to get owner relationships directly without using RPC
+    const { data: ownedGarages, error: ownedError } = await supabase
+      .from('garages')
+      .select('id, name, slug, address, email, phone, created_at, owner_id')
+      .eq('owner_id', userId);
+      
+    if (ownedError) {
+      console.error("Error fetching owned garages:", ownedError);
     }
     
-    console.log("Accessible garages result:", data);
+    // Then, get member relationships directly
+    const { data: memberGarages, error: memberError } = await supabase
+      .from('garage_members')
+      .select('garage_id, role, garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .eq('user_id', userId);
+      
+    if (memberError) {
+      console.error("Error fetching member garages:", memberError);
+    }
     
-    // Proper TypeScript casting: first to unknown, then to Garage[]
-    const garages = data as unknown as Garage[];
-    return Array.isArray(garages) ? garages : [];
+    // Finally, get profile relationship
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('garage_id, garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error("Error fetching profile garage:", profileError);
+    }
+    
+    // Combine all garage relationships
+    const garages: Garage[] = [];
+    
+    // Add owned garages
+    if (ownedGarages && ownedGarages.length > 0) {
+      garages.push(...ownedGarages.map(garage => ({
+        ...garage,
+        relationship_type: 'owner'
+      })));
+    }
+    
+    // Add member garages
+    if (memberGarages && memberGarages.length > 0) {
+      memberGarages.forEach(membership => {
+        if (membership.garages) {
+          garages.push({
+            ...membership.garages,
+            relationship_type: membership.role
+          });
+        }
+      });
+    }
+    
+    // Add profile garage
+    if (profileData?.garage_id && profileData.garages) {
+      garages.push({
+        ...profileData.garages,
+        relationship_type: 'profile'
+      });
+    }
+    
+    // Remove duplicates by id
+    const uniqueGarages = garages.filter((garage, index, self) =>
+      index === self.findIndex(g => g.id === garage.id)
+    );
+    
+    console.log("Accessible garages result:", uniqueGarages);
+    return uniqueGarages;
   } catch (err) {
     console.error("Exception in getAccessibleGarages:", err);
     return [];

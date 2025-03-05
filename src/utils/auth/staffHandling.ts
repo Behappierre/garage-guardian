@@ -13,7 +13,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
   try {
     console.log("Attempting to assign default garage for user:", userId);
     
-    // 1. First try to find the default "tractic" garage - simplified query
+    // 1. First try to find the default "tractic" garage
     const { data: defaultGarageData } = await supabase
       .from('garages')
       .select('id')
