@@ -1,4 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 /**
  * Verifies a user's role
@@ -74,7 +76,11 @@ export async function verifyDashboardAccess(userId: string, role: string | null)
   // Check if role is valid for dashboard access
   if (!['administrator', 'technician', 'front_desk'].includes(role || '')) {
     console.log("User has invalid role for dashboard:", role);
-    toast.error("You don't have permission to access this area");
+    toast({
+      title: "Access Denied",
+      description: "You don't have permission to access this area",
+      variant: "destructive"
+    });
     return false;
   }
   
