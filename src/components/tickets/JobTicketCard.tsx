@@ -2,19 +2,22 @@
 import { Button } from "@/components/ui/button";
 import { PlayCircle, StopCircle } from "lucide-react";
 import type { JobTicket } from "@/types/job-ticket";
-import { useNavigate } from "react-router-dom";
 
 interface JobTicketCardProps {
   ticket: JobTicket;
   isClockedIn: boolean;
   onClockAction: (ticket: JobTicket) => void;
+  onTicketClick: (ticket: JobTicket) => void;
 }
 
-export const JobTicketCard = ({ ticket, isClockedIn, onClockAction }: JobTicketCardProps) => {
-  const navigate = useNavigate();
-
+export const JobTicketCard = ({ 
+  ticket, 
+  isClockedIn, 
+  onClockAction,
+  onTicketClick 
+}: JobTicketCardProps) => {
   const handleCardClick = () => {
-    navigate(`/dashboard/job-tickets/${ticket.id}`);
+    onTicketClick(ticket);
   };
 
   const handleClockClick = (e: React.MouseEvent) => {

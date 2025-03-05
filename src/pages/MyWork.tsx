@@ -6,6 +6,8 @@ import { StatusColumn } from "@/components/tickets/StatusColumn";
 import { useClockEvents } from "@/hooks/use-clock-events";
 import { PageHeader } from "@/components/ui/page-header";
 import { useTheme } from "next-themes";
+import { useState } from "react";
+import { JobTicketFormDialog } from "@/components/tickets/JobTicketFormDialog";
 
 const statusColumns = [
   { key: 'received', label: 'To Do' },
@@ -18,6 +20,8 @@ const statusColumns = [
 const MyWork = () => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+  const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
+  const [showTicketForm, setShowTicketForm] = useState(false);
 
   // Fetch assigned tickets
   const { data: tickets, isLoading } = useQuery({
@@ -39,6 +43,11 @@ const MyWork = () => {
   });
 
   const { getLatestClockEvent, handleClockAction } = useClockEvents();
+
+  const handleTicketClick = (ticket: JobTicket) => {
+    setSelectedTicket(ticket);
+    setShowTicketForm(true);
+  };
 
   if (isLoading) {
     return <div className="p-8">Loading...</div>;
@@ -65,10 +74,24 @@ const MyWork = () => {
               tickets={getTicketsByStatus(column.key)}
               getLatestClockEvent={getLatestClockEvent}
               onClockAction={handleClockAction}
+              onTicketClick={handleTicketClick}
             />
           ))}
         </div>
       </div>
+
+      <JobTicketFormDialog
+        showTicketForm={showTicketForm}
+        selectedTicket={selectedTicket}
+        onOpenChange={(open) => {
+          setShowTicketForm(open);
+          if (!open) setSelectedTicket(null);
+        }}
+        onClose={() => {
+          setShowTicketForm(false);
+          setSelectedTicket(null);
+        }}
+      />
     </div>
   );
 };

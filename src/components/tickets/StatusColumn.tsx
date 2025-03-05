@@ -7,13 +7,15 @@ interface StatusColumnProps {
   tickets: JobTicket[];
   getLatestClockEvent: (ticketId: string) => any;
   onClockAction: (ticket: JobTicket) => void;
+  onTicketClick: (ticket: JobTicket) => void;
 }
 
 export const StatusColumn = ({ 
   label, 
   tickets, 
   getLatestClockEvent, 
-  onClockAction 
+  onClockAction,
+  onTicketClick
 }: StatusColumnProps) => {
   return (
     <div className="bg-gray-100 rounded-lg p-4">
@@ -29,6 +31,7 @@ export const StatusColumn = ({
               ticket={ticket}
               isClockedIn={isClockedIn}
               onClockAction={onClockAction}
+              onTicketClick={onTicketClick}
             />
           );
         })}
