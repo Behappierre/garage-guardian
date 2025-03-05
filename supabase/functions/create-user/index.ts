@@ -39,7 +39,7 @@ serve(async (req: Request) => {
       },
     });
 
-    const { email, password, firstName, lastName, role } = await req.json();
+    const { email, password, firstName, lastName, role, garageId } = await req.json();
     
     if (!email || !password || !firstName || !lastName || !role) {
       return new Response(
@@ -54,7 +54,7 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log('Creating user with email:', email);
+    console.log('Creating user with email:', email, 'to be assigned to garage:', garageId);
 
     // Create the user
     const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
@@ -94,10 +94,14 @@ serve(async (req: Request) => {
       );
     }
 
-    // Assign the role
+    // Assign the role and garage_id
     const { error: roleError } = await supabaseClient
       .from('user_roles')
-      .insert([{ user_id: userData.user.id, role }]);
+      .insert([{ 
+        user_id: userData.user.id, 
+        role,
+        garage_id: garageId 
+      }]);
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
@@ -111,6 +115,21 @@ serve(async (req: Request) => {
           status: 400,
         }
       );
+    }
+
+    // Also update the user's profile with the garage_id
+    if (garageId) {
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userData.user.id);
+
+      if (profileError) {
+        console.error('Error updating user profile with garage_id:', profileError);
+        // Don't fail the entire operation, just log the error
+      } else {
+        console.log('Updated user profile with garage_id:', garageId);
+      }
     }
 
     console.log('User created and role assigned successfully');

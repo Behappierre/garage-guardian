@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Database } from "@/integrations/supabase/types";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -24,10 +25,15 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
   const [lastName, setLastName] = useState("");
   const [role, setRole] = useState<AppRole>("front_desk");
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
-      console.log('Attempting to create user:', { email, firstName, lastName, role });
+      if (!garageId) {
+        throw new Error("No garage selected. Please select a garage first.");
+      }
+      
+      console.log('Attempting to create user:', { email, firstName, lastName, role, garageId });
       
       const { data, error } = await supabase.functions.invoke('create-user', {
         body: {
@@ -36,6 +42,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
           firstName,
           lastName,
           role,
+          garageId,
         },
       });
 
@@ -72,6 +79,10 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!garageId) {
+      toast.error("No garage selected. Please select a garage first.");
+      return;
+    }
     try {
       await createUserMutation.mutate();
     } catch (error) {
@@ -145,11 +156,21 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
               </div>
             </RadioGroup>
           </div>
+          {!garageId && (
+            <div className="rounded-md bg-amber-50 p-4 border border-amber-200">
+              <p className="text-amber-800 text-sm">
+                Warning: No garage is currently selected. You need to select a garage before creating users.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end space-x-2">
             <Button variant="outline" type="button" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createUserMutation.isPending}>
+            <Button 
+              type="submit" 
+              disabled={createUserMutation.isPending || !garageId}
+            >
               {createUserMutation.isPending ? "Creating..." : "Create User"}
             </Button>
           </div>
