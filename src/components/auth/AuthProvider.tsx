@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Function to refresh auth state - can be called after changing garages
   const refreshAuth = async () => {
     try {
+      setLoading(true);
       // Get latest session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       

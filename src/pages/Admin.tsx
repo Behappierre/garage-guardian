@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,15 +12,15 @@ import { Button } from "@/components/ui/button";
 
 const Admin = () => {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
-  const { user, garageId, loading, refreshGarageId } = useAuth();
+  const { user, garageId, loading, refreshAuth } = useAuth();
   const navigate = useNavigate();
 
   // Try to refresh garage ID when component mounts
   useEffect(() => {
     if (user && !garageId) {
-      refreshGarageId();
+      refreshAuth();
     }
-  }, [user, garageId, refreshGarageId]);
+  }, [user, garageId, refreshAuth]);
 
   // If auth is still loading, show a loading state
   if (loading) {

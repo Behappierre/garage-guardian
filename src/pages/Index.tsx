@@ -1,58 +1,46 @@
 
-import { Calendar, Users, Clock, History } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Navbar from "@/components/Navbar";
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Navbar } from '@/components/Navbar';
 
-const Index = () => {
+export default function Index() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      // Redirect authenticated users to dashboard
+      navigate('/auth');
+    };
+    
+    checkAuth();
+  }, [navigate]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
       
-      <main className="pt-20 px-4 sm:px-6 lg:px-8 animate-fadeIn">
-        <div className="max-w-7xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center py-16 sm:py-20">
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-              Smart Garage Management
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Streamline your garage operations with our comprehensive management solution.
-            </p>
-            <Button size="lg" className="bg-primary hover:bg-primary/90">
-              Get Started
+      <main className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6">
+            Manage Your Auto Repair Shop with Ease
+          </h1>
+          <p className="text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
+            Streamline appointments, manage jobs, and grow your business with our
+            all-in-one garage management system.
+          </p>
+          
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button size="lg" onClick={() => navigate('/auth?type=owner')}>
+              Garage Owner Login
             </Button>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 py-12">
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <Calendar className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Smart Scheduling</h3>
-              <p className="text-gray-600">Efficiently manage appointments and resource allocation</p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <Users className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Client Management</h3>
-              <p className="text-gray-600">Keep track of client information and service history</p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <Clock className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Time Tracking</h3>
-              <p className="text-gray-600">Log and monitor time spent on repairs</p>
-            </div>
-
-            <div className="p-6 rounded-lg bg-white/50 backdrop-blur-sm border border-gray-100 shadow-sm transition-all hover:shadow-md">
-              <History className="h-10 w-10 text-primary mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Service History</h3>
-              <p className="text-gray-600">Maintain detailed records of all services</p>
-            </div>
+            <Button size="lg" variant="outline" onClick={() => navigate('/auth?type=staff')}>
+              Staff Login
+            </Button>
           </div>
         </div>
       </main>
     </div>
   );
-};
-
-export default Index;
+}
