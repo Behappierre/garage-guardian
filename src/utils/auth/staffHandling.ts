@@ -14,32 +14,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
     
     console.log(`Assigning garage ID ${knownGarageId} to user ${userId}`);
     
-    // 1. Create garage_members entry
-    const { error: memberError } = await supabase
-      .from('garage_members')
-      .upsert({
-        user_id: userId,
-        garage_id: knownGarageId,
-        role: userRole
-      });
-    
-    if (memberError) {
-      console.error("Error creating membership:", memberError);
-      return false;
-    }
-    
-    // 2. Update profile with garage_id
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ garage_id: knownGarageId })
-      .eq('id', userId);
-    
-    if (profileError) {
-      console.error("Error updating profile:", profileError);
-      return false;
-    }
-    
-    // 3. Update user_roles with garage_id
+    // ONLY update the user_roles table for staff users
     const { error: roleError } = await supabase
       .from('user_roles')
       .update({ garage_id: knownGarageId })
@@ -47,6 +22,17 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       
     if (roleError) {
       console.error("Error updating user_roles with garage_id:", roleError);
+      return false;
+    }
+    
+    // Update profile with garage_id
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ garage_id: knownGarageId })
+      .eq('id', userId);
+    
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
       return false;
     }
     
@@ -60,30 +46,30 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
 
 /**
  * Handles staff-specific sign-in logic with simplified approach
- * Avoids querying the garages table which is causing ambiguity errors
+ * Avoids inserting staff users into garage_members
  */
 export async function handleStaffSignIn(userId: string, userRole: string) {
   console.log("Handling staff sign in for user:", userId, "with role:", userRole);
   
   try {
-    // STEP 1: Check if user has any garage_members entries
-    const { data: memberData, error: memberError } = await supabase
-      .from('garage_members')
-      .select('id')
+    // STEP 1: Check if user has garage_id in user_roles
+    const { data: userRoleData, error: roleError } = await supabase
+      .from('user_roles')
+      .select('garage_id')
       .eq('user_id', userId)
-      .limit(1);
+      .maybeSingle();
     
-    if (memberError) {
-      console.error("Error checking garage memberships:", memberError);
+    if (roleError) {
+      console.error("Error checking user roles:", roleError);
     }
       
-    if (memberData && memberData.length > 0) {
-      console.log("User has garage memberships - proceeding with login");
-      return; // Success - user has garage association
+    if (userRoleData?.garage_id) {
+      console.log("User already has garage_id in user_roles:", userRoleData.garage_id);
+      return; // Success - user already has garage association
     }
     
-    // STEP 2: If no memberships found, create one using our simplified approach
-    console.log("No existing garage memberships found for user, creating one");
+    // STEP 2: If no garage_id found, assign one
+    console.log("No existing garage_id found for user, assigning one");
     const assigned = await assignDefaultGarage(userId, userRole);
     
     if (!assigned) {
@@ -92,10 +78,10 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
         title: "Login Error",
         description: "Could not set up your account. Please contact support."
       });
-      throw new Error("Could not create garage membership");
+      throw new Error("Could not assign garage to staff user");
     }
     
-    console.log("Created garage membership - proceeding with login");
+    console.log("Assigned garage to staff user - proceeding with login");
   } catch (error) {
     console.error("Error in handleStaffSignIn:", error);
     throw error;
