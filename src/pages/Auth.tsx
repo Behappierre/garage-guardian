@@ -9,7 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 const Auth = () => {
-  const { isChecking, authError, userType } = useAuthCheck();
+  // Destructure the auth check hook but add the hasCheckedAuth property
+  const { isChecking, hasCheckedAuth, authError, userType } = useAuthCheck();
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [loadingTimeout, setLoadingTimeout] = useState(false);
@@ -55,7 +56,8 @@ const Auth = () => {
     }
   };
 
-  if (isChecking) {
+  // Only show loading state if we're actually checking and haven't completed the check yet
+  if (isChecking && !hasCheckedAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <AuthLoading />

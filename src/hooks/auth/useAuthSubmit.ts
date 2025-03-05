@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +33,13 @@ export const useAuthSubmit = (userType: UserType) => {
     role: Role
   ) => {
     e.preventDefault();
+    
+    // Check if we're already loading
+    if (loading) {
+      console.log("Auth submission already in progress, ignoring new request");
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -70,6 +78,9 @@ export const useAuthSubmit = (userType: UserType) => {
           }
         }
       } else {
+        // Sign in flow
+        console.log(`Attempting to sign in as ${userType} with email: ${email}`);
+        
         const signInData = await signIn(email, password, userType);
 
         if (signInData.user) {
@@ -153,6 +164,7 @@ export const useAuthSubmit = (userType: UserType) => {
         description: error.message,
       });
     } finally {
+      // Always reset loading state
       setLoading(false);
     }
   };

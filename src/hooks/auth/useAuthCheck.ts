@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,7 +47,7 @@ export function useAuthCheck() {
 
   // Check if user is already authenticated and handle routing
   useEffect(() => {
-    // Only check auth once per render
+    // Don't check auth again if we've already done it
     if (state.hasCheckedAuth) return;
     
     const checkAuthAndRole = async () => {
@@ -55,6 +56,7 @@ export function useAuthCheck() {
         
         // If no session, just mark as not checking and return early
         if (!session?.user) {
+          console.log("No active session found, allowing auth page access");
           setState(prev => ({ 
             ...prev, 
             isChecking: false,
@@ -200,13 +202,14 @@ export function useAuthCheck() {
     // Set a timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
       if (state.isChecking) {
+        console.log("Auth check timeout reached, allowing form to be displayed");
         setState(prev => ({ 
           ...prev, 
           isChecking: false,
           hasCheckedAuth: true
         }));
       }
-    }, 5000); // 5 second timeout
+    }, 3000); // Reduced timeout to 3 seconds for better UX
     
     checkAuthAndRole();
     
