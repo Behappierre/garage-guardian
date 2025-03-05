@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { PlayCircle, StopCircle } from "lucide-react";
 import type { JobTicket } from "@/types/job-ticket";
+import { useDrag } from "react-dnd";
 
 interface JobTicketCardProps {
   ticket: JobTicket;
@@ -16,6 +17,14 @@ export const JobTicketCard = ({
   onClockAction,
   onTicketClick 
 }: JobTicketCardProps) => {
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: 'JOB_TICKET',
+    item: { id: ticket.id },
+    collect: (monitor) => ({
+      isDragging: !!monitor.isDragging(),
+    }),
+  }));
+
   const handleCardClick = () => {
     onTicketClick(ticket);
   };
@@ -27,8 +36,10 @@ export const JobTicketCard = ({
 
   return (
     <div 
-      className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-2 cursor-pointer hover:shadow-md transition-all"
+      ref={drag}
+      className={`bg-white p-4 rounded-lg shadow-sm border border-gray-200 space-y-2 cursor-pointer hover:shadow-md transition-all ${isDragging ? 'opacity-50' : ''}`}
       onClick={handleCardClick}
+      style={{ opacity: isDragging ? 0.5 : 1 }}
     >
       <div className="flex justify-between items-start">
         <span className="text-sm font-medium text-gray-900">
