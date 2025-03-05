@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +23,8 @@ export const useAuthSubmit = (userType: UserType) => {
   const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
 
-  const handleAuth = async (
+  // Modified to return void instead of Promise<void>
+  const handleAuth = (
     e: React.FormEvent,
     mode: AuthMode,
     email: string,
@@ -34,127 +36,129 @@ export const useAuthSubmit = (userType: UserType) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      if (mode === "signup") {
-        const user = await signUp(email, password, firstName, lastName, role, userType);
-        
-        if (user) {
-          if (userType === "owner") {
-            setNewUserId(user.id);
-            setShowGarageForm(true);
-            
-            await supabase.auth.signInWithPassword({
-              email,
-              password
-            });
-            
-            uiToast({
-              title: "Account created!",
-              description: "Now let's set up your garage.",
-            });
-          } else {
-            await assignStaffToGarage(user.id, role);
-            
-            const { error: signInError } = await supabase.auth.signInWithPassword({
-              email,
-              password
-            });
-            
-            if (signInError) throw signInError;
-            
-            if (role === 'technician') {
-              navigate("/dashboard/job-tickets");
+    (async () => {
+      try {
+        if (mode === "signup") {
+          const user = await signUp(email, password, firstName, lastName, role, userType);
+          
+          if (user) {
+            if (userType === "owner") {
+              setNewUserId(user.id);
+              setShowGarageForm(true);
+              
+              await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+              
+              uiToast({
+                title: "Account created!",
+                description: "Now let's set up your garage.",
+              });
             } else {
-              navigate("/dashboard/appointments");
+              await assignStaffToGarage(user.id, role);
+              
+              const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password
+              });
+              
+              if (signInError) throw signInError;
+              
+              if (role === 'technician') {
+                navigate("/dashboard/job-tickets");
+              } else {
+                navigate("/dashboard/appointments");
+              }
             }
           }
-        }
-      } else {
-        const signInData = await signIn(email, password, userType);
+        } else {
+          const signInData = await signIn(email, password, userType);
 
-        if (signInData.user) {
-          try {
-            const userRole = await verifyUserAccess(signInData.user.id, userType);
+          if (signInData.user) {
+            try {
+              const userRole = await verifyUserAccess(signInData.user.id, userType);
 
-            if (userType === "owner") {
-              await handleOwnerSignIn(signInData.user.id);
-              navigate("/garage-management");
-              return;
-            }
-
-            if (userType === "staff" && userRole === 'administrator') {
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('garage_id')
-                .eq('id', signInData.user.id)
-                .single();
-                
-              if (profileData?.garage_id) {
-                console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
-                navigate("/dashboard");
+              if (userType === "owner") {
+                await handleOwnerSignIn(signInData.user.id);
+                navigate("/garage-management");
                 return;
-              } else {
-                const { data: ownedGarages } = await supabase
-                  .from('garages')
-                  .select('id')
-                  .eq('owner_id', signInData.user.id)
-                  .limit(1);
+              }
+
+              if (userType === "staff" && userRole === 'administrator') {
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('garage_id')
+                  .eq('id', signInData.user.id)
+                  .single();
                   
-                if (ownedGarages && ownedGarages.length > 0) {
-                  await supabase
-                    .from('profiles')
-                    .update({ garage_id: ownedGarages[0].id })
-                    .eq('id', signInData.user.id);
-                    
+                if (profileData?.garage_id) {
+                  console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
                   navigate("/dashboard");
                   return;
                 } else {
-                  throw new Error("Administrators should use the garage owner login");
+                  const { data: ownedGarages } = await supabase
+                    .from('garages')
+                    .select('id')
+                    .eq('owner_id', signInData.user.id)
+                    .limit(1);
+                    
+                  if (ownedGarages && ownedGarages.length > 0) {
+                    await supabase
+                      .from('profiles')
+                      .update({ garage_id: ownedGarages[0].id })
+                      .eq('id', signInData.user.id);
+                      
+                    navigate("/dashboard");
+                    return;
+                  } else {
+                    throw new Error("Administrators should use the garage owner login");
+                  }
                 }
               }
-            }
-            
-            if (userRole) {
-              await handleStaffSignIn(signInData.user.id, userRole);
               
-              console.log(`Redirecting ${userRole} to appropriate dashboard`);
-              
-              switch (userRole) {
-                case 'technician':
-                  navigate("/dashboard/job-tickets");
-                  break;
-                case 'front_desk':
-                  navigate("/dashboard/appointments");
-                  break;
-                default:
-                  navigate("/dashboard");
+              if (userRole) {
+                await handleStaffSignIn(signInData.user.id, userRole);
+                
+                console.log(`Redirecting ${userRole} to appropriate dashboard`);
+                
+                switch (userRole) {
+                  case 'technician':
+                    navigate("/dashboard/job-tickets");
+                    break;
+                  case 'front_desk':
+                    navigate("/dashboard/appointments");
+                    break;
+                  default:
+                    navigate("/dashboard");
+                }
+              } else {
+                throw new Error("Your account does not have an assigned role");
               }
-            } else {
-              throw new Error("Your account does not have an assigned role");
+            } catch (error: any) {
+              console.error("Error during sign-in flow:", error.message);
+              uiToast({
+                variant: "destructive",
+                title: "Access Denied",
+                description: error.message,
+              });
+              await supabase.auth.signOut();
+              setLoading(false);
+              return;
             }
-          } catch (error: any) {
-            console.error("Error during sign-in flow:", error.message);
-            uiToast({
-              variant: "destructive",
-              title: "Access Denied",
-              description: error.message,
-            });
-            await supabase.auth.signOut();
-            setLoading(false);
-            return;
           }
         }
+      } catch (error: any) {
+        console.error("Authentication error:", error.message);
+        uiToast({
+          variant: "destructive",
+          title: "Error",
+          description: error.message,
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error: any) {
-      console.error("Authentication error:", error.message);
-      uiToast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
+    })();
   };
 
   return {

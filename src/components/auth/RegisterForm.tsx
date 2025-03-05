@@ -23,7 +23,7 @@ export interface RegisterFormProps {
   role?: Role;
   setRole?: (value: Role) => void;
   isLoading?: boolean;
-  onSubmit?: (e: React.FormEvent) => Promise<void>;
+  onSubmit?: (e: React.FormEvent) => void; // Changed from Promise<void> to void
   navigateToOtherLogin?: () => void;
 }
 

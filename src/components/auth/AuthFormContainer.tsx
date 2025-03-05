@@ -31,6 +31,7 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
     navigate(userType === "owner" ? "/auth?type=staff" : "/");
   };
 
+  // Modified to match the expected type in RegisterForm
   const handleSubmit = (e: React.FormEvent) => {
     handleAuth(e, mode, email, password, firstName, lastName, role);
   };
@@ -78,9 +79,8 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
           role={role}
           setRole={setRole}
           userType={userType}
-          loading={loading}
+          isLoading={loading}
           onSubmit={handleSubmit}
-          onToggleMode={toggleMode}
           navigateToOtherLogin={navigateToOtherLogin}
         />
       )}
