@@ -7,10 +7,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface TechnicianSelectorProps {
   technicianId: string | null;
-  technicians?: { id: string; first_name: string; last_name: string }[];
+  technicians?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  }[];
   onTechnicianChange: (technicianId: string) => void;
 }
 
@@ -24,17 +29,32 @@ export const TechnicianSelector = ({
       <Label>Assigned Technician</Label>
       <Select
         value={technicianId || ""}
-        onValueChange={(value) => onTechnicianChange(value)}
+        onValueChange={(value) => {
+          if (value && value !== "no-technicians") {
+            onTechnicianChange(value);
+          }
+        }}
       >
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select technician" />
+          <SelectValue placeholder="Assign a technician" />
         </SelectTrigger>
         <SelectContent>
-          {technicians?.map((technician) => (
-            <SelectItem key={technician.id} value={technician.id}>
-              {technician.first_name} {technician.last_name}
-            </SelectItem>
-          ))}
+          <ScrollArea className="h-[200px]">
+            {technicians && technicians.length > 0 ? (
+              technicians.map((technician) => {
+                // Skip any technician with a null or empty ID
+                if (!technician.id) return null;
+                
+                return (
+                  <SelectItem key={technician.id} value={technician.id}>
+                    {technician.first_name} {technician.last_name}
+                  </SelectItem>
+                );
+              })
+            ) : (
+              <SelectItem value="no-technicians">No technicians available</SelectItem>
+            )}
+          </ScrollArea>
         </SelectContent>
       </Select>
     </div>

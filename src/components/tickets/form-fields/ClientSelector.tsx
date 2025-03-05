@@ -11,7 +11,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 interface ClientSelectorProps {
   clientId: string | null;
@@ -66,12 +66,19 @@ export const ClientSelector = ({
     }
   }, [clients, clientId, onClientChange]);
 
+  // Function to safely handle client selection
+  const handleClientSelection = (value: string) => {
+    if (value && value !== "no-clients") {
+      onClientChange(value);
+    }
+  };
+
   return (
     <div>
       <Label>Client</Label>
       <Select
         value={clientId || ""}
-        onValueChange={(value) => onClientChange(value)}
+        onValueChange={handleClientSelection}
       >
         <SelectTrigger className="w-full">
           <SelectValue placeholder={isLoading ? "Loading clients..." : "Select client"} />
@@ -79,11 +86,16 @@ export const ClientSelector = ({
         <SelectContent>
           <ScrollArea className="h-[200px]">
             {clients && clients.length > 0 ? (
-              clients.map((client) => (
-                <SelectItem key={client.id} value={client.id || "placeholder-key"}>
-                  {client.first_name} {client.last_name}
-                </SelectItem>
-              ))
+              clients.map((client) => {
+                // Skip any client with a null or empty ID
+                if (!client.id) return null;
+                
+                return (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.first_name} {client.last_name}
+                  </SelectItem>
+                );
+              })
             ) : (
               <SelectItem value="no-clients">No clients available</SelectItem>
             )}
