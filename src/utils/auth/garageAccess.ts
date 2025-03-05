@@ -7,6 +7,7 @@ import { Garage } from "@/types/garage";
  * - As an owner (garages.owner_id)
  * - As a member (garage_members)
  * - Via profile assignment (profiles.garage_id)
+ * - Via user role (user_roles.garage_id) - new direct association
  */
 export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
   if (!userId) return [];
@@ -32,6 +33,17 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       
     if (memberError) {
       console.error("Error fetching member garages:", memberError);
+    }
+    
+    // Check user_roles table for direct garage association (new)
+    const { data: roleGarageData, error: roleGarageError } = await supabase
+      .from('user_roles')
+      .select('role, garage_id, garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)')
+      .eq('user_id', userId)
+      .not('garage_id', 'is', null);
+      
+    if (roleGarageError) {
+      console.error("Error fetching role garages:", roleGarageError);
     }
     
     // Finally, get profile relationship
@@ -63,6 +75,18 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
           garages.push({
             ...membership.garages,
             relationship_type: membership.role
+          });
+        }
+      });
+    }
+    
+    // Add role-associated garages (new)
+    if (roleGarageData && roleGarageData.length > 0) {
+      roleGarageData.forEach(roleData => {
+        if (roleData.garages) {
+          garages.push({
+            ...roleData.garages,
+            relationship_type: roleData.role
           });
         }
       });
@@ -117,7 +141,7 @@ export async function repairUserGarageRelationships(userId: string): Promise<boo
     // Check user's role
     const { data: roleData } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, garage_id')
       .eq('user_id', userId)
       .maybeSingle();
       
@@ -145,6 +169,14 @@ export async function repairUserGarageRelationships(userId: string): Promise<boo
           garage_id: garage.id, 
           role: roleInGarage 
         });
+      
+      // Update user_roles table with garage_id if it's missing
+      if (!roleData?.garage_id) {
+        await supabase
+          .from('user_roles')
+          .update({ garage_id: garage.id })
+          .eq('user_id', userId);
+      }
         
       console.log(`Ensured membership for garage ${garage.id} with role ${roleInGarage}`);
     }

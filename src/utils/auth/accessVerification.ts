@@ -11,7 +11,7 @@ export async function verifyUserRole(userId: string) {
     
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, garage_id')
       .eq('user_id', userId)
       .maybeSingle();
     
@@ -21,7 +21,7 @@ export async function verifyUserRole(userId: string) {
       return { hasError: true, role: null };
     }
 
-    console.log("User role:", roleData?.role);
+    console.log("User role:", roleData?.role, "Garage ID:", roleData?.garage_id);
     return { hasError: false, role: roleData?.role || null };
   } catch (error: any) {
     console.error("Error in verifyUserRole:", error.message);
@@ -58,19 +58,46 @@ export async function verifyDashboardAccess(userId: string, userRole: string | n
 }
 
 /**
- * Ensures the user has a garage assigned to their profile
+ * Ensures the user has a garage assigned to their profile and user_role
+ * Uses the new direct garage_id in user_roles table
  */
 export async function ensureUserHasGarage(userId: string, userRole: string) {
   try {
-    // Check profile first
+    // First check user_roles for a garage_id - direct association
+    const { data: userRoleData } = await supabase
+      .from('user_roles')
+      .select('garage_id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (userRoleData?.garage_id) {
+      console.log("User has garage_id in user_roles:", userRoleData.garage_id);
+      
+      // Ensure profile has the same garage_id
+      await supabase
+        .from('profiles')
+        .update({ garage_id: userRoleData.garage_id })
+        .eq('id', userId);
+        
+      return true;
+    }
+    
+    // Check profile for a garage_id
     const { data: profileData } = await supabase
       .from('profiles')
       .select('garage_id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
       
     if (profileData?.garage_id) {
       console.log("User has garage_id in profile:", profileData.garage_id);
+      
+      // Update user_roles with profile's garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: profileData.garage_id })
+        .eq('user_id', userId);
+        
       return true;
     }
     
@@ -85,7 +112,13 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       if (ownedGarages && ownedGarages.length > 0) {
         console.log("Admin owns garage:", ownedGarages[0].id);
         
-        // Update profile with owned garage using direct update
+        // Update user_roles with owned garage_id
+        await supabase
+          .from('user_roles')
+          .update({ garage_id: ownedGarages[0].id })
+          .eq('user_id', userId);
+        
+        // Update profile with owned garage
         await supabase
           .from('profiles')
           .update({ garage_id: ownedGarages[0].id })
@@ -105,7 +138,13 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     if (memberData && memberData.length > 0) {
       console.log("User is a member of garage:", memberData[0].garage_id);
       
-      // Update profile with found garage_id using direct update
+      // Update user_roles with garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: memberData[0].garage_id })
+        .eq('user_id', userId);
+      
+      // Update profile with found garage_id
       await supabase
         .from('profiles')
         .update({ garage_id: memberData[0].garage_id })
@@ -125,6 +164,12 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       const defaultGarageId = defaultGarage[0].id;
       console.log("Adding user to default Tractic garage:", defaultGarageId);
       
+      // Update user_roles with garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: defaultGarageId })
+        .eq('user_id', userId);
+      
       // Add user as member
       await supabase
         .from('garage_members')
@@ -132,7 +177,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
           { user_id: userId, garage_id: defaultGarageId, role: userRole }
         ]);
         
-      // Update profile using direct update
+      // Update profile
       await supabase
         .from('profiles')
         .update({ garage_id: defaultGarageId })
@@ -150,6 +195,12 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
     if (anyGarage && anyGarage.length > 0) {
       console.log("Adding user to available garage:", anyGarage[0].id);
       
+      // Update user_roles with garage_id
+      await supabase
+        .from('user_roles')
+        .update({ garage_id: anyGarage[0].id })
+        .eq('user_id', userId);
+      
       // Add user as member
       await supabase
         .from('garage_members')
@@ -157,7 +208,7 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
           { user_id: userId, garage_id: anyGarage[0].id, role: userRole }
         ]);
         
-      // Update profile using direct update
+      // Update profile
       await supabase
         .from('profiles')
         .update({ garage_id: anyGarage[0].id })
