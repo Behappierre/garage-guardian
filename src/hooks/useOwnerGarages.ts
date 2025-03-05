@@ -37,16 +37,54 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
       console.log("AUTH USER ID:", userData.user.id);
       console.log("User email:", userData.user.email);
 
-      // Use a single SQL query that bypasses potentially conflicting RLS policies
+      // DEBUGGING: Check raw database state
+      const { data: ownerCheck } = await supabase.rpc('execute_read_only_query', {
+        query_text: `SELECT COUNT(*) FROM garages WHERE owner_id = '${userData.user.id}'::uuid`
+      });
+      console.log("DIRECT OWNER COUNT:", ownerCheck);
+
+      const { data: memberCheck } = await supabase.rpc('execute_read_only_query', {
+        query_text: `SELECT COUNT(*) FROM garage_members WHERE user_id = '${userData.user.id}'::uuid`
+      });
+      console.log("DIRECT MEMBER COUNT:", memberCheck);
+
+      const { data: profileCheck } = await supabase.rpc('execute_read_only_query', {
+        query_text: `SELECT garage_id FROM profiles WHERE id = '${userData.user.id}'::uuid`
+      });
+      console.log("DIRECT PROFILE GARAGE:", profileCheck);
+
+      // DEBUGGING: Table structure verification
+      const { data: memberTableCheck } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT column_name, data_type 
+          FROM information_schema.columns 
+          WHERE table_name = 'garage_members'
+        `
+      });
+      console.log("GARAGE_MEMBERS TABLE STRUCTURE:", memberTableCheck);
+
+      // DEBUGGING: Check if referenced garages actually exist
+      const { data: garageExistence } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT id FROM garages WHERE id IN (
+            SELECT garage_id FROM profiles WHERE id = '${userData.user.id}'::uuid
+            UNION
+            SELECT garage_id FROM garage_members WHERE user_id = '${userData.user.id}'::uuid
+          )
+        `
+      });
+      console.log("GARAGE EXISTENCE CHECK:", garageExistence);
+
+      // Use a single SQL query with explicit UUID casting
       const { data: directResults } = await supabase.rpc('execute_read_only_query', {
         query_text: `
           SELECT DISTINCT g.* FROM garages g
           LEFT JOIN garage_members gm ON g.id = gm.garage_id
           LEFT JOIN profiles p ON g.id = p.garage_id
           WHERE 
-            g.owner_id = '${userData.user.id}' OR
-            gm.user_id = '${userData.user.id}' OR
-            (p.id = '${userData.user.id}' AND p.garage_id IS NOT NULL)
+            g.owner_id = '${userData.user.id}'::uuid OR
+            gm.user_id = '${userData.user.id}'::uuid OR
+            (p.id = '${userData.user.id}'::uuid AND p.garage_id IS NOT NULL)
         `
       });
       
@@ -83,7 +121,31 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
           await supabase.from('profiles')
             .update({ garage_id: (defaultGarage[0] as unknown as Garage).id })
             .eq('id', userData.user.id);
+            
+          // DEBUGGING: Verify the records were actually created
+          const { data: verifyMemberInsert } = await supabase.rpc('execute_read_only_query', {
+            query_text: `
+              SELECT * FROM garage_members 
+              WHERE user_id = '${userData.user.id}'::uuid 
+              AND garage_id = '${(defaultGarage[0] as unknown as Garage).id}'::uuid
+            `
+          });
+          console.log("VERIFY MEMBER INSERT:", verifyMemberInsert);
+          
+          const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
+            query_text: `
+              SELECT garage_id FROM profiles 
+              WHERE id = '${userData.user.id}'::uuid
+            `
+          });
+          console.log("VERIFY PROFILE UPDATE:", verifyProfileUpdate);
         } else {
+          // DEBUGGING: Last resort - check if ANY garage exists at all
+          const { data: anyGarageCheck } = await supabase.rpc('execute_read_only_query', {
+            query_text: `SELECT COUNT(*) FROM garages`
+          });
+          console.log("ANY GARAGE EXISTS CHECK:", anyGarageCheck);
+          
           setGarages([]);
         }
       }

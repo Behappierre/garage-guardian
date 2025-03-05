@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { Garage } from "@/types/garage";
 
 /**
  * Ensures a user has a garage assigned to their profile
@@ -42,6 +43,19 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       
       if (!memberExists) {
         console.log("Adding user to garage_members for consistency");
+        
+        // DEBUGGING: Try direct SQL insertion if the supabase.from approach fails
+        await supabase.rpc('execute_read_only_query', {
+          query_text: `
+            INSERT INTO garage_members (user_id, garage_id, role)
+            VALUES ('${userId}'::uuid, '${profileData.garage_id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
+            ON CONFLICT DO NOTHING
+          `
+        }).catch(err => {
+          console.error("Error with direct SQL insert:", err);
+        });
+        
+        // Also try the normal approach
         await supabase
           .from('garage_members')
           .upsert([
@@ -51,6 +65,16 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
               role: userRole === 'administrator' ? 'owner' : userRole 
             }
           ]);
+          
+        // Verify the insert worked
+        const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
+          query_text: `
+            SELECT * FROM garage_members 
+            WHERE user_id = '${userId}'::uuid 
+            AND garage_id = '${profileData.garage_id}'::uuid
+          `
+        });
+        console.log("VERIFY MEMBER INSERT RESULT:", verifyInsert);
       }
       
       return true;
@@ -138,24 +162,57 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
   if (defaultGarage) {
     console.log("Found default 'tractic' garage:", defaultGarage.id);
     
-    // Add user to this garage
-    await supabase
-      .from('garage_members')
-      .upsert([
-        { 
-          user_id: userId, 
-          garage_id: defaultGarage.id, 
-          role: userRole === 'administrator' ? 'owner' : userRole 
-        }
-      ]);
-    
-    // Update profile
-    await supabase
-      .from('profiles')
-      .update({ garage_id: defaultGarage.id })
-      .eq('id', userId);
-    
-    return true;
+    try {
+      // Try direct SQL insert as a workaround if the normal approach fails
+      await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          INSERT INTO garage_members (user_id, garage_id, role)
+          VALUES ('${userId}'::uuid, '${defaultGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
+          ON CONFLICT DO NOTHING
+        `
+      }).catch(err => {
+        console.error("Error with direct SQL insert for default garage:", err);
+      });
+      
+      // Also try normal approach
+      await supabase
+        .from('garage_members')
+        .upsert([
+          { 
+            user_id: userId, 
+            garage_id: defaultGarage.id, 
+            role: userRole === 'administrator' ? 'owner' : userRole 
+          }
+        ]);
+      
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({ garage_id: defaultGarage.id })
+        .eq('id', userId);
+        
+      // Verify both operations worked
+      const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT * FROM garage_members 
+          WHERE user_id = '${userId}'::uuid 
+          AND garage_id = '${defaultGarage.id}'::uuid
+        `
+      });
+      console.log("VERIFY DEFAULT GARAGE MEMBER INSERT:", verifyInsert);
+      
+      const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT garage_id FROM profiles 
+          WHERE id = '${userId}'::uuid
+        `
+      });
+      console.log("VERIFY DEFAULT GARAGE PROFILE UPDATE:", verifyProfileUpdate);
+      
+      return true;
+    } catch (error) {
+      console.error("Error adding user to default garage:", error);
+    }
   }
   
   // CHECK 5: Last resort - find any garage in the system
@@ -172,24 +229,57 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
   if (anyGarage) {
     console.log("Found a garage to assign:", anyGarage.id);
     
-    // Add user to this garage
-    await supabase
-      .from('garage_members')
-      .upsert([
-        { 
-          user_id: userId, 
-          garage_id: anyGarage.id, 
-          role: userRole === 'administrator' ? 'owner' : userRole 
-        }
-      ]);
-    
-    // Update profile
-    await supabase
-      .from('profiles')
-      .update({ garage_id: anyGarage.id })
-      .eq('id', userId);
-    
-    return true;
+    try {
+      // Try direct SQL insert as a workaround
+      await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          INSERT INTO garage_members (user_id, garage_id, role)
+          VALUES ('${userId}'::uuid, '${anyGarage.id}'::uuid, '${userRole === 'administrator' ? 'owner' : userRole}')
+          ON CONFLICT DO NOTHING
+        `
+      }).catch(err => {
+        console.error("Error with direct SQL insert for any garage:", err);
+      });
+      
+      // Also try normal approach
+      await supabase
+        .from('garage_members')
+        .upsert([
+          { 
+            user_id: userId, 
+            garage_id: anyGarage.id, 
+            role: userRole === 'administrator' ? 'owner' : userRole 
+          }
+        ]);
+      
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({ garage_id: anyGarage.id })
+        .eq('id', userId);
+        
+      // Verify both operations
+      const { data: verifyInsert } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT * FROM garage_members 
+          WHERE user_id = '${userId}'::uuid 
+          AND garage_id = '${anyGarage.id}'::uuid
+        `
+      });
+      console.log("VERIFY ANY GARAGE MEMBER INSERT:", verifyInsert);
+      
+      const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT garage_id FROM profiles 
+          WHERE id = '${userId}'::uuid
+        `
+      });
+      console.log("VERIFY ANY GARAGE PROFILE UPDATE:", verifyProfileUpdate);
+      
+      return true;
+    } catch (error) {
+      console.error("Error adding user to last resort garage:", error);
+    }
   }
   
   // No garage found

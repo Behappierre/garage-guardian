@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { ensureUserHasGarage } from "@/utils/auth/garageAssignment";
 
@@ -46,6 +47,12 @@ export const useSignIn = () => {
         .eq('owner_id', userId);
       
       console.log("Owner sign in - owned garages:", JSON.stringify(ownedGarages));
+      
+      // DEBUGGING: Check if the owner_id is correct with direct SQL
+      const { data: directOwnerCheck } = await supabase.rpc('execute_read_only_query', {
+        query_text: `SELECT COUNT(*) FROM garages WHERE owner_id = '${userId}'::uuid`
+      });
+      console.log("DIRECT OWNER CHECK:", directOwnerCheck);
         
       if (ownedGarages && ownedGarages.length > 0) {
         console.log("Owner has owned garages:", ownedGarages.length);
@@ -64,6 +71,17 @@ export const useSignIn = () => {
             garage_id: ownedGarages[0].id,
             role: 'owner'
           }]);
+          
+        // DEBUGGING: Verify the operations succeeded
+        const { data: verifyProfileUpdate } = await supabase.rpc('execute_read_only_query', {
+          query_text: `SELECT garage_id FROM profiles WHERE id = '${userId}'::uuid`
+        });
+        console.log("VERIFY OWNER PROFILE UPDATE:", verifyProfileUpdate);
+        
+        const { data: verifyMemberInsert } = await supabase.rpc('execute_read_only_query', {
+          query_text: `SELECT * FROM garage_members WHERE user_id = '${userId}'::uuid AND garage_id = '${ownedGarages[0].id}'::uuid`
+        });
+        console.log("VERIFY OWNER MEMBER INSERT:", verifyMemberInsert);
         
         return;
       }
@@ -76,6 +94,12 @@ export const useSignIn = () => {
         .maybeSingle();
       
       console.log("Owner sign in - existing memberships:", JSON.stringify(memberData));
+      
+      // DEBUGGING: Direct SQL check for memberships
+      const { data: directMemberCheck } = await supabase.rpc('execute_read_only_query', {
+        query_text: `SELECT * FROM garage_members WHERE user_id = '${userId}'::uuid`
+      });
+      console.log("DIRECT MEMBER CHECK:", directMemberCheck);
       
       if (memberData?.garage_id) {
         // Verify this garage exists
@@ -91,6 +115,12 @@ export const useSignIn = () => {
             .from('profiles')
             .update({ garage_id: memberData.garage_id })
             .eq('id', userId);
+            
+          // DEBUGGING: Verify the update
+          const { data: verifyUpdate } = await supabase.rpc('execute_read_only_query', {
+            query_text: `SELECT garage_id FROM profiles WHERE id = '${userId}'::uuid`
+          });
+          console.log("VERIFY MEMBER PROFILE UPDATE:", verifyUpdate);
         }
       }
       
@@ -136,6 +166,12 @@ export const useSignIn = () => {
               role: userRole
             }]);
             
+          // DEBUGGING: Verify member insert
+          const { data: verifyMemberInsert } = await supabase.rpc('execute_read_only_query', {
+            query_text: `SELECT * FROM garage_members WHERE user_id = '${userId}'::uuid AND garage_id = '${profileData.garage_id}'::uuid`
+          });
+          console.log("VERIFY STAFF MEMBER INSERT:", verifyMemberInsert);
+            
           return;
         }
       }
@@ -145,6 +181,51 @@ export const useSignIn = () => {
       console.log("Staff ensureUserHasGarage result:", hasGarage);
       
       if (!hasGarage) {
+        // DEBUGGING: Last effort - create a garage if none exist
+        const { data: garageCount } = await supabase.rpc('execute_read_only_query', {
+          query_text: `SELECT COUNT(*) FROM garages`
+        });
+        console.log("TOTAL GARAGE COUNT:", garageCount);
+        
+        if (!garageCount || (Array.isArray(garageCount) && garageCount.length > 0 && parseInt(garageCount[0].count) === 0)) {
+          console.log("No garages exist, creating a default one");
+          
+          // Create a default garage as a last resort
+          const { data: newGarage, error: createError } = await supabase
+            .from('garages')
+            .insert({
+              name: 'Default Garage',
+              slug: 'default',
+              owner_id: userId
+            })
+            .select()
+            .single();
+            
+          if (createError) {
+            console.error("Error creating default garage:", createError);
+            throw new Error("Could not create a default garage");
+          }
+          
+          console.log("Created default garage:", newGarage);
+          
+          // Add user to this garage
+          await supabase
+            .from('garage_members')
+            .insert({
+              user_id: userId,
+              garage_id: newGarage.id,
+              role: userRole
+            });
+            
+          // Update profile
+          await supabase
+            .from('profiles')
+            .update({ garage_id: newGarage.id })
+            .eq('id', userId);
+            
+          return;
+        }
+        
         throw new Error("You don't have access to any garages. Please contact an administrator.");
       }
       
