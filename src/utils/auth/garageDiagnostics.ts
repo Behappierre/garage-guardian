@@ -5,8 +5,9 @@ import { toast } from "@/hooks/use-toast";
 /**
  * Run a series of diagnostic queries to understand user-garage relationships
  * This can be used during development or as an admin tool to debug issues
+ * @returns boolean indicating if diagnostics completed successfully
  */
-export async function runGarageDiagnostics(userId: string): Promise<void> {
+export async function runGarageDiagnostics(userId: string): Promise<boolean> {
   console.log("=== STARTING GARAGE ACCESS DIAGNOSTICS ===");
   console.log(`Testing for user ID: ${userId}`);
   
@@ -124,8 +125,10 @@ export async function runGarageDiagnostics(userId: string): Promise<void> {
     }
     
     console.log("\n=== DIAGNOSTICS COMPLETE ===");
+    return true; // Return true indicating diagnostics completed successfully
   } catch (error) {
     console.error("❌ Unexpected error during diagnostics:", error);
+    return false; // Return false indicating diagnostics failed
   }
 }
 
