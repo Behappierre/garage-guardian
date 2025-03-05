@@ -95,6 +95,7 @@ export const RegisterForm = ({
         </div>
       </div>
 
+      {/* This is where the error was occurring - Fixed by ensuring proper type comparison */}
       {userType === "staff" && (
         <div className="space-y-2">
           <Label>Select Your Role</Label>
