@@ -25,7 +25,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       console.error("Error fetching owned garages:", ownedError);
     }
     
-    // Then, get member relationships directly - Fix the select statement to avoid column ambiguity
+    // Then, get member relationships directly - Using proper join syntax to avoid ambiguity
     const { data: memberGarages, error: memberError } = await supabase
       .from('garage_members')
       .select(`
@@ -48,10 +48,11 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       console.error("Error fetching member garages:", memberError);
     }
     
-    // Check user_roles table for direct garage association - Fix the select statement
+    // Check user_roles table for direct garage association - Using proper join syntax
     const { data: roleGarageData, error: roleGarageError } = await supabase
       .from('user_roles')
       .select(`
+        id,
         role,
         garage:garage_id (
           id, 
@@ -71,7 +72,7 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
       console.error("Error fetching role garages:", roleGarageError);
     }
     
-    // Finally, get profile relationship - Fix the select statement
+    // Finally, get profile relationship - Using proper join syntax
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(`
