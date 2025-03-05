@@ -51,38 +51,22 @@ export const useSignUp = () => {
   };
 
   const assignStaffToGarage = async (userId: string, role: string) => {
-    // Try to find default garage
-    const { data: defaultGarage, error: defaultGarageError } = await supabase
+    // Find any garage
+    const { data: anyGarage, error: anyGarageError } = await supabase
       .from('garages')
       .select('id')
-      .eq('slug', 'tractic')
       .limit(1);
       
-    if (defaultGarageError) {
-      console.error("Error finding default garage:", defaultGarageError);
-      throw new Error("Could not find a default garage to assign you to");
+    if (anyGarageError) {
+      throw new Error("Could not find any garage to assign you to");
     }
     
     let garageId = null;
     
-    if (defaultGarage && defaultGarage.length > 0) {
-      garageId = defaultGarage[0].id;
+    if (anyGarage && anyGarage.length > 0) {
+      garageId = anyGarage[0].id;
     } else {
-      // Try any garage
-      const { data: anyGarage, error: anyGarageError } = await supabase
-        .from('garages')
-        .select('id')
-        .limit(1);
-        
-      if (anyGarageError) {
-        throw new Error("Could not find any garage to assign you to");
-      }
-      
-      if (anyGarage && anyGarage.length > 0) {
-        garageId = anyGarage[0].id;
-      } else {
-        throw new Error("No garages exist in the system. Please contact an administrator.");
-      }
+      throw new Error("No garages exist in the system. Please contact an administrator.");
     }
     
     // Add user as garage member
