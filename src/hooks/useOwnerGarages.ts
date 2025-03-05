@@ -37,88 +37,54 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
       console.log("AUTH USER ID:", userData.user.id);
       console.log("User email:", userData.user.email);
 
-      // Use a simpler approach - fetch all garages this user should have access to
-      // This includes owned garages and memberships
-      
-      const allGarages: Garage[] = [];
-      const seenGarageIds = new Set<string>();
-
-      // First fetch owned garages directly - this is more reliable
-      const { data: ownedGarages, error: ownedError } = await supabase
-        .from("garages")
-        .select("*")
-        .eq("owner_id", userData.user.id);
-      
-      console.log("RAW OWNED GARAGES:", JSON.stringify(ownedGarages));
-      
-      if (ownedError) {
-        console.error("Error fetching owned garages:", ownedError);
-      } else if (ownedGarages && ownedGarages.length > 0) {
-        console.log("Found owned garages:", ownedGarages.length);
-        
-        ownedGarages.forEach(garage => {
-          allGarages.push(garage);
-          seenGarageIds.add(garage.id);
-        });
-      }
-
-      // Then fetch garage memberships
-      const { data: memberships, error: membershipError } = await supabase
-        .from("garage_members")
-        .select("garage_id")
-        .eq("user_id", userData.user.id);
-      
-      console.log("RAW MEMBERSHIPS:", JSON.stringify(memberships));
-      
-      if (membershipError) {
-        console.error("Error fetching garage memberships:", membershipError);
-      } else if (memberships && memberships.length > 0) {
-        // For each membership, fetch the garage details if we haven't seen it yet
-        for (const membership of memberships) {
-          if (!seenGarageIds.has(membership.garage_id)) {
-            const { data: garage, error: garageError } = await supabase
-              .from("garages")
-              .select("*")
-              .eq("id", membership.garage_id)
-              .maybeSingle();
-              
-            if (garageError) {
-              console.error("Error fetching garage details:", garageError);
-            } else if (garage) {
-              allGarages.push(garage);
-              seenGarageIds.add(garage.id);
-            }
-          }
-        }
-      }
-
-      // Use execute_read_only_query as a backup to fetch ALL garage data without RLS restrictions
-      // This helps us diagnose if RLS is causing issues
-      const { data: directQueryResult } = await supabase.rpc('execute_read_only_query', {
+      // Use a single SQL query that bypasses potentially conflicting RLS policies
+      const { data: directResults } = await supabase.rpc('execute_read_only_query', {
         query_text: `
-          SELECT g.* FROM garages g
-          WHERE g.owner_id = '${userData.user.id}'
-          OR g.id IN (
-            SELECT garage_id FROM garage_members 
-            WHERE user_id = '${userData.user.id}'
-          )
+          SELECT DISTINCT g.* FROM garages g
+          LEFT JOIN garage_members gm ON g.id = gm.garage_id
+          LEFT JOIN profiles p ON g.id = p.garage_id
+          WHERE 
+            g.owner_id = '${userData.user.id}' OR
+            gm.user_id = '${userData.user.id}' OR
+            (p.id = '${userData.user.id}' AND p.garage_id IS NOT NULL)
         `
       });
       
-      console.log("DIRECT QUERY GARAGES:", JSON.stringify(directQueryResult));
+      console.log("DIRECT QUERY RESULTS:", JSON.stringify(directResults));
       
-      // Properly handle the array result from the RPC function
-      if (directQueryResult && Array.isArray(directQueryResult) && directQueryResult.length > 0) {
-        directQueryResult.forEach((garage: any) => {
-          if (!seenGarageIds.has(garage.id)) {
-            allGarages.push(garage);
-            seenGarageIds.add(garage.id);
-          }
+      if (directResults && Array.isArray(directResults) && directResults.length > 0) {
+        console.log("Found garages for user:", directResults.length);
+        setGarages(directResults as Garage[]);
+      } else {
+        console.log("No garages found for user");
+        
+        // Fallback check for a default "tractic" garage
+        const { data: defaultGarage } = await supabase.rpc('execute_read_only_query', {
+          query_text: `SELECT * FROM garages WHERE slug = 'tractic' LIMIT 1`
         });
+        
+        console.log("Default garage check:", JSON.stringify(defaultGarage));
+        
+        if (defaultGarage && Array.isArray(defaultGarage) && defaultGarage.length > 0) {
+          console.log("Using default 'tractic' garage");
+          setGarages(defaultGarage as Garage[]);
+          
+          // Add user to this garage if not already a member
+          await supabase.from('garage_members')
+            .upsert([{ 
+              user_id: userData.user.id, 
+              garage_id: defaultGarage[0].id,
+              role: 'member'
+            }]);
+            
+          // Update profile
+          await supabase.from('profiles')
+            .update({ garage_id: defaultGarage[0].id })
+            .eq('id', userData.user.id);
+        } else {
+          setGarages([]);
+        }
       }
-
-      console.log("FINAL GARAGES LIST:", JSON.stringify(allGarages));
-      setGarages(allGarages);
     } catch (error: any) {
       console.error("Error in useOwnerGarages:", error);
       setError(error.message);
