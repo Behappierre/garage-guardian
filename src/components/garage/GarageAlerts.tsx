@@ -1,42 +1,32 @@
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, InfoIcon } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface GarageAlertsProps {
-  debugInfo: string | null;
   error: string | null;
-  garagesEmpty: boolean;
+  isMultiGarageAdmin: boolean;
 }
 
-export const GarageAlerts = ({ debugInfo, error, garagesEmpty }: GarageAlertsProps) => {
+export function GarageAlerts({ error, isMultiGarageAdmin }: GarageAlertsProps) {
   return (
     <>
-      {debugInfo && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Debug information: {debugInfo}
-          </AlertDescription>
-        </Alert>
-      )}
-      
       {error && (
-        <Alert variant={error.includes("Using default garage") ? "default" : "destructive"} className="mb-4">
+        <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error}
-          </AlertDescription>
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
       
-      {garagesEmpty && !error && (
-        <Alert variant="warning" className="mb-4">
-          <InfoIcon className="h-4 w-4" />
+      {isMultiGarageAdmin && (
+        <Alert className="mb-6" variant="default">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Multiple Garages Detected</AlertTitle>
           <AlertDescription>
-            No garages found. You can create a new garage using the button below.
+            You have access to multiple garages. Please select which garage you want to manage.
           </AlertDescription>
         </Alert>
       )}
     </>
   );
-};
+}
