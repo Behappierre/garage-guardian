@@ -1,8 +1,8 @@
+
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
-import { getAccessibleGarages, repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 
 interface AuthContextType {
   session: Session | null;
@@ -33,52 +33,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFetchingGarage(true);
       console.log("Fetching garage for user:", userId);
       
-      // Try to repair relationships first
-      await repairUserGarageRelationships(userId);
-      
-      // First check if user has a garage in their profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('garage_id')
-        .eq('id', userId)
+      // Only check user_roles table for garage_id
+      const { data: userRoleData, error: userRoleError } = await supabase
+        .from('user_roles')
+        .select('role, garage_id')
+        .eq('user_id', userId)
         .single();
         
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error("Error fetching profile:", profileError);
+      if (userRoleError) {
+        console.error("Error fetching user_role:", userRoleError);
+        throw userRoleError;
       }
       
-      if (profileData?.garage_id) {
-        console.log("Found profile garage_id:", profileData.garage_id);
-        setGarageId(profileData.garage_id);
-        setLoading(false);
-        setHasFetchedGarage(true);
-        setFetchingGarage(false);
-        return;
+      if (userRoleData?.garage_id) {
+        console.log("Found garage_id in user_roles:", userRoleData.garage_id);
+        setGarageId(userRoleData.garage_id);
+      } else {
+        // No garage found
+        console.log("No garage found for this user in user_roles");
+        toast.info("You don't have a garage associated with your account. Please contact an administrator.");
       }
-      
-      // Fetch all accessible garages
-      const accessibleGarages = await getAccessibleGarages(userId);
-      
-      if (accessibleGarages.length > 0) {
-        const firstGarage = accessibleGarages[0];
-        console.log("Using first accessible garage:", firstGarage.id);
-        
-        // Update profile with garage_id
-        await supabase
-          .from('profiles')
-          .update({ garage_id: firstGarage.id })
-          .eq('id', userId);
-        
-        setGarageId(firstGarage.id);
-        setLoading(false);
-        setHasFetchedGarage(true);
-        setFetchingGarage(false);
-        return;
-      }
-      
-      // No garage found
-      console.log("No garage found for this user");
-      toast.info("You don't have a garage associated with your account. Please create or join one.");
     } catch (error) {
       console.error("Error fetching user garage:", error);
       toast.error("Error finding your garage. Please try again or contact support.");

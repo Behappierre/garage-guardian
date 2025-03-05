@@ -1,12 +1,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { repairUserGarageRelationships } from "@/utils/auth/garageAccess";
 import { toast } from "@/hooks/use-toast";
 import { logGarageAssignmentError } from "./garageDiagnostics";
 
 /**
  * Assigns a user to the default "tractic" garage or creates one if it doesn't exist
- * Leverages the new direct garage_id in user_roles table
+ * Only uses the user_roles table for garage association
  */
 export async function assignDefaultGarage(userId: string, userRole: string): Promise<boolean> {
   try {
@@ -65,7 +64,7 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
     
     console.log("Using garage ID:", garageId);
     
-    // 2. Update user_roles with garage_id - new direct association
+    // Only update the user_roles table with garage_id
     const { error: roleError } = await supabase
       .from('user_roles')
       .update({ garage_id: garageId })
@@ -73,30 +72,6 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       
     if (roleError) {
       console.error("Error updating user_roles with garage_id:", roleError);
-    }
-    
-    // 3. Add user as member - separate operation
-    const { error: memberError } = await supabase
-      .from('garage_members')
-      .upsert({
-        user_id: userId,
-        garage_id: garageId,
-        role: userRole || 'member'
-      });
-    
-    if (memberError) {
-      console.error("Error adding member:", memberError);
-      return false;
-    }
-    
-    // 4. Update profile with garage_id - separate operation
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userId);
-    
-    if (profileError) {
-      console.error("Error updating profile:", profileError);
       return false;
     }
     
@@ -109,13 +84,13 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
 
 /**
  * Handles staff-specific sign-in logic with improved error handling
- * Utilizes the new direct garage_id in user_roles table
+ * Only uses the user_roles table for garage association
  */
 export async function handleStaffSignIn(userId: string, userRole: string) {
   console.log("Handling staff sign in for user:", userId, "with role:", userRole);
   
   try {
-    // First check if user already has a valid garage assignment in user_roles
+    // Check if user already has a valid garage assignment in user_roles
     const { data: userRoleData } = await supabase
       .from('user_roles')
       .select('role, garage_id')
@@ -133,117 +108,23 @@ export async function handleStaffSignIn(userId: string, userRole: string) {
         .maybeSingle();
         
       if (garageExists) {
-        console.log("Staff garage exists in user_role, ensuring profile and membership");
-        
-        // Ensure profile has the same garage_id
-        await supabase
-          .from('profiles')
-          .update({ garage_id: userRoleData.garage_id })
-          .eq('id', userId);
-        
-        // Ensure user is a member of this garage
-        await supabase
-          .from('garage_members')
-          .upsert([{
-            user_id: userId,
-            garage_id: userRoleData.garage_id,
-            role: userRole
-          }]);
-          
+        console.log("Staff garage exists in user_role");
         return;
       } else {
         console.log("Garage in user_role doesn't exist, need to find or create a garage");
       }
     }
     
-    // Next, check profile for a garage_id
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('garage_id')
-      .eq('id', userId)
-      .maybeSingle();
+    // Try the improved assignDefaultGarage function
+    const assigned = await assignDefaultGarage(userId, userRole);
     
-    console.log("Staff profile data:", JSON.stringify(profileData));
-      
-    // If profile has a garage_id, verify it exists
-    if (profileData?.garage_id) {
-      const { data: garageExists } = await supabase
-        .from('garages')
-        .select('id')
-        .eq('id', profileData.garage_id)
-        .maybeSingle();
-        
-      if (garageExists) {
-        console.log("Staff garage exists in profile, updating user_role and membership");
-        
-        // Update user_role with this garage_id
-        await supabase
-          .from('user_roles')
-          .update({ garage_id: profileData.garage_id })
-          .eq('user_id', userId);
-        
-        // Ensure user is a member of this garage
-        await supabase
-          .from('garage_members')
-          .upsert([{
-            user_id: userId,
-            garage_id: profileData.garage_id,
-            role: userRole
-          }]);
-          
-        return;
-      }
-    }
-      
-    // Try to ensure user has a garage using repairUserGarageRelationships
-    const hasGarage = await repairUserGarageRelationships(userId);
-    console.log("Staff repairUserGarageRelationships result:", hasGarage);
-    
-    if (!hasGarage) {
-      // Try the improved assignDefaultGarage function
-      const assigned = await assignDefaultGarage(userId, userRole);
-      
-      if (!assigned) {
-        toast({
-          variant: "destructive",
-          title: "Login Error",
-          description: "Could not create or assign a default garage. Please contact support."
-        });
-        throw new Error("Could not create or assign a default garage");
-      }
-      
-      return;
-    }
-    
-    // Re-verify that user_role now has a garage_id after repairs
-    const { data: updatedUserRole } = await supabase
-      .from('user_roles')
-      .select('garage_id')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    if (!updatedUserRole?.garage_id) {
-      // Try fetching from profile as fallback
-      const { data: updatedProfile } = await supabase
-        .from('profiles')
-        .select('garage_id')
-        .eq('id', userId)
-        .maybeSingle();
-        
-      if (updatedProfile?.garage_id) {
-        // Update user_role with profile's garage_id
-        await supabase
-          .from('user_roles')
-          .update({ garage_id: updatedProfile.garage_id })
-          .eq('user_id', userId);
-      } else {
-        toast({
-          variant: "destructive", 
-          title: "System Error",
-          description: "Failed to assign garage to your profile. Please contact support."
-        });
-        throw new Error("System error: Failed to assign garage to your profile. Please contact support.");
-      }
+    if (!assigned) {
+      toast({
+        variant: "destructive",
+        title: "Login Error",
+        description: "Could not create or assign a default garage. Please contact support."
+      });
+      throw new Error("Could not create or assign a default garage");
     }
   } catch (error) {
     console.error("Error in handleStaffSignIn:", error);
