@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Garage } from "@/types/garage";
-import { getAccessibleGarages, repairUserGarageRelationships } from "@/utils/auth/garageAccess";
+import { getAccessibleGarages, repairUserGarageRelationships } from "@/utils/auth/garage-access";
 
 export interface OwnerGaragesResult {
   garages: Garage[];
