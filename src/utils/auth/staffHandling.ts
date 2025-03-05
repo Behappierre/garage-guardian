@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { logGarageAssignmentError } from "./garageDiagnostics";
@@ -9,62 +8,52 @@ import { logGarageAssignmentError } from "./garageDiagnostics";
  */
 export async function assignDefaultGarage(userId: string, userRole: string): Promise<boolean> {
   try {
-    console.log("Attempting to assign default garage for user:", userId);
+    console.log(`Attempting to assign default garage for user ${userId}`);
     
-    // 1. First try to find the default "tractic" garage
-    const { data: defaultGarageData } = await supabase
-      .from('garages')
-      .select('id')
-      .eq('slug', 'tractic')
-      .maybeSingle();
+    // 1. Find the default garage with explicit table alias
+    const { data: defaultGarageResult, error: garageError } = await supabase.rpc('execute_read_only_query', {
+      query_text: `
+        SELECT g.id 
+        FROM garages g
+        WHERE g.slug = 'tractic'
+        LIMIT 1
+      `
+    });
     
-    let garageId: string | null = defaultGarageData?.id || null;
-    
-    // If no default garage found, try to find any garage
-    if (!garageId) {
-      console.log("Default 'tractic' garage not found, checking for any garage");
-      
-      const { data: anyGarageData } = await supabase
-        .from('garages')
-        .select('id')
-        .limit(1)
-        .maybeSingle();
-      
-      garageId = anyGarageData?.id || null;
+    if (garageError || !defaultGarageResult || defaultGarageResult.length === 0) {
+      console.error("Error or no default garage found:", garageError);
+      throw new Error("Default garage not found");
     }
     
-    // If still no garage found, create a default one
-    if (!garageId) {
-      console.log("No garages found, creating a default one");
+    const garageId = defaultGarageResult[0].id;
+    console.log(`Found default garage: ${garageId}`);
+    
+    // 2. Add user as member with SEPARATE query (no joins)
+    const { error: memberError } = await supabase
+      .from('garage_members')
+      .upsert([{
+        user_id: userId,
+        garage_id: garageId,
+        role: userRole
+      }]);
       
-      // Create a default garage with explicit column selection
-      const { data: newGarage, error: createError } = await supabase
-        .from('garages')
-        .insert({
-          name: 'Default Garage',
-          slug: 'default',
-          owner_id: userId
-        })
-        .select('id')
-        .single();
-      
-      if (createError) {
-        console.error("Error creating default garage:", createError);
-        return false;
-      }
-      
-      garageId = newGarage.id;
-      console.log("Created new default garage with ID:", garageId);
+    if (memberError) {
+      console.error("Error adding garage member:", memberError);
+      throw new Error("Failed to add garage membership");
     }
     
-    if (!garageId) {
-      console.error("Failed to find or create a garage");
-      return false;
+    // 3. Update profile with SEPARATE query (no joins, no ambiguity)
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ garage_id: garageId })
+      .eq('id', userId);
+      
+    if (profileError) {
+      console.error("Error updating profile:", profileError);
+      throw new Error("Failed to update profile");
     }
     
-    console.log("Using garage ID:", garageId);
-    
-    // Only update the user_roles table with garage_id - explicit column references
+    // 4. Update user_roles with garage_id
     const { error: roleError } = await supabase
       .from('user_roles')
       .update({ garage_id: garageId })
@@ -72,9 +61,10 @@ export async function assignDefaultGarage(userId: string, userRole: string): Pro
       
     if (roleError) {
       console.error("Error updating user_roles with garage_id:", roleError);
-      return false;
+      throw new Error("Failed to update user roles");
     }
     
+    console.log(`Successfully assigned user ${userId} to garage ${garageId}`);
     return true;
   } catch (error) {
     logGarageAssignmentError(error, "assignDefaultGarage");
