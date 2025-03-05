@@ -159,7 +159,13 @@ serve(async (req: Request) => {
 
     // Assign the role and garage_id - Using a more explicit approach with proper error handling
     try {
-      // Step 1: Insert role into user_roles
+      // Step 1: Insert role into user_roles - Make sure garage_id is included
+      console.log('Assigning role and garage_id:', { 
+        user_id: userData.user.id, 
+        role,
+        garage_id: garageId 
+      });
+      
       const { error: roleError } = await supabaseClient
         .from('user_roles')
         .insert([{ 
@@ -169,12 +175,14 @@ serve(async (req: Request) => {
         }]);
 
       if (roleError) {
+        console.error('Error assigning role:', roleError);
         throw new Error(`Error assigning role: ${roleError.message}`);
       }
       
       console.log('Successfully assigned role:', role, 'with garage:', garageId);
 
       // Step 2: Update profile with garage_id
+      console.log('Updating profile with garage_id:', garageId);
       const { error: profileError } = await supabaseClient
         .from('profiles')
         .update({ garage_id: garageId })
@@ -190,6 +198,7 @@ serve(async (req: Request) => {
       // Step 3: Add the user to garage_members table for complete integration
       if (role === 'administrator') {
         // If administrator, add as owner in garage_members
+        console.log('Adding administrator to garage_members as owner');
         const { error: memberError } = await supabaseClient
           .from('garage_members')
           .insert([{
@@ -206,6 +215,7 @@ serve(async (req: Request) => {
         }
       } else {
         // For other roles, add as staff
+        console.log('Adding staff user to garage_members');
         const { error: memberError } = await supabaseClient
           .from('garage_members')
           .insert([{
@@ -222,6 +232,7 @@ serve(async (req: Request) => {
         }
       }
       
+      // If everything succeeded, return success response
       return new Response(
         JSON.stringify({ 
           message: 'User created successfully',
