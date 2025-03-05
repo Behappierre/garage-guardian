@@ -27,6 +27,28 @@ export async function ensureUserHasGarage(userId: string, userRole: string) {
       
     if (garageCheck) {
       console.log("Verified garage exists:", garageCheck.id);
+      
+      // Make sure user is also in garage_members
+      const { data: memberCheck } = await supabase
+        .from('garage_members')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('garage_id', profileData.garage_id)
+        .maybeSingle();
+        
+      if (!memberCheck) {
+        console.log("Adding user to garage_members for consistency");
+        await supabase
+          .from('garage_members')
+          .upsert([
+            { 
+              user_id: userId, 
+              garage_id: profileData.garage_id, 
+              role: userRole === 'administrator' ? 'owner' : userRole 
+            }
+          ]);
+      }
+      
       return true;
     } else {
       console.log("Garage ID in profile does not exist, will need to find another garage");

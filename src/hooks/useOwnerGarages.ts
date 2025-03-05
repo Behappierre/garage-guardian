@@ -58,28 +58,36 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         });
       }
 
-      // Second, check for garage memberships
-      const { data: memberships, error: memberError } = await supabase
+      // Second, check for garage memberships - FIX THE JOIN SYNTAX HERE
+      // Use a simple approach first to avoid join issues
+      const { data: membershipRecords, error: membershipError } = await supabase
         .from("garage_members")
-        .select(`
-          garage_id,
-          role,
-          garages:garage_id(id, name, slug, address, email, phone, created_at, owner_id)
-        `)
+        .select("garage_id, role")
         .eq("user_id", userData.user.id);
       
-      if (memberError) {
-        console.error("Error fetching garage memberships:", memberError);
-      } else if (memberships && memberships.length > 0) {
-        console.log("Found garage memberships:", memberships.length);
+      if (membershipError) {
+        console.error("Error fetching garage memberships:", membershipError);
+      } else if (membershipRecords && membershipRecords.length > 0) {
+        console.log("Found garage memberships:", membershipRecords.length);
         
-        memberships.forEach(membership => {
-          if (membership.garages && !seenGarageIds.has(membership.garages.id)) {
-            allGarages.push(membership.garages as Garage);
-            seenGarageIds.add(membership.garages.id);
-            console.log("Added garage from membership:", membership.garages.id, membership.garages.name);
+        // For each membership, get the garage details
+        for (const membership of membershipRecords) {
+          if (!seenGarageIds.has(membership.garage_id)) {
+            const { data: garageData, error: garageError } = await supabase
+              .from("garages")
+              .select("id, name, slug, address, email, phone, created_at, owner_id")
+              .eq("id", membership.garage_id)
+              .single();
+              
+            if (garageError) {
+              console.error("Error fetching garage details:", garageError);
+            } else if (garageData) {
+              allGarages.push(garageData);
+              seenGarageIds.add(garageData.id);
+              console.log("Added garage from membership:", garageData.id, garageData.name);
+            }
           }
-        });
+        }
       }
 
       // Third, check if the user's profile has a garage_id
