@@ -41,6 +41,8 @@ serve(async (req: Request) => {
 
     const { email, password, firstName, lastName, role, garageId } = await req.json();
     
+    console.log('Creating user with data:', { email, firstName, lastName, role, garageId });
+    
     if (!email || !password || !firstName || !lastName || !role) {
       return new Response(
         JSON.stringify({ 
@@ -106,6 +108,8 @@ serve(async (req: Request) => {
         }
       );
     }
+
+    console.log('User created successfully, now assigning role with garage ID:', garageId);
 
     // Assign the role AND the garage ID
     const { error: roleError } = await supabaseClient
