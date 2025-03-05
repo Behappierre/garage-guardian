@@ -34,7 +34,7 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         return;
       }
 
-      console.log("Fetching garages for user:", userData.user.id);
+      console.log("AUTH USER ID:", userData.user.id);
       console.log("User email:", userData.user.email);
 
       // Use a more comprehensive query to find all garages associated with the user
@@ -47,6 +47,8 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         .select("id, name, slug, address, email, phone, created_at, owner_id")
         .eq("owner_id", userData.user.id);
       
+      console.log("RAW OWNED GARAGES:", JSON.stringify(ownedGarages));
+      
       if (ownedError) {
         console.error("Error fetching owned garages:", ownedError);
       } else if (ownedGarages && ownedGarages.length > 0) {
@@ -58,12 +60,13 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         });
       }
 
-      // Second, check for garage memberships - FIX THE JOIN SYNTAX HERE
-      // Use a simple approach first to avoid join issues
+      // Second, check for garage memberships
       const { data: membershipRecords, error: membershipError } = await supabase
         .from("garage_members")
         .select("garage_id, role")
         .eq("user_id", userData.user.id);
+      
+      console.log("RAW MEMBERSHIPS:", JSON.stringify(membershipRecords));
       
       if (membershipError) {
         console.error("Error fetching garage memberships:", membershipError);
@@ -96,6 +99,8 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         .select("garage_id")
         .eq("id", userData.user.id)
         .single();
+      
+      console.log("PROFILE DATA:", JSON.stringify(profileData));
         
       if (profileError && !profileError.message.includes("No rows found")) {
         console.error("Error fetching profile:", profileError);
@@ -116,7 +121,28 @@ export const useOwnerGarages = (): OwnerGaragesResult => {
         }
       }
 
-      console.log("Total garages found:", allGarages.length);
+      // Use a direct SQL query via RPC to check if there are any issues with RLS
+      const { data: rawGarages } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT count(*) FROM garage_members 
+          WHERE user_id = '${userData.user.id}'
+        `
+      });
+      console.log("RAW COUNT OF MEMBERSHIPS:", rawGarages);
+
+      // Additional direct query to see all garages
+      const { data: allGaragesRaw } = await supabase.rpc('execute_read_only_query', {
+        query_text: `
+          SELECT g.id, g.name, g.slug, gm.user_id, gm.role
+          FROM garages g
+          LEFT JOIN garage_members gm ON g.id = gm.garage_id
+          WHERE gm.user_id = '${userData.user.id}'
+          OR g.owner_id = '${userData.user.id}'
+        `
+      });
+      console.log("ALL GARAGES DIRECT QUERY:", allGaragesRaw);
+
+      console.log("FINAL GARAGES LIST:", JSON.stringify(allGarages));
       setGarages(allGarages);
     } catch (error: any) {
       console.error("Error in useOwnerGarages:", error);

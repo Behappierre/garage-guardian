@@ -10,11 +10,14 @@ export async function handleAdminOnStaffLogin(userId: string) {
   console.log("Handling admin on staff login page for user:", userId);
   
   // Check garage memberships first
-  const { data: memberData } = await supabase
+  const { data: memberData, error: memberError } = await supabase
     .from('garage_members')
     .select('garage_id, role')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
+  
+  console.log("Admin garage memberships:", JSON.stringify(memberData));
+  console.log("Membership error:", memberError);
     
   if (memberData && memberData.length > 0) {
     console.log("Admin has garage memberships:", memberData.length);
@@ -26,45 +29,61 @@ export async function handleAdminOnStaffLogin(userId: string) {
       .eq('id', memberData[0].garage_id)
       .single();
       
-    if (garageCheckError && !garageCheckError.message.includes('No rows found')) {
-      console.error("Error checking if admin's member garage exists:", garageCheckError);
+    console.log("Garage check result:", JSON.stringify(garageCheck));
+    console.log("Garage check error:", garageCheckError);
+      
+    if (garageCheckError) {
+      if (garageCheckError.message.includes('No rows found')) {
+        console.log("Admin's member garage does not exist");
+      } else {
+        console.error("Error checking if admin's member garage exists:", garageCheckError);
+      }
     }
     
     if (garageCheck) {
       // Update profile with garage_id to ensure it's properly set
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ garage_id: memberData[0].garage_id })
         .eq('id', userId);
+      
+      console.log("Profile update error:", updateError);
         
       return { shouldRedirect: true, path: "/dashboard" };
     }
   } 
   
   // Try to find owned garages
-  const { data: ownedGarages } = await supabase
+  const { data: ownedGarages, error: ownedError } = await supabase
     .from('garages')
     .select('id')
     .eq('owner_id', userId)
     .order('created_at', { ascending: false });
+  
+  console.log("Owned garages:", JSON.stringify(ownedGarages));
+  console.log("Owned garages error:", ownedError);
     
   if (ownedGarages && ownedGarages.length > 0) {
     console.log("Admin owns garages:", ownedGarages.length);
     
     // Add user as owner member if not already a member
-    await supabase
+    const { error: upsertError } = await supabase
       .from('garage_members')
       .upsert([{
         user_id: userId,
         garage_id: ownedGarages[0].id,
         role: 'owner'
       }]);
+    
+    console.log("Garage member upsert error:", upsertError);
       
     // Update profile with garage_id
-    await supabase
+    const { error: updateError } = await supabase
       .from('profiles')
       .update({ garage_id: ownedGarages[0].id })
       .eq('id', userId);
+    
+    console.log("Profile update error:", updateError);
       
     return { shouldRedirect: true, path: "/dashboard" };
   } 
@@ -84,14 +103,18 @@ export async function handleStaffLogin(userId: string, userRole: string) {
   try {
     // Ensure the user has a garage assignment
     const hasGarage = await ensureUserHasGarage(userId, userRole);
+    console.log("Staff ensureUserHasGarage result:", hasGarage);
     
     if (hasGarage) {
       // Get the garage_id from profile since it should be updated by ensureUserHasGarage
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('garage_id')
         .eq('id', userId)
         .single();
+      
+      console.log("Staff profile data:", JSON.stringify(profileData));
+      console.log("Profile error:", profileError);
         
       if (profileData?.garage_id) {
         console.log("Staff has garage_id in profile:", profileData.garage_id);
@@ -102,9 +125,19 @@ export async function handleStaffLogin(userId: string, userRole: string) {
           .select('id')
           .eq('id', profileData.garage_id)
           .single();
+        
+        console.log("Garage check result:", JSON.stringify(garageCheck));
+        console.log("Garage check error:", garageCheckError);
           
-        if (garageCheckError && !garageCheckError.message.includes('No rows found')) {
-          console.error("Error checking if staff's garage exists:", garageCheckError);
+        if (garageCheckError) {
+          if (garageCheckError.message.includes('No rows found')) {
+            console.log("Staff's garage does not exist. Need to find another garage or display error.");
+            toast.error("Your garage no longer exists. Please contact an administrator.");
+            await supabase.auth.signOut();
+            return { shouldRedirect: false, path: null };
+          } else {
+            console.error("Error checking if staff's garage exists:", garageCheckError);
+          }
         }
         
         if (!garageCheck) {
