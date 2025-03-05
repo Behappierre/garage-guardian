@@ -1,44 +1,154 @@
 
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Briefcase, Users, Github } from "lucide-react";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const Home = () => {
   const navigate = useNavigate();
+  const [hovered, setHovered] = useState<string | null>(null);
+
+  const navigateTo = (path: string) => {
+    navigate(path);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 text-center">
-        <h1 className="text-3xl font-bold">GarageWizz</h1>
-        <p className="mt-2 text-gray-600">The complete garage management solution</p>
-        
-        <div className="mt-10 space-y-6">
-          <div className="bg-white p-8 rounded-lg shadow-md space-y-6">
-            <h2 className="text-xl font-semibold">I am a Garage Owner</h2>
-            <p className="text-gray-600">Create an account to manage your garage operations</p>
-            <Button 
-              onClick={() => navigate("/auth?type=owner")} 
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              Sign Up as Garage Owner
-            </Button>
-          </div>
-          
-          <div className="bg-white p-8 rounded-lg shadow-md space-y-6">
-            <h2 className="text-xl font-semibold">I am a Staff Member</h2>
-            <p className="text-gray-600">Sign in to your garage account</p>
-            <Button 
-              onClick={() => navigate("/auth?type=staff")} 
-              className="w-full bg-teal-500 hover:bg-teal-600"
-            >
-              Staff Sign In
-            </Button>
-            <p className="text-xs text-gray-500 mt-2">
-              Staff accounts are created by garage administrators
+    <ThemeProvider>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+          {/* Header */}
+          <div className="text-center mb-16">
+            <h1 className="font-playfair text-5xl sm:text-6xl font-bold bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              GarageWizz
+            </h1>
+            <p className="text-gray-600 text-xl max-w-2xl mx-auto">
+              Intelligent garage management powered by AI assistance
             </p>
           </div>
+
+          {/* Main Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-24">
+            {/* Garage Owner Card */}
+            <div 
+              className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 ${
+                hovered === 'owner' 
+                  ? 'transform -translate-y-2 shadow-xl' 
+                  : ''
+              }`}
+              onMouseEnter={() => setHovered('owner')}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-200 to-cyan-50 opacity-50 z-0"></div>
+              <div className="relative z-10 p-8">
+                <div className="flex items-center mb-6">
+                  <div className="bg-teal-500 p-3 rounded-lg text-white mr-4">
+                    <Briefcase className="h-6 w-6" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800">Garage Owner</h2>
+                </div>
+                <p className="text-gray-600 mb-8">
+                  Manage your auto repair business efficiently with comprehensive tools for scheduling, 
+                  inventory, customer management, and financial reporting.
+                </p>
+                <Button 
+                  className="w-full transition-all duration-300 hover:bg-teal-600 hover:scale-105"
+                  onClick={() => navigateTo("/auth?type=owner")}
+                >
+                  Sign In as Owner
+                </Button>
+              </div>
+            </div>
+
+            {/* Staff Member Card */}
+            <div 
+              className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 ${
+                hovered === 'staff' 
+                  ? 'transform -translate-y-2 shadow-xl' 
+                  : ''
+              }`}
+              onMouseEnter={() => setHovered('staff')}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-pastel.purple to-blue-50 opacity-50 z-0"></div>
+              <div className="relative z-10 p-8">
+                <div className="flex items-center mb-6">
+                  <div className="bg-purple-500 p-3 rounded-lg text-white mr-4">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800">Staff Member</h2>
+                </div>
+                <p className="text-gray-600 mb-8">
+                  Access the tools you need for day-to-day operations, including repair tracking, 
+                  time management, and client service with AI-powered assistance.
+                </p>
+                <Button 
+                  className="w-full bg-purple-600 hover:bg-purple-700 transition-all duration-300 hover:scale-105"
+                  onClick={() => navigateTo("/auth?type=staff")}
+                >
+                  Sign In as Staff
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Features Section */}
+          <div className="mb-24">
+            <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">
+              Smart Garage Management
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[
+                {
+                  title: "AI Assistance",
+                  description: "Get intelligent recommendations and automation for common tasks",
+                  gradient: "from-blue-200 to-blue-50"
+                },
+                {
+                  title: "Customer Management",
+                  description: "Maintain detailed client records and service history",
+                  gradient: "from-green-200 to-green-50"
+                },
+                {
+                  title: "Appointment Scheduling",
+                  description: "Optimize your shop's workflow with smart calendaring",
+                  gradient: "from-amber-200 to-amber-50"
+                },
+                {
+                  title: "Job Tracking",
+                  description: "Monitor repair progress and technician productivity",
+                  gradient: "from-purple-200 to-purple-50"
+                }
+              ].map((feature, index) => (
+                <div 
+                  key={index}
+                  className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  <div className={`h-2 w-24 rounded-full bg-gradient-to-r ${feature.gradient} mb-4`}></div>
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800">{feature.title}</h3>
+                  <p className="text-gray-600 text-sm">{feature.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <footer className="border-t border-gray-200 pt-8 text-center text-gray-500 text-sm">
+            <div className="flex justify-center space-x-6 mb-4">
+              <a href="#" className="hover:text-gray-700 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-gray-700 transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-gray-700 transition-colors">Contact Us</a>
+            </div>
+            <div className="flex items-center justify-center">
+              <p>© 2023 GarageWizz. All rights reserved.</p>
+              <a href="https://github.com" className="ml-2 text-gray-400 hover:text-gray-600">
+                <Github size={16} />
+              </a>
+            </div>
+          </footer>
         </div>
       </div>
-    </div>
+    </ThemeProvider>
   );
 };
 
