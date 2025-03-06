@@ -5,7 +5,6 @@ import { useJobTicketForm } from "@/hooks/use-job-ticket-form";
 import { JobTicketFormFields } from "./JobTicketFormFields";
 import { TimeEntriesList } from "./TimeEntriesList";
 import { Wand2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const JobTicketForm = (props: JobTicketFormProps) => {
   const {
@@ -24,27 +23,25 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col space-y-6">
-      <ScrollArea className="pr-4 max-h-[calc(70vh-120px)]">
-        <div className="space-y-6">
-          <JobTicketFormFields
-            formData={formData}
-            setFormData={setFormData}
-            clients={clients}
-            clientVehicles={clientVehicles}
-            clientAppointments={clientAppointments}
-            selectedAppointmentId={selectedAppointmentId}
-            setSelectedAppointmentId={setSelectedAppointmentId}
-            technicians={technicians}
-          />
+      <div className="space-y-6">
+        <JobTicketFormFields
+          formData={formData}
+          setFormData={setFormData}
+          clients={clients}
+          clientVehicles={clientVehicles}
+          clientAppointments={clientAppointments}
+          selectedAppointmentId={selectedAppointmentId}
+          setSelectedAppointmentId={setSelectedAppointmentId}
+          technicians={technicians}
+        />
 
-          {props.initialData && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-4">Time Entries</h3>
-              <TimeEntriesList jobTicketId={props.initialData.id} />
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+        {props.initialData && (
+          <div className="mt-6">
+            <h3 className="text-lg font-medium mb-4">Time Entries</h3>
+            <TimeEntriesList jobTicketId={props.initialData.id} />
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-end gap-2 pt-4 border-t mt-4">
         {onEnhanceDescription && (

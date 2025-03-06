@@ -19,7 +19,7 @@ export const DescriptionField = ({
         value={description}
         onChange={(e) => onDescriptionChange(e.target.value)}
         placeholder="Enter job description and details"
-        className="min-h-[120px]"
+        className="min-h-[120px] resize-none"
       />
     </div>
   );

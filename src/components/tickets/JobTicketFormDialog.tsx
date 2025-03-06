@@ -26,7 +26,7 @@ export const JobTicketFormDialog = ({
       open={showTicketForm} 
       onOpenChange={onOpenChange}
     >
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden p-6" closeButton={true}>
+      <DialogContent className="sm:max-w-[600px] p-6" closeButton={true}>
         <DialogHeader className="pb-4">
           <DialogTitle>
             {isLoading ? "Loading Job Ticket..." : selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
