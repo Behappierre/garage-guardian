@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ const Home = () => {
             playsInline
             className="absolute inset-0 object-cover w-full h-full"
           >
-            <source src="/lovable-uploads/garage-background.mp4" type="video/mp4" />
+            <source src="/lovable-uploads/5079986_Uniform_Occupation_1920x1080.mp4" type="video/mp4" />
           </video>
           {/* Overlay for better text visibility */}
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
