@@ -843,6 +843,7 @@ export type Database = {
         | "completed"
         | "pending_parts"
         | "cancelled"
+        | "draft"
     }
     CompositeTypes: {
       [_ in never]: never

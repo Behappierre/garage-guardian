@@ -34,6 +34,7 @@ export const StatusPrioritySelectors = ({
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="min-w-[150px]">
+            <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="received">Received</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="pending_parts">On Hold</SelectItem>

@@ -368,12 +368,44 @@ export const AppointmentForm = ({
         throw new Error(error.message);
       }
 
+      if (data.client_id && appointment) {
+        const { data: jobTicket, error: ticketError } = await supabase
+          .from('job_tickets')
+          .insert([{
+            description: `Service appointment: ${data.service_type}`,
+            status: 'draft',
+            priority: 'normal',
+            assigned_technician_id: null,
+            client_id: data.client_id,
+            vehicle_id: data.vehicle_id,
+            garage_id: data.garage_id
+          }])
+          .select()
+          .single();
+
+        if (ticketError) {
+          console.error("Error creating job ticket:", ticketError);
+        } else if (jobTicket) {
+          const { error: relationError } = await supabase
+            .from('appointment_job_tickets')
+            .insert([{
+              appointment_id: appointment.id,
+              job_ticket_id: jobTicket.id
+            }]);
+
+          if (relationError) {
+            console.error("Error linking appointment to job ticket:", relationError);
+          }
+        }
+      }
+
       return appointment;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['client-appointments'] });
-      toast.success('Appointment created successfully');
+      queryClient.invalidateQueries({ queryKey: ['job_tickets'] });
+      toast.success('Appointment created successfully with linked job ticket');
       onClose();
     },
     onError: (error) => {
