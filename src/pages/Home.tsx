@@ -150,7 +150,7 @@ const Home = () => {
               <a href="#" className="hover:text-gray-700 transition-colors">Contact Us</a>
             </div>
             <div className="flex items-center justify-center">
-              <p>© 2023 GarageWizz. All rights reserved.</p>
+              <p>© 2025 GarageWizz. All rights reserved.</p>
               <a href="https://github.com" className="ml-2 text-gray-400 hover:text-gray-600">
                 <Github size={16} />
               </a>
