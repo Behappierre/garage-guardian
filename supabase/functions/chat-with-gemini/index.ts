@@ -30,6 +30,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
+    // Get user's garage_id
+    let garageId = null;
+    if (user_id) {
+      const { data: userData, error: userError } = await supabaseClient
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', user_id)
+        .single();
+        
+      if (userError) {
+        console.error("Error fetching user's garage_id:", userError);
+      } else {
+        garageId = userData?.garage_id;
+        console.log('User garage ID for chat-with-gemini:', garageId);
+      }
+    }
+
     // Determine the type of query
     const queryType = await determineQueryType(message);
     console.log('Determined query type:', queryType);
@@ -38,19 +55,19 @@ serve(async (req) => {
     let response;
     switch (queryType) {
       case 'booking':
-        response = await handleBookingRequest(message, supabaseClient);
+        response = await handleBookingRequest(message, supabaseClient, user_id);
         break;
       case 'client':
-        response = await handleClientRequest(message, supabaseClient);
+        response = await handleClientRequest(message, supabaseClient, garageId);
         break;
       case 'vehicle':
-        response = await handleVehicleRequest(message, supabaseClient);
+        response = await handleVehicleRequest(message, supabaseClient, garageId);
         break;
       case 'safety':
         response = await handleSafetyRequest(message);
         break;
       case 'jobSheet':
-        response = await handleJobSheetRequest(message, supabaseClient);
+        response = await handleJobSheetRequest(message, supabaseClient, garageId);
         break;
       default:
         response = await handleAutomotiveRequest(message);
@@ -68,7 +85,7 @@ serve(async (req) => {
         user_id,
         message,
         response,
-        metadata: { query_type: queryType }
+        metadata: { query_type: queryType, garage_id: garageId }
       });
 
     if (chatError) {

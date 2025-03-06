@@ -30,6 +30,25 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl as string, supabaseKey as string);
     
+    // Get the user's garage_id - this is a critical enhancement
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('garage_id')
+      .eq('id', user_id)
+      .single();
+      
+    if (userError) {
+      console.error("Error fetching user's garage_id:", userError);
+      throw new Error("Unable to determine user's garage");
+    }
+    
+    const userGarageId = userData?.garage_id;
+    console.log('User garage ID:', userGarageId);
+    
+    if (!userGarageId) {
+      console.warn("User doesn't have an assigned garage_id");
+    }
+    
     // Check for query intents
     const isQueryRequest = checkForQueryIntent(message);
     const isBookingRequest = checkForBookingIntent(message);
@@ -38,7 +57,7 @@ serve(async (req) => {
     if (isQueryRequest) {
       console.log("Detected query intent, fetching appointment data");
       try {
-        const queryResponse = await handleAppointmentQuery(message, supabase);
+        const queryResponse = await handleAppointmentQuery(message, supabase, userGarageId);
         if (queryResponse) {
           // Store the conversation
           await storeConversation(user_id, message, queryResponse, supabase);
@@ -76,10 +95,11 @@ serve(async (req) => {
           let firstName = nameParts[0];
           let lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
           
-          // Search for the client
+          // Search for the client, now filtering by the user's garage_id
           const { data: clients, error: clientError } = await supabase
             .from('clients')
             .select('id, first_name, last_name, email')
+            .eq('garage_id', userGarageId)
             .or(`first_name.ilike.${firstName}%,last_name.ilike.${lastName}%`);
             
           if (clientError) {
@@ -101,7 +121,8 @@ serve(async (req) => {
             const { data: vehicles, error: vehicleError } = await supabase
               .from('vehicles')
               .select('id, make, model, year')
-              .eq('client_id', client.id);
+              .eq('client_id', client.id)
+              .eq('garage_id', userGarageId);  // Add garage_id filter
               
             if (vehicleError) {
               console.error("Error fetching vehicles:", vehicleError);
@@ -121,7 +142,8 @@ serve(async (req) => {
               service_type: extractServiceType(message) || "General Service",
               notes: `Booked via AI assistant: ${message}`,
               status: 'scheduled',
-              bay: assignBay(dateInfo.startTime)
+              bay: assignBay(dateInfo.startTime),
+              garage_id: userGarageId  // Critical: Set the garage_id
             };
             
             console.log("Creating appointment with data:", appointmentData);
@@ -229,7 +251,7 @@ serve(async (req) => {
 });
 
 // Helper function for appointment queries
-async function handleAppointmentQuery(message: string, supabase: any): Promise<string | null> {
+async function handleAppointmentQuery(message: string, supabase: any, garageId: string | null): Promise<string | null> {
   // Determine the time range for the query
   const timeRange = determineTimeRange(message);
   if (!timeRange) {
@@ -237,8 +259,8 @@ async function handleAppointmentQuery(message: string, supabase: any): Promise<s
   }
   
   try {
-    // Query appointments in the specified time range
-    const { data: appointments, error: appointmentsError } = await supabase
+    // Query appointments in the specified time range - with garage_id filter added
+    const query = supabase
       .from('appointments')
       .select(`
         *,
@@ -248,6 +270,15 @@ async function handleAppointmentQuery(message: string, supabase: any): Promise<s
       .gte('start_time', timeRange.startTime.toISOString())
       .lt('start_time', timeRange.endTime.toISOString())
       .order('start_time', { ascending: true });
+      
+    // Add garage filter if garage_id is available
+    if (garageId) {
+      query.eq('garage_id', garageId);
+    } else {
+      console.warn('No garage_id available for filtering appointments');
+    }
+    
+    const { data: appointments, error: appointmentsError } = await query;
       
     if (appointmentsError) {
       console.error("Error fetching appointments:", appointmentsError);

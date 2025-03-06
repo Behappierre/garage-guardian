@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-export async function handleBookingRequest(message: string, supabaseClient: any) {
+export async function handleBookingRequest(message: string, supabaseClient: any, userId?: string) {
   console.log('Processing booking request:', message);
 
   try {
@@ -18,12 +18,36 @@ export async function handleBookingRequest(message: string, supabaseClient: any)
       return null;
     }
 
+    // Get user's garage_id if userId is provided
+    let garageId = null;
+    if (userId) {
+      const { data: userData, error: userError } = await supabaseClient
+        .from('profiles')
+        .select('garage_id')
+        .eq('id', userId)
+        .single();
+        
+      if (userError) {
+        console.error("Error fetching user's garage_id:", userError);
+      } else {
+        garageId = userData?.garage_id;
+        console.log('User garage ID:', garageId);
+      }
+    }
+
     // Get available time slots for the next 7 days
-    const { data: existingAppointments, error: appointmentsError } = await supabaseClient
+    let query = supabaseClient
       .from('appointments')
       .select('*')
       .gte('start_time', new Date().toISOString())
       .lte('start_time', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString());
+      
+    // Filter by garage_id if available
+    if (garageId) {
+      query = query.eq('garage_id', garageId);
+    }
+      
+    const { data: existingAppointments, error: appointmentsError } = await query;
 
     if (appointmentsError) {
       console.error('Error fetching appointments:', appointmentsError);
@@ -79,7 +103,9 @@ export async function handleBookingRequest(message: string, supabaseClient: any)
       }))
       .join('\n');
 
-    return `I found several available appointment slots:\n\n${formattedSlots}\n\nWould you like me to help you book one of these times? Just let me know which time works best for you, and I'll help you schedule it.`;
+    const garageContext = garageId ? "" : "\n\nNOTE: I'm showing all available slots across all garages. For more specific availability, please specify which garage you'd like to book with.";
+
+    return `I found several available appointment slots:\n\n${formattedSlots}${garageContext}\n\nWould you like me to help you book one of these times? Just let me know which time works best for you, and I'll help you schedule it.`;
 
   } catch (error) {
     console.error('Error in handleBookingRequest:', error);
