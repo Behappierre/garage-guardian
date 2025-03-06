@@ -43,27 +43,28 @@ const Home = () => {
             </p>
           </div>
 
-          {/* Main Cards - moved down by 75% of their height */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-24 mt-[25vh]">
-            {/* Garage Owner Card */}
+          {/* Main Cards - adjusted height and width */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-24 mt-[25vh]">
+            {/* Garage Owner Card - reduced height by 45% and increased width */}
             <div 
-              className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 h-full flex flex-col ${
+              className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 flex flex-col ${
                 hovered === 'owner' 
                   ? 'transform -translate-y-2 shadow-xl' 
                   : ''
               }`}
+              style={{ height: '55%' }} /* Reduced to 55% of original height */
               onMouseEnter={() => setHovered('owner')}
               onMouseLeave={() => setHovered(null)}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-cyan-200 to-cyan-50 opacity-80 z-0"></div>
-              <div className="relative z-10 p-8 flex-1 flex flex-col">
-                <div className="flex items-center mb-6">
+              <div className="relative z-10 p-6 flex-1 flex flex-col">
+                <div className="flex items-center mb-4">
                   <div className="bg-teal-500 p-3 rounded-lg text-white mr-4">
                     <Briefcase className="h-6 w-6" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Garage Owner</h2>
                 </div>
-                <p className="text-gray-600 mb-8 flex-grow">
+                <p className="text-gray-600 mb-6 flex-grow">
                   Manage your auto repair business efficiently with comprehensive tools for scheduling, 
                   inventory, customer management, and financial reporting.
                 </p>
@@ -76,25 +77,26 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Staff Member Card - Updated colors for better visibility */}
+            {/* Staff Member Card - reduced height by 45% and increased width */}
             <div 
-              className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 h-full flex flex-col ${
+              className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 flex flex-col ${
                 hovered === 'staff' 
                   ? 'transform -translate-y-2 shadow-xl' 
                   : ''
               }`}
+              style={{ height: '55%' }} /* Reduced to 55% of original height */
               onMouseEnter={() => setHovered('staff')}
               onMouseLeave={() => setHovered(null)}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-purple-300 to-purple-100 opacity-90 z-0"></div>
-              <div className="relative z-10 p-8 flex-1 flex flex-col">
-                <div className="flex items-center mb-6">
+              <div className="relative z-10 p-6 flex-1 flex flex-col">
+                <div className="flex items-center mb-4">
                   <div className="bg-purple-600 p-3 rounded-lg text-white mr-4">
                     <Users className="h-6 w-6" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Staff Member</h2>
                 </div>
-                <p className="text-gray-700 mb-8 flex-grow">
+                <p className="text-gray-700 mb-6 flex-grow">
                   Access the tools you need for day-to-day operations, including repair tracking, 
                   time management, and client service with AI-powered assistance.
                 </p>
