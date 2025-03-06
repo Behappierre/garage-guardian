@@ -33,12 +33,12 @@ const Home = () => {
 
         {/* Content */}
         <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h1 className="font-playfair text-5xl sm:text-6xl font-bold bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent mb-4">
+          {/* Header - Updated text-center to text-left, changed font color to white, and made the font larger */}
+          <div className="text-left mb-16 max-w-2xl mx-auto">
+            <h1 className="font-playfair text-6xl sm:text-7xl font-bold text-white mb-4">
               GarageWizz
             </h1>
-            <p className="text-white text-xl max-w-2xl mx-auto">
+            <p className="text-white text-xl">
               Intelligent garage management powered by AI assistance
             </p>
           </div>
