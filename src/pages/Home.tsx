@@ -25,6 +25,15 @@ const Home = () => {
             <p className="text-gray-600 text-xl max-w-2xl mx-auto">
               Intelligent garage management powered by AI assistance
             </p>
+            <div className="mt-6 flex justify-center">
+              <div className="w-24 h-24">
+                <img 
+                  src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
+                  alt="AI Wizard" 
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Main Cards */}

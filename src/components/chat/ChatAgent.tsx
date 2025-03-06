@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MessagesSquare, Send, Trash2, Maximize2, Minimize2, X } from "lucide-react";
+import { Send, Trash2, Maximize2, Minimize2, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -193,10 +193,16 @@ export function ChatAgent() {
     <>
       <Button
         size="icon"
-        className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95"
+        className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 bg-indigo-600 hover:bg-indigo-700"
         onClick={() => setIsOpen(true)}
       >
-        <MessagesSquare className="h-6 w-6" />
+        <div className="relative h-8 w-8">
+          <img 
+            src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
+            alt="AI Wizard" 
+            className="h-full w-full object-contain"
+          />
+        </div>
       </Button>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -209,7 +215,16 @@ export function ChatAgent() {
           closeButton={false}
         >
           <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
-            <DialogTitle className="text-lg">AI Wizzard</DialogTitle>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8">
+                <img 
+                  src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
+                  alt="AI Wizard" 
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <DialogTitle className="text-lg">AI Wizzard</DialogTitle>
+            </div>
             <div className="flex gap-2">
               <Button 
                 variant="ghost" 
