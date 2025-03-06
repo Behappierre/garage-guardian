@@ -21,7 +21,9 @@ export function ChatHeader({ isWide, onToggleWidth, onClearChat, onClose }: Chat
     <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
       <div className="flex items-center gap-3">
         <div className="relative h-16 w-16">
-          <div className="absolute inset-0 bg-purple-500/50 animate-pulse rounded-full blur-lg"></div>
+          <div className="absolute inset-0 bg-purple-500/50 animate-pulse rounded-full blur-xl"></div>
+          <div className="absolute inset-0 bg-blue-500/30 animate-pulse rounded-full blur-lg"></div>
+          <div className="absolute inset-0 bg-teal-500/20 animate-pulse rounded-full blur-md"></div>
           <img 
             src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
             alt="AI Wizard" 
