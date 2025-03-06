@@ -42,18 +42,19 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  // garageId is not required for owner/administrator registration
-  if (role !== 'administrator' && body.garageId === undefined) {
-    console.error('No garage ID provided for non-admin user');
+  // For owner user type, garageId should be null
+  // For staff user type that isn't administrator, garageId is required
+  if (userType !== 'owner' && role !== 'administrator' && body.garageId === undefined) {
+    console.error('No garage ID provided for non-admin staff user');
     const error = createErrorResponse('No garage ID provided for staff user.', 400);
     return { body: null, error };
   }
 
   console.log('Creating user with email:', email, 'role:', role, 'userType:', userType);
-  if (body.garageId) {
+  if (body.garageId && userType !== 'owner') {
     console.log('User will be assigned to garage:', body.garageId);
   } else {
-    console.log('Owner registration: No garage assignment needed initially');
+    console.log('Owner registration or administrator: No garage assignment needed initially');
   }
 
   return { body, error: null };
@@ -129,14 +130,20 @@ export async function assignUserRole(
 ) {
   try {
     // For all users: Create a user_roles entry with the appropriate role
+    // For owner users, DO NOT include garage_id in user_roles
+    const userRoleData = { 
+      user_id: userId, 
+      role
+    };
+    
+    // Only include garage_id for staff members, not for owners
+    if (userType !== 'owner' && garageId) {
+      userRoleData['garage_id'] = garageId;
+    }
+    
     const { error: roleError } = await supabaseClient
       .from('user_roles')
-      .insert([{ 
-        user_id: userId, 
-        role,
-        // Only include garage_id if it's provided and not null (for staff members)
-        ...(garageId ? { garage_id: garageId } : {})
-      }]);
+      .insert([userRoleData]);
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
@@ -156,15 +163,23 @@ export async function assignUserRole(
     // Determine garage_member role based on userType
     const memberRole = userType === 'owner' ? 'owner' : role;
     
-    console.log(`Creating garage_members entry with role: ${memberRole}`);
+    // For owner users, DO NOT include garage_id in garage_members
+    const garageMemberData = {
+      user_id: userId,
+      role: memberRole
+    };
+    
+    // Only include garage_id for staff members, not for owners
+    if (userType !== 'owner' && garageId) {
+      garageMemberData['garage_id'] = garageId;
+    }
+    
+    console.log(`Creating garage_members entry with role: ${memberRole}, userType: ${userType}`);
+    console.log('Garage members data:', garageMemberData);
+    
     const { error: memberError } = await supabaseClient
       .from('garage_members')
-      .insert([{
-        user_id: userId,
-        role: memberRole,
-        // Only include garage_id if it's provided for staff
-        ...(garageId ? { garage_id: garageId } : {})
-      }]);
+      .insert([garageMemberData]);
       
     if (memberError) {
       console.warn('Warning: Could not create garage_members entry:', memberError);
@@ -182,7 +197,8 @@ export async function assignUserRole(
       console.log(`Successfully created garage_members entry with role: ${memberRole}`);
     }
     
-    if (garageId) {
+    // Only update profile with garage_id for staff users, not owners
+    if (userType !== 'owner' && garageId) {
       // For users with a garage, update profile with garage_id
       console.log('Updating profile with garage_id:', garageId);
       
@@ -207,6 +223,8 @@ export async function assignUserRole(
       } else {
         console.log('Successfully updated profile with garage_id:', garageId);
       }
+    } else {
+      console.log('Owner user - not updating profile with garage_id');
     }
     
     // If everything succeeded, return success response
