@@ -12,12 +12,14 @@ export const DescriptionField = ({
   onDescriptionChange,
 }: DescriptionFieldProps) => {
   return (
-    <div>
-      <Label>Description</Label>
+    <div className="space-y-2">
+      <Label htmlFor="description">Description</Label>
       <Textarea
+        id="description"
         value={description}
         onChange={(e) => onDescriptionChange(e.target.value)}
-        rows={4}
+        placeholder="Enter job description and details"
+        className="min-h-[120px]"
       />
     </div>
   );

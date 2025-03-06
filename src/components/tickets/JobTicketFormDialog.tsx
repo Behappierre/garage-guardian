@@ -26,28 +26,27 @@ export const JobTicketFormDialog = ({
       open={showTicketForm} 
       onOpenChange={onOpenChange}
     >
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden p-6" closeButton={true}>
+        <DialogHeader className="pb-4">
           <DialogTitle>
             {isLoading ? "Loading Job Ticket..." : selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
           </DialogTitle>
         </DialogHeader>
-        <div className="flex-1 overflow-hidden">
-          {isLoading ? (
-            <div className="space-y-4 p-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          ) : (
-            <JobTicketForm
-              initialData={selectedTicket}
-              onClose={onClose}
-              linkedAppointmentId={linkedAppointmentId}
-            />
-          )}
-        </div>
+        
+        {isLoading ? (
+          <div className="space-y-4 p-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        ) : (
+          <JobTicketForm
+            initialData={selectedTicket}
+            onClose={onClose}
+            linkedAppointmentId={linkedAppointmentId}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
