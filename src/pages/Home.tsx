@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -41,17 +40,6 @@ const Home = () => {
             <p className="text-white text-xl max-w-2xl mx-auto">
               Intelligent garage management powered by AI assistance
             </p>
-          </div>
-
-          {/* Wizard Mascot - positioned in front of the cards */}
-          <div className="absolute z-20 right-1/4 top-[45vh] md:right-1/3 lg:right-[40%] xl:right-[42%]">
-            <div className="bg-white rounded-full w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shadow-lg">
-              <img
-                src="/lovable-uploads/edc0821e-6dc3-487c-8124-aec1de8bd2e1.png"
-                alt="GarageWizz Mascot"
-                className="w-24 h-24 sm:w-28 sm:h-28 object-contain"
-              />
-            </div>
           </div>
 
           {/* Main Cards - adjusted positioning and height */}
