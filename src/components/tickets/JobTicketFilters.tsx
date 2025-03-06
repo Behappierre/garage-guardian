@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowUpDown, ToggleLeft, ToggleRight, User } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { TicketPriority, TicketStatus } from "@/types/job-ticket";
@@ -13,13 +13,16 @@ interface JobTicketFiltersProps {
   registrationFilter: string;
   priorityFilter: TicketPriority | "all";
   hideCompleted: boolean;
+  technicianFilter: string | "all";
   sortField: "created_at" | "client_name";
   sortOrder: "asc" | "desc";
+  technicians: Array<{ id: string; first_name: string; last_name: string }>;
   onNameFilterChange: (value: string) => void;
   onStatusFilterChange: (value: TicketStatus | "all") => void;
   onRegistrationFilterChange: (value: string) => void;
   onPriorityFilterChange: (value: TicketPriority | "all") => void;
   onHideCompletedChange: (value: boolean) => void;
+  onTechnicianFilterChange: (value: string | "all") => void;
   onSortChange: (field: "created_at" | "client_name") => void;
 }
 
@@ -29,18 +32,21 @@ export const JobTicketFilters = ({
   registrationFilter,
   priorityFilter,
   hideCompleted,
+  technicianFilter,
   sortField,
   sortOrder,
+  technicians,
   onNameFilterChange,
   onStatusFilterChange,
   onRegistrationFilterChange,
   onPriorityFilterChange,
   onHideCompletedChange,
+  onTechnicianFilterChange,
   onSortChange,
 }: JobTicketFiltersProps) => {
   return (
     <div className="mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
         <div className="space-y-2">
           <Label htmlFor="statusFilter">Filter by Status</Label>
           <Select
@@ -75,6 +81,26 @@ export const JobTicketFilters = ({
               <SelectItem value="normal">Normal</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="technicianFilter">Filter by Technician</Label>
+          <Select
+            value={technicianFilter}
+            onValueChange={(value) => onTechnicianFilterChange(value)}
+          >
+            <SelectTrigger id="technicianFilter" className="flex items-center">
+              <User className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Select technician" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All technicians</SelectItem>
+              {technicians.map((tech) => (
+                <SelectItem key={tech.id} value={tech.id}>
+                  {tech.first_name} {tech.last_name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

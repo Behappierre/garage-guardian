@@ -2,7 +2,7 @@
 import { format } from "date-fns";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, User } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
   client?: Database["public"]["Tables"]["clients"]["Row"] | null;
   vehicle?: Database["public"]["Tables"]["vehicles"]["Row"] | null;
+  technician?: Database["public"]["Tables"]["profiles"]["Row"] | null;
 };
 
 interface JobTicketsListProps {
@@ -137,20 +138,32 @@ export const JobTicketsList = ({ tickets, isLoading, onTicketClick }: JobTickets
               <div className="flex items-center space-x-4">
                 <div>
                   <span className="font-medium">{ticket.ticket_number}</span>
-                  {ticket.client && (
-                    <span className="ml-3 text-gray-600">
-                      {ticket.client.first_name} {ticket.client.last_name}
+                  
+                  {/* License plate display */}
+                  {ticket.vehicle && ticket.vehicle.license_plate && (
+                    <span className="ml-3 inline-flex items-center px-2 py-0.5 rounded border-2 border-gray-800 bg-yellow-100 text-gray-800 font-mono font-bold">
+                      {ticket.vehicle.license_plate.toUpperCase()}
                     </span>
                   )}
-                  {ticket.vehicle && ticket.vehicle.license_plate && (
-                    <span className="ml-3 text-gray-500">
-                      ({ticket.vehicle.license_plate})
+                  
+                  {/* Last name in brackets */}
+                  {ticket.client && ticket.client.last_name && (
+                    <span className="ml-2 text-gray-600">
+                      ({ticket.client.last_name})
                     </span>
                   )}
                 </div>
               </div>
 
               <div className="flex items-center space-x-2">
+                {/* Technician badge */}
+                {ticket.technician && (
+                  <div className="flex items-center text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700">
+                    <User className="h-3 w-3 mr-1" />
+                    <span>{ticket.technician.first_name} {ticket.technician.last_name}</span>
+                  </div>
+                )}
+                
                 <div className="flex items-center text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700">
                   <Clock className="h-3 w-3 mr-1" />
                   <span>{getHoursBooked(ticket.id)}</span>

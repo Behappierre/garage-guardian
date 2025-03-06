@@ -18,11 +18,48 @@ export const useJobTickets = (ticketId: string | null) => {
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [registrationFilter, setRegistrationFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
+  const [technicianFilter, setTechnicianFilter] = useState<string | "all">("all");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isLoadingTicket, setIsLoadingTicket] = useState(false);
   const [linkedAppointmentId, setLinkedAppointmentId] = useState<string | null>(null);
+
+  // Fetch all technicians
+  const { data: technicians } = useQuery({
+    queryKey: ["technicians", garageId],
+    queryFn: async () => {
+      if (!garageId) return [];
+      
+      // Get user IDs with technician role
+      const { data: technicianRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "technician")
+        .eq("garage_id", garageId);
+      
+      if (rolesError) {
+        console.error("Error fetching technician roles:", rolesError);
+        return [];
+      }
+      
+      if (!technicianRoles.length) return [];
+      
+      // Get technician profiles
+      const { data: technicianProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", technicianRoles.map(role => role.user_id));
+      
+      if (profilesError) {
+        console.error("Error fetching technician profiles:", profilesError);
+        return [];
+      }
+      
+      return technicianProfiles || [];
+    },
+    enabled: !!garageId,
+  });
 
   // Fetch specific ticket if ID is provided
   const { data: ticketData, isLoading: isLoadingTicketQuery } = useQuery({
@@ -35,7 +72,8 @@ export const useJobTickets = (ticketId: string | null) => {
         .select(`
           *,
           client:clients(*),
-          vehicle:vehicles(*)
+          vehicle:vehicles(*),
+          technician:profiles(id, first_name, last_name)
         `)
         .eq('id', ticketId)
         .eq('garage_id', garageId)
@@ -102,7 +140,8 @@ export const useJobTickets = (ticketId: string | null) => {
         .select(`
           *,
           client:clients(*),
-          vehicle:vehicles(*)
+          vehicle:vehicles(*),
+          technician:profiles(id, first_name, last_name)
         `)
         .eq('id', id)
         .eq('garage_id', garageId)
@@ -142,7 +181,7 @@ export const useJobTickets = (ticketId: string | null) => {
   }, [garageId]);
 
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, hideCompleted, sortField, sortOrder, garageId],
+    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, technicianFilter, hideCompleted, sortField, sortOrder, garageId],
     queryFn: async () => {
       if (!garageId) {
         return [];
@@ -153,7 +192,8 @@ export const useJobTickets = (ticketId: string | null) => {
         .select(`
           *,
           client:clients(*),
-          vehicle:vehicles(*)
+          vehicle:vehicles(*),
+          technician:profiles(id, first_name, last_name)
         `)
         .eq('garage_id', garageId);
       
@@ -165,6 +205,11 @@ export const useJobTickets = (ticketId: string | null) => {
       // Only apply filter if it's not "all"
       if (priorityFilter !== "all") {
         query = query.eq('priority', priorityFilter);
+      }
+      
+      // Only apply filter if it's not "all"
+      if (technicianFilter !== "all") {
+        query = query.eq('assigned_technician_id', technicianFilter);
       }
 
       const { data, error } = await query;
@@ -230,6 +275,9 @@ export const useJobTickets = (ticketId: string | null) => {
     setRegistrationFilter,
     priorityFilter,
     setPriorityFilter,
+    technicianFilter,
+    setTechnicianFilter,
+    technicians: technicians || [],
     hideCompleted,
     setHideCompleted,
     sortField,
