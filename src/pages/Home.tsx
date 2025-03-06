@@ -45,14 +45,14 @@ const Home = () => {
 
           {/* Main Cards - adjusted positioning and height */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-24 mt-[50vh]">
-            {/* Garage Owner Card - adjusted height to show buttons */}
+            {/* Garage Owner Card - adjusted height for better proportions */}
             <div 
               className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 flex flex-col ${
                 hovered === 'owner' 
                   ? 'transform -translate-y-2 shadow-xl' 
                   : ''
               }`}
-              style={{ height: '300px' }} /* Fixed height to ensure buttons are visible */
+              style={{ height: '250px' }} /* Reduced height but still ensures buttons are visible */
               onMouseEnter={() => setHovered('owner')}
               onMouseLeave={() => setHovered(null)}
             >
@@ -64,7 +64,7 @@ const Home = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Garage Owner</h2>
                 </div>
-                <p className="text-gray-600 mb-6 flex-grow">
+                <p className="text-gray-600 mb-4 flex-grow">
                   Manage your auto repair business efficiently with comprehensive tools for scheduling, 
                   inventory, customer management, and financial reporting.
                 </p>
@@ -77,14 +77,14 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Staff Member Card - adjusted height to show buttons */}
+            {/* Staff Member Card - adjusted height to match owner card */}
             <div 
               className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 flex flex-col ${
                 hovered === 'staff' 
                   ? 'transform -translate-y-2 shadow-xl' 
                   : ''
               }`}
-              style={{ height: '300px' }} /* Fixed height to ensure buttons are visible */
+              style={{ height: '250px' }} /* Reduced height but still ensures buttons are visible */
               onMouseEnter={() => setHovered('staff')}
               onMouseLeave={() => setHovered(null)}
             >
@@ -96,7 +96,7 @@ const Home = () => {
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Staff Member</h2>
                 </div>
-                <p className="text-gray-700 mb-6 flex-grow">
+                <p className="text-gray-700 mb-4 flex-grow">
                   Access the tools you need for day-to-day operations, including repair tracking, 
                   time management, and client service with AI-powered assistance.
                 </p>
