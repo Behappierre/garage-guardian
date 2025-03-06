@@ -43,6 +43,17 @@ const Home = () => {
             </p>
           </div>
 
+          {/* Wizard Mascot - positioned in front of the cards */}
+          <div className="absolute z-20 right-1/4 top-[45vh] md:right-1/3 lg:right-[40%] xl:right-[42%]">
+            <div className="bg-white rounded-full w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shadow-lg">
+              <img
+                src="/lovable-uploads/edc0821e-6dc3-487c-8124-aec1de8bd2e1.png"
+                alt="GarageWizz Mascot"
+                className="w-24 h-24 sm:w-28 sm:h-28 object-contain"
+              />
+            </div>
+          </div>
+
           {/* Main Cards - adjusted positioning and height */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-24 mt-[50vh]">
             {/* Garage Owner Card - adjusted height for better proportions */}
