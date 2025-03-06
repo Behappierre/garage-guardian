@@ -1,202 +1,29 @@
 
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Send, Trash2, Maximize2, Minimize2, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import ReactMarkdown from 'react-markdown';
-import { useAuth } from "@/components/auth/AuthProvider";
-import { useAppointments } from "@/hooks/use-appointments";
+import { useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+import { ChatHeader } from "./components/ChatHeader";
+import { ChatMessages } from "./components/ChatMessages";
+import { ChatInput } from "./components/ChatInput";
+import { ChatLauncher } from "./components/ChatLauncher";
+import { useChatMessages } from "./hooks/useChatMessages";
 
 export function ChatAgent() {
-  const { user } = useAuth();
-  const { refreshAppointments } = useAppointments();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [isWide, setIsWide] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [hasDisplayedWelcome, setHasDisplayedWelcome] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const welcomeMessage = {
-    role: "assistant" as const,
-    content: "👋 Welcome to GarageWizz AI Assistant! I'm here to help you with scheduling appointments, looking up vehicle information, managing clients, and answering automotive questions. How can I assist you today?"
-  };
-
-  useEffect(() => {
-    if (isOpen && !hasDisplayedWelcome && messages.length === 0) {
-      setMessages([welcomeMessage]);
-      setHasDisplayedWelcome(true);
-    }
-  }, [isOpen, hasDisplayedWelcome, messages.length]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
-
-  const formatMessage = (content: string) => {
-    return content
-      .replace(/^([A-Za-z ]+):/gm, '**$1:**')
-      .replace(/^- /gm, '• ')
-      .replace(/\n\n/g, '\n\n---\n\n')
-      .replace(/Bay \d+/g, '**$&**')
-      .replace(/Status:/g, '**Status:**')
-      .replace(/Vehicle:/g, '**Vehicle:**')
-      .replace(/Customer:/g, '**Customer:**')
-      .replace(/Service Details:/g, '**Service Details:**')
-      .replace(/Job Ticket:/g, '**Job Ticket:**')
-      .replace(/Notes:/g, '**Notes:**')
-      .replace(/Booking is confirmed/g, '**Booking is confirmed**');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = input.trim();
-    setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
-    setIsLoading(true);
-
-    try {
-      if (!user?.id) {
-        throw new Error('User not authenticated');
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No active session');
-      }
-
-      const isLikelyBookingRequest = checkIfBookingRequest(userMessage);
-
-      try {
-        console.log('Attempting to invoke GPT Edge Function with:', {
-          message: userMessage,
-          userId: user.id,
-          isLikelyBooking: isLikelyBookingRequest
-        });
-        
-        const { data: gptData, error: gptError } = await supabase.functions.invoke('chat-with-gpt', {
-          body: { 
-            message: userMessage,
-            user_id: user.id
-          }
-        });
-
-        console.log('Response from GPT Edge Function:', { data: gptData, error: gptError });
-
-        if (gptError) {
-          console.warn('GPT function error, falling back to Gemini:', gptError);
-          throw gptError;
-        }
-
-        if (!gptData?.response) {
-          console.warn('No response from GPT, falling back to Gemini');
-          throw new Error('No response received from GPT assistant');
-        }
-
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: formatMessage(gptData.response)
-        }]);
-
-        if (gptData.response.toLowerCase().includes('booking is confirmed') || 
-            gptData.response.toLowerCase().includes('appointment created')) {
-          console.log("Booking confirmed, refreshing appointments");
-          refreshAppointments();
-        }
-
-        return;
-      } catch (gptError) {
-        console.log('Falling back to chat-with-gemini function');
-        
-        const { data: geminiData, error: geminiError } = await supabase.functions.invoke('chat-with-gemini', {
-          body: { 
-            message: userMessage,
-            user_id: user.id
-          }
-        });
-
-        console.log('Response from Gemini Edge Function:', { data: geminiData, error: geminiError });
-
-        if (geminiError) {
-          console.error('Gemini function error:', geminiError);
-          throw geminiError;
-        }
-
-        if (!geminiData?.response) {
-          throw new Error('No response received from Gemini assistant');
-        }
-
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: formatMessage(geminiData.response)
-        }]);
-
-        if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
-            geminiData.response.toLowerCase().includes('appointment created')) {
-          console.log("Booking confirmed, refreshing appointments");
-          refreshAppointments();
-        }
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to get response from AI assistant");
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "I apologize, but I'm having trouble processing your request at the moment. Please try again later." 
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const checkIfBookingRequest = (message: string): boolean => {
-    const bookingTerms = ['book', 'schedule', 'appointment', 'reserve', 'slot'];
-    return bookingTerms.some(term => message.toLowerCase().includes(term));
-  };
-
-  const handleClearChat = () => {
-    setMessages([]);
-    setHasDisplayedWelcome(false);
-    toast.success("Chat cleared");
-  };
+  const { messages, isLoading, sendMessage, clearMessages } = useChatMessages();
 
   const toggleWidth = () => {
     setIsWide(prev => !prev);
   };
 
+  const handleSendMessage = (message: string) => {
+    sendMessage(message);
+  };
+
   return (
     <>
-      <Button
-        size="icon"
-        className="fixed bottom-4 right-4 h-28 w-28 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 bg-transparent hover:bg-gray-100/10"
-        onClick={() => setIsOpen(true)}
-      >
-        <div className="relative h-28 w-28">
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400 via-cyan-300 to-blue-500 blur-md animate-pulse" />
-          <img 
-            src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
-            alt="AI Wizard" 
-            className="h-full w-full object-contain relative z-10 rounded-full"
-          />
-        </div>
-      </Button>
+      <ChatLauncher onClick={() => setIsOpen(true)} />
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent 
@@ -206,105 +33,22 @@ export function ChatAgent() {
           )}
           closeButton={false}
         >
-          <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
-            <div className="flex items-center gap-2">
-              <div className="relative h-28 w-28">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400 via-cyan-300 to-blue-500 blur-md animate-pulse" />
-                <img 
-                  src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
-                  alt="AI Wizard" 
-                  className="h-full w-full object-contain relative z-10 rounded-full"
-                />
-              </div>
-              <DialogTitle className="text-lg">AI Wizzard</DialogTitle>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={toggleWidth}
-                className="h-8 w-8"
-                title={isWide ? "Narrow view" : "Wide view"}
-              >
-                {isWide ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
-                )}
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={handleClearChat}
-                className="h-8 w-8"
-                title="Clear chat"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => setIsOpen(false)}
-                className="h-8 w-8"
-                title="Close"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </DialogHeader>
+          <ChatHeader 
+            isWide={isWide}
+            onToggleWidth={toggleWidth}
+            onClearChat={clearMessages}
+            onClose={() => setIsOpen(false)}
+          />
 
           <div className="flex flex-col h-[calc(90vh-8rem)]">
-            <ScrollArea className="flex-1 px-4 pt-4">
-              <div className="space-y-4">
-                {messages.map((message, i) => (
-                  <div
-                    key={i}
-                    className={`flex ${
-                      message.role === "assistant" ? "justify-start" : "justify-end"
-                    } animate-in slide-in-from-bottom-5 duration-300`}
-                  >
-                    <div
-                      className={`rounded-lg px-4 py-2 max-w-full break-words ${
-                        message.role === "assistant"
-                          ? "bg-muted prose prose-sm dark:prose-invert w-full"
-                          : "bg-primary text-primary-foreground"
-                      }`}
-                    >
-                      {message.role === "assistant" ? (
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
-                      ) : (
-                        message.content
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {isLoading && (
-                  <div className="flex justify-start animate-pulse">
-                    <div className="bg-muted rounded-lg px-4 py-2">
-                      Thinking...
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
-            <form onSubmit={handleSubmit} className="p-4 flex gap-2 border-t">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                className="min-h-[80px] resize-none"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-              />
-              <Button type="submit" size="icon" disabled={isLoading} className="h-10 w-10 self-end">
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
+            <ChatMessages 
+              messages={isOpen ? messages : []} 
+              isLoading={isLoading} 
+            />
+            <ChatInput 
+              onSubmit={handleSendMessage}
+              isLoading={isLoading}
+            />
           </div>
         </DialogContent>
       </Dialog>
