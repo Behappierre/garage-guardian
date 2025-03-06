@@ -44,6 +44,7 @@ const MyWork = () => {
 
   const updateTicketStatus = useMutation({
     mutationFn: async ({ ticketId, newStatus }: { ticketId: string, newStatus: TicketStatus }) => {
+      console.log(`Updating ticket ${ticketId} to status ${newStatus}`);
       const { error } = await supabase
         .from("job_tickets")
         .update({ status: newStatus })
@@ -75,6 +76,13 @@ const MyWork = () => {
     if (ticket.status !== newStatus) {
       updateTicketStatus.mutate({ ticketId, newStatus });
     }
+  };
+
+  const handleFormClose = () => {
+    setShowTicketForm(false);
+    setSelectedTicket(null);
+    // Refresh the tickets data when form is closed
+    queryClient.invalidateQueries({ queryKey: ["assigned_tickets"] });
   };
 
   if (isLoading) {
@@ -117,10 +125,7 @@ const MyWork = () => {
             setShowTicketForm(open);
             if (!open) setSelectedTicket(null);
           }}
-          onClose={() => {
-            setShowTicketForm(false);
-            setSelectedTicket(null);
-          }}
+          onClose={handleFormClose}
         />
       </div>
     </DndProvider>

@@ -21,6 +21,8 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
     onEnhanceDescription,
   } = useJobTicketForm(props);
 
+  console.log("Current form data in JobTicketForm:", formData);
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col space-y-6">
       <div className="space-y-6">

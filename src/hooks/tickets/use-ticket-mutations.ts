@@ -24,6 +24,15 @@ export const useTicketMutations = (onClose: () => void) => {
       let ticketId;
       
       if (initialTicketId) {
+        console.log("Updating job ticket:", initialTicketId, "with data:", {
+          description: formData.description,
+          status: formData.status,
+          priority: formData.priority,
+          assigned_technician_id: formData.assigned_technician_id,
+          client_id: formData.client_id,
+          vehicle_id: formData.vehicle_id
+        });
+        
         const { error } = await supabase
           .from("job_tickets")
           .update({
@@ -37,7 +46,11 @@ export const useTicketMutations = (onClose: () => void) => {
           })
           .eq("id", initialTicketId);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating job ticket:", error);
+          throw error;
+        }
+        
         ticketId = initialTicketId;
       } else {
         // Use the create_job_ticket function to handle the ticket_number generation
@@ -95,6 +108,7 @@ export const useTicketMutations = (onClose: () => void) => {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["job_tickets"] });
+      await queryClient.invalidateQueries({ queryKey: ["assigned_tickets"] });
       await queryClient.invalidateQueries({ queryKey: ["appointments"] });
       toast.success(initialTicketId ? "Job ticket updated successfully" : "Job ticket created successfully");
       onClose();

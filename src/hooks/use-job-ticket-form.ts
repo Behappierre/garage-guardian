@@ -62,6 +62,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, li
     setIsSubmitting(true);
 
     try {
+      console.log("Submitting job ticket with formData:", formData);
       await submitTicket(formData, initialData?.id, selectedAppointmentId);
     } catch (error: any) {
       console.error("Error submitting ticket:", error);

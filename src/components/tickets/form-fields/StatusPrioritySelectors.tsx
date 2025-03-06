@@ -22,6 +22,11 @@ export const StatusPrioritySelectors = ({
   onStatusChange,
   onPriorityChange,
 }: StatusPrioritySelectorsProps) => {
+  const handlePriorityChange = (value: any) => {
+    console.log("Priority changed to:", value);
+    onPriorityChange(value);
+  };
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
@@ -48,7 +53,7 @@ export const StatusPrioritySelectors = ({
         <Label>Priority</Label>
         <Select
           value={priority}
-          onValueChange={(value: any) => onPriorityChange(value)}
+          onValueChange={handlePriorityChange}
         >
           <SelectTrigger className="w-full">
             <SelectValue />
