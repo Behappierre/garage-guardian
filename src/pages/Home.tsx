@@ -26,7 +26,7 @@ const Home = () => {
               Intelligent garage management powered by AI assistance
             </p>
             <div className="mt-6 flex justify-center">
-              <div className="w-32 h-32">
+              <div className="w-48 h-48">
                 <img 
                   src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
                   alt="AI Wizard" 

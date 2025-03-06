@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -187,7 +188,7 @@ export function ChatAgent() {
         className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 bg-transparent hover:bg-gray-100/10"
         onClick={() => setIsOpen(true)}
       >
-        <div className="relative h-12 w-12">
+        <div className="relative h-14 w-14">
           <img 
             src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
             alt="AI Wizard" 
@@ -206,7 +207,7 @@ export function ChatAgent() {
         >
           <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
-              <div className="h-10 w-10">
+              <div className="h-14 w-14">
                 <img 
                   src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
                   alt="AI Wizard" 
