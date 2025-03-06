@@ -43,16 +43,16 @@ const Home = () => {
             </p>
           </div>
 
-          {/* Main Cards - adjusted height and width */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-24 mt-[25vh]">
-            {/* Garage Owner Card - reduced height by 45% and increased width */}
+          {/* Main Cards - adjusted positioning and height */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-7xl mx-auto mb-24 mt-[50vh]">
+            {/* Garage Owner Card - adjusted height to show buttons */}
             <div 
               className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 flex flex-col ${
                 hovered === 'owner' 
                   ? 'transform -translate-y-2 shadow-xl' 
                   : ''
               }`}
-              style={{ height: '55%' }} /* Reduced to 55% of original height */
+              style={{ height: '300px' }} /* Fixed height to ensure buttons are visible */
               onMouseEnter={() => setHovered('owner')}
               onMouseLeave={() => setHovered(null)}
             >
@@ -77,14 +77,14 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Staff Member Card - reduced height by 45% and increased width */}
+            {/* Staff Member Card - adjusted height to show buttons */}
             <div 
               className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 flex flex-col ${
                 hovered === 'staff' 
                   ? 'transform -translate-y-2 shadow-xl' 
                   : ''
               }`}
-              style={{ height: '55%' }} /* Reduced to 55% of original height */
+              style={{ height: '300px' }} /* Fixed height to ensure buttons are visible */
               onMouseEnter={() => setHovered('staff')}
               onMouseLeave={() => setHovered(null)}
             >
