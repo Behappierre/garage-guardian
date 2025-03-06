@@ -32,17 +32,18 @@ export const useSignUp = () => {
     if (signUpError) throw signUpError;
     
     if (signUpData.user) {
-      // We'll use the create-user edge function instead of direct DB operations
-      // This will bypass RLS issues for new user registration
-      const { error: createUserError } = await supabase.functions.invoke('create-user', {
+      // Determine if we need to pass a garageId (null for owners)
+      const garageId = userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"; // Default garage ID for staff
+      
+      // Call edge function to create user with proper role
+      const { data, error: createUserError } = await supabase.functions.invoke('create-user', {
         body: {
           email,
           password,
           firstName,
           lastName,
           role: userRole,
-          // Pass a default garage ID for staff users or null for owner users
-          garageId: userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"
+          garageId
         }
       });
       
@@ -51,14 +52,15 @@ export const useSignUp = () => {
         throw new Error("Failed to set up your account. Please try again.");
       }
       
+      console.log("User created successfully:", data);
       return signUpData.user;
     }
     
     return null;
   };
 
+  // These functions are kept for backward compatibility
   const assignRole = async (userId: string, role: string) => {
-    // This function is kept for backward compatibility but not used directly
     console.log('Legacy assignRole called but not used');
   };
 

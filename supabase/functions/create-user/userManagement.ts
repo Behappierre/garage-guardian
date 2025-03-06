@@ -41,10 +41,10 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  // For owner registration, garageId is not required initially
+  // For owner registration, garageId should be null and is not required
   if (role !== 'administrator' && !body.garageId) {
     console.error('No garage ID provided for non-admin user');
-    const error = createErrorResponse('No garage ID provided. Please select a garage first.', 400);
+    const error = createErrorResponse('No garage ID provided for staff user.', 400);
     return { body: null, error };
   }
 
@@ -52,7 +52,7 @@ export async function validateRequest(req: Request) {
   if (body.garageId) {
     console.log('User will be assigned to garage:', body.garageId);
   } else {
-    console.log('No garage assignment (owner registration)');
+    console.log('Owner registration: No garage assignment needed initially');
   }
 
   return { body, error: null };
@@ -66,31 +66,37 @@ export async function createUserAccount(
   firstName: string,
   lastName: string
 ) {
-  // Create the user
-  const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      first_name: firstName,
-      last_name: lastName,
+  try {
+    // Create the user
+    const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+      }
+    });
+
+    if (createUserError) {
+      console.error('Error creating user:', createUserError);
+      const error = createErrorResponse(createUserError.message, 400);
+      return { userData: null, error };
     }
-  });
 
-  if (createUserError) {
-    console.error('Error creating user:', createUserError);
-    const error = createErrorResponse(createUserError.message, 400);
+    if (!userData?.user) {
+      console.error('User creation failed - no user data returned');
+      const error = createErrorResponse('User creation failed - no user data returned', 500);
+      return { userData: null, error };
+    }
+
+    console.log('User created successfully with ID:', userData.user.id);
+    return { userData, error: null };
+  } catch (err: any) {
+    console.error('Unexpected error creating user:', err);
+    const error = createErrorResponse(err.message || 'Failed to create user', 500);
     return { userData: null, error };
   }
-
-  if (!userData?.user) {
-    console.error('User creation failed - no user data returned');
-    const error = createErrorResponse('User creation failed - no user data returned', 500);
-    return { userData: null, error };
-  }
-
-  console.log('User created successfully with ID:', userData.user.id);
-  return { userData, error: null };
 }
 
 // Assign role and garage to the user
@@ -107,7 +113,7 @@ export async function assignUserRole(
       role
     };
     
-    // Only add garage_id if it's provided
+    // Only add garage_id if it's provided (not for administrators/owners initially)
     if (garageId) {
       roleData.garage_id = garageId;
       console.log('Assigning role with garage_id:', roleData);
@@ -121,17 +127,22 @@ export async function assignUserRole(
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
-      throw new Error(`Error assigning role: ${roleError.message}`);
+      return {
+        result: { 
+          message: 'User created but role assignment failed',
+          userId: userId,
+          error: roleError.message,
+          status: 'partial_success' 
+        },
+        error: true
+      };
     }
     
     console.log('Successfully assigned role:', role);
     if (garageId) {
       console.log('With garage:', garageId);
-    }
-
-    // Step 2: Update profile with garage_id if provided
-    if (garageId) {
-      console.log('Updating profile with garage_id:', garageId);
+      
+      // Step 2: Update profile with garage_id if provided
       const { error: profileError } = await supabaseClient
         .from('profiles')
         .update({ garage_id: garageId })
