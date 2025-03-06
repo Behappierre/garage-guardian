@@ -1,4 +1,3 @@
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -58,6 +57,7 @@ export const JobTicketFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="received">Received</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="pending_parts">On Hold</SelectItem>
