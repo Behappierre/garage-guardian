@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,9 +25,11 @@ const Home = () => {
             <p className="text-gray-600 text-xl max-w-2xl mx-auto">
               Intelligent garage management powered by AI assistance
             </p>
-            <div className="mt-6 flex justify-center">
-              <div className="relative w-96 h-96">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400 via-cyan-300 to-blue-500 blur-md animate-pulse" />
+            <div className="mt-10 flex justify-center">
+              <div className="relative w-[40rem] h-[40rem]">
+                {/* Enhanced glow effect */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-teal-500 blur-3xl opacity-70 animate-pulse"></div>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400 via-cyan-300 to-blue-500 blur-xl animate-pulse"></div>
                 <img 
                   src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
                   alt="AI Wizard" 

@@ -19,13 +19,16 @@ export function ChatHeader({ isWide, onToggleWidth, onClearChat, onClose }: Chat
 
   return (
     <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
-      <div className="flex items-center gap-2">
-        <img 
-          src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
-          alt="AI Wizard" 
-          className="h-10 w-10 rounded-full object-cover"
-        />
-        <DialogTitle className="text-lg">AI Assistant</DialogTitle>
+      <div className="flex items-center gap-3">
+        <div className="relative h-16 w-16">
+          <div className="absolute inset-0 bg-purple-500/50 animate-pulse rounded-full blur-lg"></div>
+          <img 
+            src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
+            alt="AI Wizard" 
+            className="h-full w-full rounded-full object-cover relative z-10"
+          />
+        </div>
+        <DialogTitle className="text-xl">AI Assistant</DialogTitle>
       </div>
       <div className="flex gap-2">
         <Button 
