@@ -28,7 +28,8 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   };
 
   const navigateToOtherLogin = () => {
-    navigate(userType === "owner" ? "/auth?type=staff" : "/");
+    // Always navigate to home page
+    navigate("/");
   };
 
   // Modified to match the expected type in RegisterForm

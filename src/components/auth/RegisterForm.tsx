@@ -84,6 +84,11 @@ export const RegisterForm = ({
   
   const handleSubmit = propOnSubmit || handleRegister;
 
+  // Handler to navigate to home page
+  const navigateToHome = () => {
+    navigate("/");
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 min-w-80">
       <div className="space-y-2">
@@ -183,7 +188,7 @@ export const RegisterForm = ({
         <Button 
           type="button" 
           variant="outline" 
-          onClick={navigateToOtherLogin} 
+          onClick={navigateToHome} 
           className="w-full mt-2"
           disabled={isLoading}
         >
