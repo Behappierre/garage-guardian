@@ -15,7 +15,7 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  const { email, password, firstName, lastName, role } = body;
+  const { email, password, firstName, lastName, role, userType } = body;
   
   // Log all received parameters for debugging
   console.log('Creating user with parameters:', { 
@@ -24,6 +24,7 @@ export async function validateRequest(req: Request) {
     firstName, 
     lastName, 
     role,
+    userType,
     garageId: body.garageId
   });
   
@@ -48,7 +49,7 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  console.log('Creating user with email:', email, 'role:', role);
+  console.log('Creating user with email:', email, 'role:', role, 'userType:', userType);
   if (body.garageId) {
     console.log('User will be assigned to garage:', body.garageId);
   } else {
@@ -123,10 +124,11 @@ export async function assignUserRole(
   supabaseClient: SupabaseClient,
   userId: string,
   role: string,
-  garageId: string | null
+  garageId: string | null,
+  userType: string = 'staff' // Default to staff if not provided
 ) {
   try {
-    // For administrators/owners: Create a user_roles entry with the administrator role
+    // For all users: Create a user_roles entry with the appropriate role
     const { error: roleError } = await supabaseClient
       .from('user_roles')
       .insert([{ 
@@ -149,37 +151,40 @@ export async function assignUserRole(
       };
     }
     
-    console.log('Successfully assigned role:', role);
+    console.log('Successfully assigned role in user_roles:', role);
     
-    // For owners/administrators, create a garage_members entry without a garage_id initially
-    if (role === 'administrator') {
-      console.log('Creating owner entry in garage_members without a garage_id');
-      const { error: memberError } = await supabaseClient
-        .from('garage_members')
-        .insert([{
-          user_id: userId,
-          role: 'owner',
-          // No garage_id specified for owners initially
-        }]);
-        
-      if (memberError) {
-        console.warn('Warning: Could not create garage_members entry:', memberError);
-        // Continue even if this fails, but log the error
-        return {
-          result: { 
-            message: 'User created with role, but garage_members entry failed',
-            userId: userId,
-            error: memberError.message,
-            status: 'partial_success' 
-          },
-          error: true
-        };
-      } else {
-        console.log('Successfully created garage_members entry for owner');
-      }
-    } else if (garageId) {
-      // For staff members with a garage, update profile with garage_id
-      console.log('Staff with garage:', garageId);
+    // Determine garage_member role based on userType
+    const memberRole = userType === 'owner' ? 'owner' : role;
+    
+    console.log(`Creating garage_members entry with role: ${memberRole}`);
+    const { error: memberError } = await supabaseClient
+      .from('garage_members')
+      .insert([{
+        user_id: userId,
+        role: memberRole,
+        // Only include garage_id if it's provided for staff
+        ...(garageId ? { garage_id: garageId } : {})
+      }]);
+      
+    if (memberError) {
+      console.warn('Warning: Could not create garage_members entry:', memberError);
+      // Continue even if this fails, but log the error
+      return {
+        result: { 
+          message: 'User created with role, but garage_members entry failed',
+          userId: userId,
+          error: memberError.message,
+          status: 'partial_success' 
+        },
+        error: true
+      };
+    } else {
+      console.log(`Successfully created garage_members entry with role: ${memberRole}`);
+    }
+    
+    if (garageId) {
+      // For users with a garage, update profile with garage_id
+      console.log('Updating profile with garage_id:', garageId);
       
       // Update profile with garage_id if provided
       const { error: profileError } = await supabaseClient

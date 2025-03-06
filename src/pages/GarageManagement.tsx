@@ -27,7 +27,7 @@ const GarageManagement = () => {
           return;
         }
 
-        // Check if user has administrator role
+        // Check if user has administrator role in user_roles
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
@@ -41,10 +41,22 @@ const GarageManagement = () => {
           return;
         }
 
-        // If not an administrator, redirect to staff login
-        if (!roleData || roleData.role !== 'administrator') {
-          console.log("User is not an administrator, redirecting to staff login");
-          toast.error("Only administrators can access garage management");
+        // Check if user is an owner in garage_members
+        const { data: ownerData, error: ownerError } = await supabase
+          .from('garage_members')
+          .select('role')
+          .eq('user_id', userData.user.id)
+          .eq('role', 'owner')
+          .maybeSingle();
+          
+        if (ownerError) {
+          console.error("Error checking owner status:", ownerError);
+        }
+
+        // If user is neither an administrator in user_roles nor an owner in garage_members, redirect
+        if ((!roleData || roleData.role !== 'administrator') && (!ownerData || ownerData.role !== 'owner')) {
+          console.log("User is not an administrator or owner, redirecting to staff login");
+          toast.error("Only administrators and owners can access garage management");
           
           // Sign out before redirecting
           await supabase.auth.signOut();
@@ -52,22 +64,12 @@ const GarageManagement = () => {
           return;
         }
 
-        // Check garage_members entry for this administrator
-        const { data: memberData, error: memberError } = await supabase
-          .from('garage_members')
-          .select('garage_id, role')
-          .eq('user_id', userData.user.id)
-          .eq('role', 'owner')
-          .maybeSingle();
+        console.log("Access granted to garage management:", {
+          isAdminInUserRoles: roleData?.role === 'administrator',
+          isOwnerInGarageMembers: ownerData?.role === 'owner'
+        });
 
-        if (memberError) {
-          console.error("Error checking garage membership:", memberError);
-          // Continue anyway as this might be a first login
-        } else {
-          console.log("Owner membership data:", memberData);
-        }
-
-        // User is an administrator, allow access to garage management
+        // User is either an administrator or owner, allow access to garage management
         setIsAdmin(true);
       } catch (error) {
         console.error("Error in admin check:", error);
@@ -99,7 +101,7 @@ const GarageManagement = () => {
     return null;
   }
 
-  // Render garage management if user is admin
+  // Render garage management if user is admin or owner
   return <GarageManager />;
 };
 

@@ -15,15 +15,12 @@ export const useSignUp = () => {
     role: Role, 
     userType: UserType
   ) => {
+    // For owners, ensure the role is always administrator
     const userRole = userType === "owner" ? "administrator" : role;
     
-    console.log(`Signing up user with role: ${userRole}`);
+    console.log(`Signing up user with role: ${userRole}, type: ${userType}`);
     
     try {
-      // Instead of doing supabase.auth.signUp() and then edge function,
-      // only use the edge function which will handle both tasks
-      console.log("Calling create-user edge function directly");
-      
       // Determine if we need to pass a garageId (null for owners)
       const garageId = userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"; // Default garage ID for staff
       
@@ -35,7 +32,8 @@ export const useSignUp = () => {
           firstName,
           lastName,
           role: userRole,
-          garageId
+          garageId,
+          userType // Add userType to help determine membership role
         }
       });
       

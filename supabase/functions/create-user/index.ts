@@ -43,7 +43,7 @@ serve(async (req: Request) => {
       return requestError;
     }
 
-    const { email, password, firstName, lastName, role, garageId } = body;
+    const { email, password, firstName, lastName, role, garageId, userType } = body;
     
     // Create user account
     const { userData, error: createUserError } = await createUserAccount(
@@ -63,7 +63,8 @@ serve(async (req: Request) => {
       supabaseClient,
       userData.user.id,
       role,
-      garageId
+      garageId,
+      userType // Pass userType to determine correct garage_members role
     );
     
     if (assignRoleError) {
