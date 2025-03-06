@@ -67,7 +67,7 @@ export const StatusColumn = ({
       <div className="space-y-3">
         {tickets.map((ticket) => {
           const latestEvent = getLatestClockEvent(ticket.id);
-          const isClockedIn = latestEvent?.event_type === 'clock_in';
+          const isClockedIn = latestEvent && latestEvent.event_type === 'clock_in';
 
           return (
             <JobTicketCard
