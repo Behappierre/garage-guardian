@@ -16,12 +16,22 @@ const Auth = () => {
 
   // Listen for auth state errors from localStorage
   useEffect(() => {
-    const authError = localStorage.getItem('auth_last_error');
-    if (authError) {
-      setLastError(authError);
-      // Clear the error after reading it
-      localStorage.removeItem('auth_last_error');
-    }
+    const checkForErrors = () => {
+      const authError = localStorage.getItem('auth_last_error');
+      if (authError) {
+        setLastError(authError);
+        // Clear the error after reading it
+        localStorage.removeItem('auth_last_error');
+      }
+    };
+    
+    // Check immediately on mount
+    checkForErrors();
+    
+    // And set up interval to check regularly (useful for redirects)
+    const interval = setInterval(checkForErrors, 1000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const runDiagnostics = async () => {
@@ -69,7 +79,7 @@ const Auth = () => {
         {lastError && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Last Error</AlertTitle>
+            <AlertTitle>Authentication Issue</AlertTitle>
             <AlertDescription>{lastError}</AlertDescription>
           </Alert>
         )}

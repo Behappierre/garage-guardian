@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +18,7 @@ export const useAuthSubmit = (userType: UserType) => {
   const [loading, setLoading] = useState(false);
   const [showGarageForm, setShowGarageForm] = useState(false);
   const [newUserId, setNewUserId] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
   const { garageId } = useAuth();
@@ -41,6 +43,7 @@ export const useAuthSubmit = (userType: UserType) => {
     }
     
     setLoading(true);
+    setLastError(null);
 
     (async () => {
       try {
@@ -60,108 +63,130 @@ export const useAuthSubmit = (userType: UserType) => {
               });
               
               try {
+                // Try to sign in with the new credentials
                 await signIn(email, password, userType);
-              } catch (signInError) {
+              } catch (signInError: any) {
                 console.warn("Auto sign-in after registration failed:", signInError);
+                localStorage.setItem('auth_last_error', `Auto-login failed: ${signInError.message}`);
               }
             } else {
-              const signInData = await signIn(email, password, userType);
-              
-              if (signInData.user) {
-                const targetGarageId = garageId || await assignStaffToGarage(signInData.user.id, role);
+              try {
+                const signInData = await signIn(email, password, userType);
                 
-                if (targetGarageId) {
-                  console.log(`Staff user assigned to garage: ${targetGarageId}`);
-                } else {
-                  console.warn("No garage ID available for staff assignment");
+                if (signInData.user) {
+                  const targetGarageId = garageId || await assignStaffToGarage(signInData.user.id, role);
+                  
+                  if (targetGarageId) {
+                    console.log(`Staff user assigned to garage: ${targetGarageId}`);
+                  } else {
+                    console.warn("No garage ID available for staff assignment");
+                  }
+                  
+                  if (role === 'technician') {
+                    navigate("/dashboard/job-tickets");
+                  } else {
+                    navigate("/dashboard/appointments");
+                  }
                 }
-                
-                if (role === 'technician') {
-                  navigate("/dashboard/job-tickets");
-                } else {
-                  navigate("/dashboard/appointments");
-                }
+              } catch (signInError: any) {
+                console.error("Failed to sign in after registration:", signInError);
+                localStorage.setItem('auth_last_error', `Auto-login failed: ${signInError.message}`);
+                setLastError(`Account created but couldn't sign in automatically. Please try signing in manually.`);
               }
             }
           }
         } else {
-          const signInData = await signIn(email, password, userType);
+          try {
+            const signInData = await signIn(email, password, userType);
 
-          if (signInData.user) {
-            try {
-              const userRole = await verifyUserAccess(signInData.user.id, userType);
+            if (signInData.user) {
+              try {
+                const userRole = await verifyUserAccess(signInData.user.id, userType);
 
-              if (userType === "owner") {
-                await handleOwnerSignIn(signInData.user.id);
-                navigate("/garage-management");
-                return;
-              }
-
-              if (userType === "staff" && userRole === 'administrator') {
-                const { data: profileData } = await supabase
-                  .from('profiles')
-                  .select('garage_id')
-                  .eq('id', signInData.user.id)
-                  .single();
-                  
-                if (profileData?.garage_id) {
-                  console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
-                  navigate("/dashboard");
+                if (userType === "owner") {
+                  await handleOwnerSignIn(signInData.user.id);
+                  navigate("/garage-management");
                   return;
-                } else {
-                  const { data: ownedGarages } = await supabase
-                    .from('garages')
-                    .select('id')
-                    .eq('owner_id', signInData.user.id)
-                    .limit(1);
+                }
+
+                if (userType === "staff" && userRole === 'administrator') {
+                  const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('garage_id')
+                    .eq('id', signInData.user.id)
+                    .single();
                     
-                  if (ownedGarages && ownedGarages.length > 0) {
-                    await supabase
-                      .from('profiles')
-                      .update({ garage_id: ownedGarages[0].id })
-                      .eq('id', signInData.user.id);
-                      
+                  if (profileData?.garage_id) {
+                    console.log("Administrator signing in as staff with garage_id:", profileData.garage_id);
                     navigate("/dashboard");
                     return;
                   } else {
-                    throw new Error("Administrators should use the garage owner login");
+                    const { data: ownedGarages } = await supabase
+                      .from('garages')
+                      .select('id')
+                      .eq('owner_id', signInData.user.id)
+                      .limit(1);
+                      
+                    if (ownedGarages && ownedGarages.length > 0) {
+                      await supabase
+                        .from('profiles')
+                        .update({ garage_id: ownedGarages[0].id })
+                        .eq('id', signInData.user.id);
+                        
+                      navigate("/dashboard");
+                      return;
+                    } else {
+                      throw new Error("Administrators should use the garage owner login");
+                    }
                   }
                 }
-              }
-              
-              if (userRole) {
-                await handleStaffSignIn(signInData.user.id, userRole);
                 
-                console.log(`Redirecting ${userRole} to appropriate dashboard`);
-                
-                switch (userRole) {
-                  case 'technician':
-                    navigate("/dashboard/job-tickets");
-                    break;
-                  case 'front_desk':
-                    navigate("/dashboard/appointments");
-                    break;
-                  default:
-                    navigate("/dashboard");
+                if (userRole) {
+                  await handleStaffSignIn(signInData.user.id, userRole);
+                  
+                  console.log(`Redirecting ${userRole} to appropriate dashboard`);
+                  
+                  switch (userRole) {
+                    case 'technician':
+                      navigate("/dashboard/job-tickets");
+                      break;
+                    case 'front_desk':
+                      navigate("/dashboard/appointments");
+                      break;
+                    default:
+                      navigate("/dashboard");
+                  }
+                } else {
+                  throw new Error("Your account does not have an assigned role");
                 }
-              } else {
-                throw new Error("Your account does not have an assigned role");
+              } catch (error: any) {
+                console.error("Error during sign-in flow:", error.message);
+                setLastError(error.message);
+                uiToast({
+                  variant: "destructive",
+                  title: "Access Denied",
+                  description: error.message,
+                });
+                await supabase.auth.signOut();
+                setLoading(false);
+                return;
               }
-            } catch (error: any) {
-              console.error("Error during sign-in flow:", error.message);
-              uiToast({
-                variant: "destructive",
-                title: "Access Denied",
-                description: error.message,
-              });
-              await supabase.auth.signOut();
-              setLoading(false);
-              return;
             }
+          } catch (error: any) {
+            console.error("Sign-in error:", error.message);
+            setLastError(error.message);
+            uiToast({
+              variant: "destructive",
+              title: "Login Failed",
+              description: error.message || "Invalid login credentials",
+            });
+            setLoading(false);
+            return;
           }
         }
       } catch (error: any) {
         console.error("Authentication error:", error.message);
+        setLastError(error.message);
         uiToast({
           variant: "destructive",
           title: "Error",
@@ -177,9 +202,11 @@ export const useAuthSubmit = (userType: UserType) => {
     loading,
     showGarageForm,
     newUserId,
+    lastError,
     setLoading,
     setShowGarageForm,
     setNewUserId,
+    setLastError,
     handleAuth,
     uiToast
   };
