@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,8 +14,8 @@ export default function Admin() {
   return (
     <div className="container py-6 space-y-6">
       <PageHeader
-        heading="Admin"
-        text="Manage user accounts, costs, and system settings."
+        title="Admin"
+        description="Manage user accounts, costs, and system settings."
       />
 
       <Tabs defaultValue="users">
