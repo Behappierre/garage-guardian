@@ -41,18 +41,6 @@ const Home = () => {
             <p className="text-white text-xl max-w-2xl mx-auto">
               Intelligent garage management powered by AI assistance
             </p>
-            <div className="mt-10 flex justify-center">
-              <div className="relative w-[20rem] h-[20rem]">
-                {/* Enhanced glow effect */}
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500 via-blue-500 to-teal-500 blur-3xl opacity-70 animate-pulse"></div>
-                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-teal-400 via-cyan-300 to-blue-500 blur-xl animate-pulse"></div>
-                <img 
-                  src="/lovable-uploads/cbfe65d7-b425-4f87-975a-f3f52a813a44.png" 
-                  alt="AI Wizard" 
-                  className="relative h-full w-full object-contain z-10 rounded-full"
-                />
-              </div>
-            </div>
           </div>
 
           {/* Main Cards */}
