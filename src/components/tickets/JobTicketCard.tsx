@@ -45,10 +45,12 @@ export const JobTicketCard = ({
     >
       <div className="flex justify-between items-start">
         <div>
-          <div className="font-medium">{ticket.ticket_number}</div>
+          <div className="font-medium text-left">{ticket.ticket_number}</div>
           {ticket.vehicle?.license_plate && (
-            <div className="text-xs text-gray-500">
-              {ticket.vehicle.license_plate}
+            <div className="mt-1 flex items-center gap-1 text-xs">
+              <span className="bg-[#FEF7CD] text-gray-700 px-2 py-0.5 rounded border border-gray-200 font-medium">
+                {ticket.vehicle.license_plate}
+              </span>
             </div>
           )}
         </div>
