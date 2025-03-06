@@ -83,9 +83,15 @@ export async function createUserAccount(
     }
 
     if (existingUsers && existingUsers.users.length > 0) {
-      console.warn('User with this email already exists:', email);
-      const error = createErrorResponse('A user with this email address has already been registered', 409);
-      return { userData: null, error };
+      console.log('User with this email already exists:', email);
+      // Return the existing user instead of an error
+      return { 
+        userData: { 
+          user: existingUsers.users[0]
+        }, 
+        error: null,
+        isExisting: true
+      };
     }
 
     // Create the user
@@ -142,7 +148,7 @@ export async function createUserAccount(
       console.log('Profile created by trigger for user:', userData.user.id);
     }
     
-    return { userData, error: null };
+    return { userData, error: null, isExisting: false };
   } catch (err: any) {
     console.error('Unexpected error creating user:', err);
     const error = createErrorResponse(err.message || 'Failed to create user', 500);
@@ -170,12 +176,51 @@ export async function assignUserRole(
     if (checkRoleError) {
       console.error('Error checking existing user roles:', checkRoleError);
     } else if (existingRoles && existingRoles.length > 0) {
-      console.log('User already has roles assigned, not creating duplicates');
+      console.log('User already has roles assigned:', existingRoles);
+      
+      // Check if the user has the specific role we're trying to assign
+      const hasRole = existingRoles.some(r => r.role === role);
+      
+      if (hasRole) {
+        console.log(`User already has ${role} role, no need to create duplicate`);
+      } else {
+        console.log(`User has roles but not ${role}, adding it`);
+        
+        // Add the new role
+        const { error: addRoleError } = await supabaseClient
+          .from('user_roles')
+          .insert([{ user_id: userId, role }]);
+          
+        if (addRoleError) {
+          console.error(`Error adding ${role} role:`, addRoleError);
+        } else {
+          console.log(`Added ${role} role to user`);
+        }
+      }
+      
+      // If existing roles don't have a garage_id but one is provided, update it
+      const needsGarageUpdate = existingRoles.some(r => r.role === role && !r.garage_id && garageId);
+      
+      if (needsGarageUpdate) {
+        console.log(`Updating user_roles with garage_id ${garageId}`);
+        
+        const { error: updateGarageError } = await supabaseClient
+          .from('user_roles')
+          .update({ garage_id: garageId })
+          .eq('user_id', userId)
+          .eq('role', role);
+          
+        if (updateGarageError) {
+          console.error('Error updating garage_id in user_roles:', updateGarageError);
+        } else {
+          console.log('Updated user_roles with garage_id');
+        }
+      }
       
       // Return success since we don't need to create duplicates
       return {
         result: { 
-          message: 'User already has roles assigned',
+          message: 'User roles have been updated as needed',
           userId: userId,
           status: 'success' 
         },
@@ -216,6 +261,59 @@ export async function assignUserRole(
     }
     
     console.log('Successfully assigned role in user_roles:', role);
+    
+    // Check if user already has a profile
+    const { data: profileData, error: profileCheckError } = await supabaseClient
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .eq('id', userId)
+      .single();
+      
+    if (profileCheckError) {
+      console.log('User may not have a profile, creating one');
+      
+      // Try to get user data to extract first/last name
+      const { data: userData, error: userError } = await supabaseClient.auth.admin.getUserById(userId);
+      
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+      } else if (userData) {
+        // Create a profile for the user
+        const first_name = userData.user.user_metadata?.first_name || 'User';
+        const last_name = userData.user.user_metadata?.last_name || '';
+        
+        const { error: createProfileError } = await supabaseClient
+          .from('profiles')
+          .insert({
+            id: userId,
+            first_name,
+            last_name,
+            garage_id: garageId
+          });
+          
+        if (createProfileError) {
+          console.error('Error creating profile:', createProfileError);
+        } else {
+          console.log('Created profile for user');
+        }
+      }
+    } else {
+      console.log('User already has a profile');
+      
+      // Update the profile with garage_id if provided
+      if (garageId) {
+        const { error: updateProfileError } = await supabaseClient
+          .from('profiles')
+          .update({ garage_id: garageId })
+          .eq('id', userId);
+          
+        if (updateProfileError) {
+          console.error('Error updating profile with garage_id:', updateProfileError);
+        } else {
+          console.log('Updated profile with garage_id');
+        }
+      }
+    }
     
     // Determine garage_member role based on userType
     const memberRole = userType === 'owner' ? 'owner' : role;
@@ -300,34 +398,6 @@ export async function assignUserRole(
         };
       } else {
         console.log(`Successfully created garage_members entry with role: ${memberRole}`);
-      }
-      
-      // Only update profile with garage_id for staff users, not owners
-      if (userType !== 'owner' && garageId) {
-        // For users with a garage, update profile with garage_id
-        console.log('Updating profile with garage_id:', garageId);
-        
-        // Update profile with garage_id if provided
-        const { error: profileError } = await supabaseClient
-          .from('profiles')
-          .update({ garage_id: garageId })
-          .eq('id', userId);
-
-        if (profileError) {
-          console.warn('Warning: Error updating profile with garage_id:', profileError);
-          // Continue even if profile update fails
-          return {
-            result: { 
-              message: 'User created with role, but profile update failed',
-              userId: userId,
-              error: profileError.message,
-              status: 'partial_success' 
-            },
-            error: true
-          };
-        } else {
-          console.log('Successfully updated profile with garage_id:', garageId);
-        }
       }
     }
     

@@ -1,87 +1,113 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuthForm } from "@/hooks/auth/useAuthForm";
-import { useAuthSubmit } from "@/hooks/auth/useAuthSubmit";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
 import { GarageFormContainer } from "./GarageFormContainer";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import { useAuthSubmit } from "@/hooks/auth/useAuthSubmit";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AuthFormContainerProps {
   userType: "owner" | "staff";
 }
 
 export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
-  const navigate = useNavigate();
-  const {
-    mode, email, password, firstName, lastName, role,
-    setEmail, setPassword, setFirstName, setLastName, setRole,
-    toggleMode
-  } = useAuthForm(userType);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [role, setRole] = useState<"administrator" | "technician" | "front_desk">(
+    userType === "owner" ? "administrator" : "front_desk"
+  );
   
-  const {
-    loading, showGarageForm, newUserId, handleAuth, setShowGarageForm
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  const { 
+    loading, 
+    showGarageForm, 
+    newUserId, 
+    lastError,
+    handleAuth 
   } = useAuthSubmit(userType);
 
-  const handleGarageCreationComplete = (garageId: string) => {
-    navigate("/garage-management");
+  const toggleMode = () => {
+    setMode(mode === "signin" ? "signup" : "signin");
   };
 
   const navigateToOtherLogin = () => {
-    // Always navigate to home page
-    navigate("/");
+    if (userType === "owner") {
+      navigate("/auth?type=staff");
+    } else {
+      navigate("/");
+    }
   };
 
-  // Modified to match the expected type in RegisterForm
-  const handleSubmit = (e: React.FormEvent) => {
-    handleAuth(e, mode, email, password, firstName, lastName, role);
-  };
+  useEffect(() => {
+    // Check for any session errors in URL params
+    const urlParams = new URLSearchParams(location.search);
+    const error = urlParams.get('error');
+    const errorDescription = urlParams.get('error_description');
+    
+    if (error) {
+      console.error("Authentication error from URL:", error, errorDescription);
+    }
+  }, [location]);
+
+  if (showGarageForm && newUserId) {
+    return <GarageFormContainer userId={newUserId} userType={userType} />;
+  }
 
   return (
-    <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-lg shadow-lg">
-      <div className="text-center">
+    <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
+      <div className="text-center mb-6">
         <h2 className="text-2xl font-bold">
-          {userType === "owner" 
-            ? (mode === "signin" ? "Garage Owner Sign In" : "Create Garage Owner Account") 
-            : (mode === "signin" ? "Staff Sign In" : "Create Staff Account")}
+          {userType === "owner" ? "Garage Owner" : "Staff"} {mode === "signin" ? "Sign In" : "Registration"}
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          {mode === "signin" ? "Welcome back!" : "Join GarageWizz today"}
+        <p className="text-gray-600 mt-1">
+          {mode === "signin" ? "Welcome back!" : "Create your account"}
         </p>
       </div>
 
-      {showGarageForm && newUserId ? (
-        <GarageFormContainer 
-          userId={newUserId} 
-          onComplete={handleGarageCreationComplete} 
-        />
-      ) : mode === "signin" ? (
+      {lastError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{lastError}</AlertDescription>
+        </Alert>
+      )}
+
+      {mode === "signin" ? (
         <LoginForm
           email={email}
           setEmail={setEmail}
           password={password}
           setPassword={setPassword}
           loading={loading}
-          onSubmit={handleSubmit}
+          onSubmit={(e) => handleAuth(e, mode, email, password, firstName, lastName, role)}
           onToggleMode={toggleMode}
           userType={userType}
           navigateToOtherLogin={navigateToOtherLogin}
         />
       ) : (
         <RegisterForm
-          firstName={firstName}
-          setFirstName={setFirstName}
-          lastName={lastName}
-          setLastName={setLastName}
           email={email}
           setEmail={setEmail}
           password={password}
           setPassword={setPassword}
+          firstName={firstName}
+          setFirstName={setFirstName}
+          lastName={lastName}
+          setLastName={setLastName}
           role={role}
           setRole={setRole}
+          loading={loading}
+          onSubmit={(e) => handleAuth(e, mode, email, password, firstName, lastName, role)}
+          onToggleMode={toggleMode}
           userType={userType}
-          isLoading={loading}
-          onSubmit={handleSubmit}
           navigateToOtherLogin={navigateToOtherLogin}
         />
       )}

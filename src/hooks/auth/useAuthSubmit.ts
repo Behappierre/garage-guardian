@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,19 +92,24 @@ export const useAuthSubmit = (userType: UserType) => {
           }
         } else {
           try {
+            console.log(`Attempting to sign in ${email} as ${userType}`);
             const signInData = await signIn(email, password, userType);
 
             if (signInData.user) {
               try {
+                console.log(`Successfully signed in, user ID: ${signInData.user.id}`);
                 const userRole = await verifyUserAccess(signInData.user.id, userType);
+                console.log(`User has role: ${userRole}`);
 
                 if (userType === "owner") {
+                  console.log("Processing owner sign-in...");
                   await handleOwnerSignIn(signInData.user.id);
                   navigate("/garage-management");
                   return;
                 }
 
                 if (userType === "staff" && userRole === 'administrator') {
+                  console.log("Administrator signing in through staff login...");
                   const { data: profileData } = await supabase
                     .from('profiles')
                     .select('garage_id')
@@ -122,6 +128,7 @@ export const useAuthSubmit = (userType: UserType) => {
                       .limit(1);
                       
                     if (ownedGarages && ownedGarages.length > 0) {
+                      console.log("Administrator owns garages, updating profile:", ownedGarages[0].id);
                       await supabase
                         .from('profiles')
                         .update({ garage_id: ownedGarages[0].id })
@@ -130,12 +137,15 @@ export const useAuthSubmit = (userType: UserType) => {
                       navigate("/dashboard");
                       return;
                     } else {
-                      throw new Error("Administrators should use the garage owner login");
+                      console.log("Administrator has no garage_id and owns no garages");
+                      navigate("/garage-management?source=staff");
+                      return;
                     }
                   }
                 }
                 
                 if (userRole) {
+                  console.log(`Processing ${userRole} staff sign-in...`);
                   await handleStaffSignIn(signInData.user.id, userRole);
                   
                   console.log(`Redirecting ${userRole} to appropriate dashboard`);
@@ -151,6 +161,7 @@ export const useAuthSubmit = (userType: UserType) => {
                       navigate("/dashboard");
                   }
                 } else {
+                  console.error("User has no role assigned");
                   throw new Error("Your account does not have an assigned role");
                 }
               } catch (error: any) {

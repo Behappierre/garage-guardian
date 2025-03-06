@@ -48,13 +48,13 @@ serve(async (req: Request) => {
     console.log(`Creating user: ${email}, role: ${role}, userType: ${userType}, garageId: ${garageId || 'null'}`);
     
     // First check if user already exists
-    const { data: existingUser } = await supabaseClient.auth.admin.listUsers({
+    const { data: existingUser, error: existingError } = await supabaseClient.auth.admin.listUsers({
       filter: { email }
     });
     
     // If user already exists, proceed with role assignment instead of error
     if (existingUser?.users && existingUser.users.length > 0) {
-      console.log(`User with email ${email} already exists, not creating again`);
+      console.log(`User with email ${email} already exists, proceeding with update`);
       
       const userId = existingUser.users[0].id;
       
@@ -74,7 +74,8 @@ serve(async (req: Request) => {
           .insert({
             id: userId,
             first_name: firstName,
-            last_name: lastName
+            last_name: lastName,
+            garage_id: garageId
           });
           
         if (insertProfileError) {
@@ -84,41 +85,41 @@ serve(async (req: Request) => {
         }
       } else {
         console.log(`Profile for user ${userId} exists`);
+        
+        // Update profile with garage_id if provided
+        if (garageId) {
+          const { error: updateProfileError } = await supabaseClient
+            .from('profiles')
+            .update({ garage_id: garageId })
+            .eq('id', userId);
+            
+          if (updateProfileError) {
+            console.error("Error updating profile with garage_id:", updateProfileError);
+          } else {
+            console.log(`Updated profile for user ${userId} with garage_id: ${garageId}`);
+          }
+        }
       }
       
-      // Check if user already has roles assigned
-      const { data: existingRoles, error: checkRoleError } = await supabaseClient
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', userId);
-        
-      if (checkRoleError) {
-        console.error('Error checking existing user roles:', checkRoleError);
-      } else if (!existingRoles || existingRoles.length === 0) {
-        console.log('User has no roles assigned, assigning role now');
-        
-        // Assign role to existing user
-        const { result, error: assignRoleError } = await assignUserRole(
-          supabaseClient,
-          userId,
-          role,
-          garageId,
-          userType
-        );
-        
-        if (assignRoleError) {
-          console.error("Error assigning role to existing user:", assignRoleError);
-        } else {
-          console.log("Successfully assigned role to existing user");
-        }
+      // Assign role to existing user
+      const { result, error: assignRoleError } = await assignUserRole(
+        supabaseClient,
+        userId,
+        role,
+        garageId,
+        userType
+      );
+      
+      if (assignRoleError) {
+        console.error("Error assigning role to existing user:", assignRoleError);
       } else {
-        console.log('User already has roles assigned, not creating duplicates');
+        console.log("Successfully assigned role to existing user");
       }
       
       // Return success response with existing user id
       return new Response(
         JSON.stringify({ 
-          message: 'User already exists and has been updated if needed',
+          message: 'User already exists and has been updated',
           userId: userId,
           status: 'success' 
         }),
@@ -130,7 +131,7 @@ serve(async (req: Request) => {
     }
     
     // Create new user account if user doesn't exist
-    const { userData, error: createUserError } = await createUserAccount(
+    const { userData, error: createUserError, isExisting } = await createUserAccount(
       supabaseClient, 
       email, 
       password, 
@@ -142,7 +143,7 @@ serve(async (req: Request) => {
       return createUserError;
     }
 
-    console.log(`User created with ID: ${userData.user.id}, now assigning role...`);
+    console.log(`User ${isExisting ? 'already exists' : 'created'} with ID: ${userData.user.id}, now assigning role...`);
 
     // Assign role to user (garageId may be null for owners/administrators)
     const { result, error: assignRoleError } = await assignUserRole(
@@ -167,10 +168,13 @@ serve(async (req: Request) => {
     console.log('User creation completed successfully:', result);
     
     return new Response(
-      JSON.stringify(result),
+      JSON.stringify({ 
+        ...result,
+        isExisting
+      }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 201,
+        status: isExisting ? 200 : 201,
       }
     );
   } catch (error: any) {
