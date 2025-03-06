@@ -1,6 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const CURRENCY_SYMBOLS = {
   USD: "$",
@@ -12,17 +13,27 @@ export const CURRENCY_SYMBOLS = {
 export type SupportedCurrency = keyof typeof CURRENCY_SYMBOLS;
 
 export const useCurrency = () => {
+  const { garageId } = useAuth();
+
   const { data, isLoading } = useQuery({
-    queryKey: ["settings"],
+    queryKey: ["garage-currency", garageId],
     queryFn: async () => {
+      if (!garageId) return { currency: "USD" };
+
+      // Get currency from garage settings
       const { data, error } = await supabase
-        .from("settings")
-        .select("currency")
+        .from("garages")
+        .select("settings")
+        .eq("id", garageId)
         .single();
 
       if (error) throw error;
-      return data;
+      
+      // Extract currency from garage settings
+      const currency = data?.settings?.currency || "USD";
+      return { currency };
     },
+    enabled: !!garageId,
   });
 
   const currency = data?.currency as SupportedCurrency || "USD";

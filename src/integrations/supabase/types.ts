@@ -792,6 +792,12 @@ export type Database = {
         }
         Returns: Json
       }
+      get_garage_currency: {
+        Args: {
+          p_garage_id: string
+        }
+        Returns: string
+      }
       get_user_garage_id: {
         Args: Record<PropertyKey, never>
         Returns: string

@@ -5,30 +5,36 @@ import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/ui/page-header";
 import { ThemeSettings, CurrencySettings, LogoSettings } from "@/components/settings";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export default function Settings() {
   const { theme, setTheme } = useTheme();
+  const { garageId } = useAuth();
 
-  const { data: settings } = useQuery({
-    queryKey: ["settings"],
+  const { data: garageSettings } = useQuery({
+    queryKey: ["garage-settings", garageId],
     queryFn: async () => {
+      if (!garageId) return null;
+      
       const { data, error } = await supabase
-        .from("settings")
-        .select("*")
+        .from("garages")
+        .select("settings")
+        .eq("id", garageId)
         .single();
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!garageId
   });
 
   useEffect(() => {
-    if (settings?.dark_mode) {
+    if (garageSettings?.settings?.dark_mode) {
       setTheme("dark");
     } else {
       setTheme("light");
     }
-  }, [settings?.dark_mode, setTheme]);
+  }, [garageSettings?.settings?.dark_mode, setTheme]);
 
   return (
     <div className="flex flex-col w-full h-full bg-background">

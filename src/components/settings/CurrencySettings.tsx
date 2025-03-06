@@ -6,35 +6,62 @@ import { supabase } from "@/integrations/supabase/client";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export function CurrencySettings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { theme } = useTheme();
+  const { garageId } = useAuth();
 
-  const { data: settings } = useQuery({
-    queryKey: ["settings"],
+  const { data: garageSettings } = useQuery({
+    queryKey: ["garage-settings", garageId],
     queryFn: async () => {
+      if (!garageId) return null;
+      
       const { data, error } = await supabase
-        .from("settings")
-        .select("*")
+        .from("garages")
+        .select("settings")
+        .eq("id", garageId)
         .single();
 
       if (error) throw error;
       return data;
-    }
+    },
+    enabled: !!garageId
   });
 
   const handleCurrencyChange = async (currency: string) => {
+    if (!garageId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No garage selected",
+      });
+      return;
+    }
+
     try {
+      // Get current settings
+      const currentSettings = garageSettings?.settings || {};
+      
+      // Update settings with new currency
+      const updatedSettings = {
+        ...currentSettings,
+        currency
+      };
+
+      // Save to database
       const { error } = await supabase
-        .from("settings")
-        .update({ currency })
-        .eq("id", settings.id);
+        .from("garages")
+        .update({ settings: updatedSettings })
+        .eq("id", garageId);
 
       if (error) throw error;
 
-      await queryClient.invalidateQueries({ queryKey: ["settings"] });
+      // Invalidate queries to refresh data
+      await queryClient.invalidateQueries({ queryKey: ["garage-settings", garageId] });
+      await queryClient.invalidateQueries({ queryKey: ["garage-currency", garageId] });
 
       const currencyNames = {
         USD: 'US Dollar',
@@ -57,7 +84,7 @@ export function CurrencySettings() {
   };
 
   const isDarkMode = theme === "dark";
-  const currentCurrency = settings?.currency || 'USD';
+  const currentCurrency = garageSettings?.settings?.currency || 'USD';
 
   return (
     <div className={`flex flex-col p-6 border rounded-lg ${
