@@ -40,23 +40,20 @@ export const useTicketMutations = (onClose: () => void) => {
         if (error) throw error;
         ticketId = initialTicketId;
       } else {
+        // Use the create_job_ticket function to handle the ticket_number generation
         const { data: ticket, error: ticketError } = await supabase
-          .from("job_tickets")
-          .insert({
-            description: formData.description,
-            status: formData.status,
-            priority: formData.priority,
-            assigned_technician_id: formData.assigned_technician_id,
-            client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id,
-            garage_id: garageId,
-            ticket_number: 'TEMP'
-          })
-          .select()
-          .single();
+          .rpc('create_job_ticket', {
+            p_description: formData.description,
+            p_status: formData.status,
+            p_priority: formData.priority,
+            p_assigned_technician_id: formData.assigned_technician_id,
+            p_client_id: formData.client_id,
+            p_vehicle_id: formData.vehicle_id,
+            p_garage_id: garageId
+          });
 
         if (ticketError) throw ticketError;
-        ticketId = ticket.id;
+        ticketId = ticket;
       }
 
       if (selectedAppointmentId) {

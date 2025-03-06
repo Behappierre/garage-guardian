@@ -370,18 +370,15 @@ export const AppointmentForm = ({
 
       if (data.client_id && appointment) {
         const { data: jobTicket, error: ticketError } = await supabase
-          .from('job_tickets')
-          .insert([{
-            description: `Service appointment: ${data.service_type}`,
-            status: 'draft',
-            priority: 'normal',
-            assigned_technician_id: null,
-            client_id: data.client_id,
-            vehicle_id: data.vehicle_id,
-            garage_id: data.garage_id
-          }])
-          .select()
-          .single();
+          .rpc('create_job_ticket', {
+            p_description: `Service appointment: ${data.service_type}`,
+            p_status: 'draft',
+            p_priority: 'normal',
+            p_assigned_technician_id: null,
+            p_client_id: data.client_id,
+            p_vehicle_id: data.vehicle_id,
+            p_garage_id: data.garage_id
+          });
 
         if (ticketError) {
           console.error("Error creating job ticket:", ticketError);
@@ -390,7 +387,7 @@ export const AppointmentForm = ({
             .from('appointment_job_tickets')
             .insert([{
               appointment_id: appointment.id,
-              job_ticket_id: jobTicket.id
+              job_ticket_id: jobTicket
             }]);
 
           if (relationError) {
