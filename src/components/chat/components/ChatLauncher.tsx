@@ -15,7 +15,7 @@ export function ChatLauncher({ onClick }: ChatLauncherProps) {
       <div className="absolute inset-0 bg-purple-500/50 animate-pulse rounded-full blur-xl"></div>
       <div className="absolute inset-0 bg-blue-500/30 animate-pulse rounded-full blur-lg"></div>
       <img 
-        src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
+        src="/lovable-uploads/cbfe65d7-b425-4f87-975a-f3f52a813a44.png" 
         alt="AI Wizard" 
         className="h-full w-full object-cover relative z-10"
       />
