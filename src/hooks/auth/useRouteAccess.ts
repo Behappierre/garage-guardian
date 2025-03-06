@@ -15,6 +15,7 @@ interface RouteAccessState {
   userRole: string | null;
   hasAttemptedVerification: boolean;
   redirectTo: string | null;
+  loading: boolean;
 }
 
 export function useRouteAccess() {
@@ -25,7 +26,8 @@ export function useRouteAccess() {
     hasAccess: false,
     userRole: null,
     hasAttemptedVerification: false,
-    redirectTo: null
+    redirectTo: null,
+    loading
   });
 
   // Reset verification state when location changes
@@ -48,7 +50,8 @@ export function useRouteAccess() {
           hasAccess: false,
           userRole: null,
           hasAttemptedVerification: true,
-          redirectTo: null
+          redirectTo: null,
+          loading
         });
         return;
       }
@@ -66,7 +69,8 @@ export function useRouteAccess() {
             hasAccess: false,
             userRole: null,
             hasAttemptedVerification: true,
-            redirectTo: "/auth"
+            redirectTo: "/auth",
+            loading
           });
           return;
         }
@@ -82,7 +86,8 @@ export function useRouteAccess() {
             hasAccess,
             userRole: role,
             hasAttemptedVerification: true,
-            redirectTo: hasAccess ? null : "/auth"
+            redirectTo: hasAccess ? null : "/auth",
+            loading
           });
           return;
         }
@@ -97,7 +102,8 @@ export function useRouteAccess() {
               hasAccess: false,
               userRole: role,
               hasAttemptedVerification: true,
-              redirectTo: "/auth"
+              redirectTo: "/auth",
+              loading
             });
             return;
           }
@@ -111,7 +117,8 @@ export function useRouteAccess() {
             hasAccess: hasGarage,
             userRole: role,
             hasAttemptedVerification: true,
-            redirectTo: hasGarage ? null : "/auth"
+            redirectTo: hasGarage ? null : "/auth",
+            loading
           });
           return;
         }
@@ -122,7 +129,8 @@ export function useRouteAccess() {
           hasAccess: true,
           userRole: role,
           hasAttemptedVerification: true,
-          redirectTo: null
+          redirectTo: null,
+          loading
         });
       } catch (error: any) {
         console.error("Error verifying access:", error.message);
@@ -131,7 +139,8 @@ export function useRouteAccess() {
           hasAccess: false,
           userRole: null,
           hasAttemptedVerification: true,
-          redirectTo: "/auth"
+          redirectTo: "/auth",
+          loading
         });
       }
     };
@@ -143,6 +152,5 @@ export function useRouteAccess() {
 
   return {
     ...state,
-    loading
   };
 }

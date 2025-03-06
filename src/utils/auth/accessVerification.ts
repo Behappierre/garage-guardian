@@ -13,11 +13,15 @@ export async function verifyUserRole(userId: string) {
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role, garage_id')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('user_id', userId);
       
     if (roleError) {
       console.error("Error fetching user role:", roleError);
+      return { hasError: true, role: null };
+    }
+    
+    if (!roleData || roleData.length === 0) {
+      console.log("No user roles found");
       return { hasError: true, role: null };
     }
     
@@ -40,8 +44,30 @@ export async function verifyUserRole(userId: string) {
       return { hasError: false, role: 'administrator' };
     }
     
-    console.log("User role:", roleData?.role, "Garage ID:", roleData?.garage_id);
-    return { hasError: false, role: roleData?.role };
+    // Prioritize administrator role if it exists
+    const adminRole = roleData.find(r => r.role === 'administrator');
+    if (adminRole) {
+      console.log("User has administrator role", "Garage ID:", adminRole.garage_id);
+      return { hasError: false, role: 'administrator' };
+    }
+    
+    // Then check for technician role
+    const techRole = roleData.find(r => r.role === 'technician');
+    if (techRole) {
+      console.log("User has technician role", "Garage ID:", techRole.garage_id);
+      return { hasError: false, role: 'technician' };
+    }
+    
+    // Finally check for front_desk role
+    const frontDeskRole = roleData.find(r => r.role === 'front_desk');
+    if (frontDeskRole) {
+      console.log("User has front_desk role", "Garage ID:", frontDeskRole.garage_id);
+      return { hasError: false, role: 'front_desk' };
+    }
+    
+    // If we get here, user has some role but none of the ones we specifically check for
+    console.log("User has role:", roleData[0]?.role, "Garage ID:", roleData[0]?.garage_id);
+    return { hasError: false, role: roleData[0]?.role };
   } catch (error: any) {
     console.error("Error verifying user role:", error.message);
     return { hasError: true, role: null };
