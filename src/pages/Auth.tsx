@@ -4,7 +4,7 @@ import { AuthLoading } from "@/components/auth/AuthLoading";
 import { useAuthCheck } from "@/hooks/auth/useAuthCheck";
 import { runGarageDiagnostics } from "@/utils/auth/garageDiagnostics";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
@@ -12,6 +12,17 @@ const Auth = () => {
   const { isChecking, authError, userType } = useAuthCheck();
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
+
+  // Listen for auth state errors from localStorage
+  useEffect(() => {
+    const authError = localStorage.getItem('auth_last_error');
+    if (authError) {
+      setLastError(authError);
+      // Clear the error after reading it
+      localStorage.removeItem('auth_last_error');
+    }
+  }, []);
 
   const runDiagnostics = async () => {
     try {
@@ -54,6 +65,15 @@ const Auth = () => {
             <AlertDescription>{authError}</AlertDescription>
           </Alert>
         )}
+        
+        {lastError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Last Error</AlertTitle>
+            <AlertDescription>{lastError}</AlertDescription>
+          </Alert>
+        )}
+        
         <AuthForm userType={userType} />
         
         {diagnosticResult && (

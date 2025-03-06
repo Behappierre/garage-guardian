@@ -47,6 +47,27 @@ serve(async (req: Request) => {
     
     console.log(`Creating user: ${email}, role: ${role}, userType: ${userType}, garageId: ${garageId || 'null'}`);
     
+    // First check if user already exists
+    const { data: existingUser } = await supabaseClient.auth.admin.listUsers({
+      filter: { email }
+    });
+    
+    // If user already exists, return early with appropriate message
+    if (existingUser?.users && existingUser.users.length > 0) {
+      console.log(`User with email ${email} already exists, not creating again`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'User with this email already exists',
+          userId: existingUser.users[0].id,
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 409, // Conflict
+        }
+      );
+    }
+    
     // Create user account
     const { userData, error: createUserError } = await createUserAccount(
       supabaseClient, 

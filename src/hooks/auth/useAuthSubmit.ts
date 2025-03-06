@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +24,6 @@ export const useAuthSubmit = (userType: UserType) => {
   const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
 
-  // This function is now properly typed to return void
   const handleAuth = (
     e: React.FormEvent,
     mode: AuthMode,
@@ -36,6 +34,12 @@ export const useAuthSubmit = (userType: UserType) => {
     role: Role
   ) => {
     e.preventDefault();
+    
+    if (loading) {
+      console.log("Submission already in progress, ignoring duplicate request");
+      return;
+    }
+    
     setLoading(true);
 
     (async () => {
@@ -54,21 +58,29 @@ export const useAuthSubmit = (userType: UserType) => {
                 title: "Account created!",
                 description: "Now let's set up your garage.",
               });
-            } else {
-              // For staff users, explicitly use the current garage context if available
-              const targetGarageId = garageId || await assignStaffToGarage(user.id, role);
               
-              if (targetGarageId) {
-                console.log(`Staff user assigned to garage: ${targetGarageId}`);
-              } else {
-                console.warn("No garage ID available for staff assignment");
+              try {
+                await signIn(email, password, userType);
+              } catch (signInError) {
+                console.warn("Auto sign-in after registration failed:", signInError);
               }
+            } else {
+              const signInData = await signIn(email, password, userType);
               
-              // Navigate based on role
-              if (role === 'technician') {
-                navigate("/dashboard/job-tickets");
-              } else {
-                navigate("/dashboard/appointments");
+              if (signInData.user) {
+                const targetGarageId = garageId || await assignStaffToGarage(signInData.user.id, role);
+                
+                if (targetGarageId) {
+                  console.log(`Staff user assigned to garage: ${targetGarageId}`);
+                } else {
+                  console.warn("No garage ID available for staff assignment");
+                }
+                
+                if (role === 'technician') {
+                  navigate("/dashboard/job-tickets");
+                } else {
+                  navigate("/dashboard/appointments");
+                }
               }
             }
           }

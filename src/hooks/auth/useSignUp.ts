@@ -25,7 +25,7 @@ export const useSignUp = () => {
       // For staff type, use default garage ID or context garage ID
       const garageId = userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"; // Default garage ID for staff
       
-      // Call edge function to create user with proper role
+      // Call edge function once to create user with proper role
       const { data, error: createUserError } = await supabase.functions.invoke('create-user', {
         body: {
           email,
@@ -50,18 +50,10 @@ export const useSignUp = () => {
       
       console.log("User created successfully:", data);
       
-      // Sign in the user automatically after successful creation
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // Don't sign in automatically here - defer to the calling component
+      // This way we avoid duplicating auth operations
       
-      if (signInError) {
-        console.warn("User created but automatic sign-in failed:", signInError);
-        // We don't throw here because user creation was successful
-      }
-      
-      return signInData?.user || { id: data.userId };
+      return { id: data.userId }; // Return just the ID, let parent handle login
     } catch (error) {
       console.error("Error in signup process:", error);
       throw error;

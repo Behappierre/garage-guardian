@@ -112,6 +112,36 @@ export async function createUserAccount(
     }
 
     console.log('User created successfully with ID:', userData.user.id);
+    
+    // Check if profile was created by trigger
+    const { data: profileData, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .eq('id', userData.user.id)
+      .single();
+      
+    if (profileError || !profileData) {
+      console.warn('Profile may not have been created by trigger, creating manually');
+      
+      // Manually create profile if trigger failed
+      const { error: insertProfileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: userData.user.id,
+          first_name: firstName,
+          last_name: lastName
+        });
+        
+      if (insertProfileError) {
+        console.error('Error creating profile manually:', insertProfileError);
+        // Continue anyway, as the user was created successfully
+      } else {
+        console.log('Profile created manually for user:', userData.user.id);
+      }
+    } else {
+      console.log('Profile created by trigger for user:', userData.user.id);
+    }
+    
     return { userData, error: null };
   } catch (err: any) {
     console.error('Unexpected error creating user:', err);
@@ -130,6 +160,28 @@ export async function assignUserRole(
 ) {
   try {
     console.log(`Starting assignUserRole for user ${userId}, role: ${role}, userType: ${userType}, garageId: ${garageId}`);
+    
+    // Check if user_roles already exists for this user to prevent duplicates
+    const { data: existingRoles, error: checkRoleError } = await supabaseClient
+      .from('user_roles')
+      .select('*')
+      .eq('user_id', userId);
+      
+    if (checkRoleError) {
+      console.error('Error checking existing user roles:', checkRoleError);
+    } else if (existingRoles && existingRoles.length > 0) {
+      console.log('User already has roles assigned, not creating duplicates');
+      
+      // Return success since we don't need to create duplicates
+      return {
+        result: { 
+          message: 'User already has roles assigned',
+          userId: userId,
+          status: 'success' 
+        },
+        error: null
+      };
+    }
     
     // For all users: Create a user_roles entry with the appropriate role
     // For owner users, DO NOT include garage_id in user_roles
@@ -167,6 +219,31 @@ export async function assignUserRole(
     
     // Determine garage_member role based on userType
     const memberRole = userType === 'owner' ? 'owner' : role;
+    
+    // Check if garage_members already exists for this user
+    if (userType !== 'owner' && garageId) {
+      const { data: existingMembers, error: checkMemberError } = await supabaseClient
+        .from('garage_members')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('garage_id', garageId);
+        
+      if (checkMemberError) {
+        console.error('Error checking existing garage members:', checkMemberError);
+      } else if (existingMembers && existingMembers.length > 0) {
+        console.log('User already a member of this garage, not creating duplicate');
+        
+        // Skip the rest of the garage_members logic
+        return {
+          result: { 
+            message: 'User created and already a garage member',
+            userId: userId,
+            status: 'success' 
+          },
+          error: null
+        };
+      }
+    }
     
     // For garage_members table
     const garageMemberData: Record<string, any> = {
