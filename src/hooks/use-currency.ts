@@ -29,8 +29,9 @@ export const useCurrency = () => {
 
       if (error) throw error;
       
-      // Extract currency from garage settings
-      const currency = data?.settings?.currency || "USD";
+      // Extract currency from garage settings and ensure it's properly typed
+      const settings = data?.settings as Record<string, any> || {};
+      const currency = (settings.currency as string) || "USD";
       return { currency };
     },
     enabled: !!garageId,

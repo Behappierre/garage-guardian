@@ -29,12 +29,14 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    if (garageSettings?.settings?.dark_mode) {
+    // Properly cast settings to an object type
+    const settings = garageSettings?.settings as Record<string, any> || {};
+    if (settings.dark_mode) {
       setTheme("dark");
     } else {
       setTheme("light");
     }
-  }, [garageSettings?.settings?.dark_mode, setTheme]);
+  }, [garageSettings, setTheme]);
 
   return (
     <div className="flex flex-col w-full h-full bg-background">

@@ -42,8 +42,8 @@ export function CurrencySettings() {
     }
 
     try {
-      // Get current settings
-      const currentSettings = garageSettings?.settings || {};
+      // Get current settings and properly type it as a Record
+      const currentSettings = garageSettings?.settings as Record<string, any> || {};
       
       // Update settings with new currency
       const updatedSettings = {
@@ -84,7 +84,9 @@ export function CurrencySettings() {
   };
 
   const isDarkMode = theme === "dark";
-  const currentCurrency = garageSettings?.settings?.currency || 'USD';
+  // Cast settings to an object and get currency with a default value
+  const settings = garageSettings?.settings as Record<string, any> || {};
+  const currentCurrency = settings.currency as string || 'USD';
 
   return (
     <div className={`flex flex-col p-6 border rounded-lg ${
