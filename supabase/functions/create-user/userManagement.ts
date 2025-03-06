@@ -15,7 +15,7 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  const { email, password, firstName, lastName, role, garageId } = body;
+  const { email, password, firstName, lastName, role } = body;
   
   // Log all received parameters for debugging
   console.log('Creating user with parameters:', { 
@@ -24,7 +24,7 @@ export async function validateRequest(req: Request) {
     firstName, 
     lastName, 
     role,
-    garageId
+    garageId: body.garageId
   });
   
   // Validate required fields
@@ -41,15 +41,19 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  // Validate garage ID
-  if (!garageId) {
-    console.error('No garage ID provided');
+  // For owner registration, garageId is not required initially
+  if (role !== 'administrator' && !body.garageId) {
+    console.error('No garage ID provided for non-admin user');
     const error = createErrorResponse('No garage ID provided. Please select a garage first.', 400);
     return { body: null, error };
   }
 
-  console.log('Creating user with email:', email, 'to be assigned to garage:', garageId);
-  console.log('Role selected:', role);
+  console.log('Creating user with email:', email, 'role:', role);
+  if (body.garageId) {
+    console.log('User will be assigned to garage:', body.garageId);
+  } else {
+    console.log('No garage assignment (owner registration)');
+  }
 
   return { body, error: null };
 }
@@ -94,48 +98,52 @@ export async function assignUserRole(
   supabaseClient: SupabaseClient,
   userId: string,
   role: string,
-  garageId: string
+  garageId: string | null
 ) {
   try {
-    // Step 1: Insert role into user_roles with garage_id
-    console.log('Assigning role and garage_id:', { 
+    // Step 1: Insert role into user_roles with garage_id if provided
+    const roleData: any = { 
       user_id: userId, 
-      role,
-      garage_id: garageId 
-    });
+      role
+    };
+    
+    // Only add garage_id if it's provided
+    if (garageId) {
+      roleData.garage_id = garageId;
+      console.log('Assigning role with garage_id:', roleData);
+    } else {
+      console.log('Assigning role without garage_id:', roleData);
+    }
     
     const { error: roleError } = await supabaseClient
       .from('user_roles')
-      .insert([{ 
-        user_id: userId, 
-        role,
-        garage_id: garageId 
-      }]);
+      .insert([roleData]);
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
       throw new Error(`Error assigning role: ${roleError.message}`);
     }
     
-    console.log('Successfully assigned role:', role, 'with garage:', garageId);
-
-    // Step 2: Update profile with garage_id
-    console.log('Updating profile with garage_id:', garageId);
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userId);
-
-    if (profileError) {
-      console.warn('Warning: Error updating profile with garage_id:', profileError);
-      // Continue even if profile update fails
-    } else {
-      console.log('Successfully updated profile with garage_id:', garageId);
+    console.log('Successfully assigned role:', role);
+    if (garageId) {
+      console.log('With garage:', garageId);
     }
-    
-    // DO NOT add any users to garage_members table when creating users
-    // garage_members should only be populated when creating a garage
-    console.log('Skipping garage_members entry - only populate when creating garages');
+
+    // Step 2: Update profile with garage_id if provided
+    if (garageId) {
+      console.log('Updating profile with garage_id:', garageId);
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
+
+      if (profileError) {
+        console.warn('Warning: Error updating profile with garage_id:', profileError);
+        // Continue even if profile update fails
+      } else {
+        console.log('Successfully updated profile with garage_id:', garageId);
+      }
+    }
     
     // If everything succeeded, return success response
     return {

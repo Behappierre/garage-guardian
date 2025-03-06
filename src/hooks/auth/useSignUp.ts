@@ -32,11 +32,23 @@ export const useSignUp = () => {
     if (signUpError) throw signUpError;
     
     if (signUpData.user) {
-      await assignRole(signUpData.user.id, userRole);
+      // We'll use the create-user edge function instead of direct DB operations
+      // This will bypass RLS issues for new user registration
+      const { error: createUserError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email,
+          password,
+          firstName,
+          lastName,
+          role: userRole,
+          // Pass a default garage ID for staff users or null for owner users
+          garageId: userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"
+        }
+      });
       
-      // If this is a staff member (not an owner), automatically assign them to a garage
-      if (userType === "staff") {
-        await assignStaffToGarage(signUpData.user.id, userRole);
+      if (createUserError) {
+        console.error("Error creating user via edge function:", createUserError);
+        throw new Error("Failed to set up your account. Please try again.");
       }
       
       return signUpData.user;
@@ -46,15 +58,8 @@ export const useSignUp = () => {
   };
 
   const assignRole = async (userId: string, role: string) => {
-    // Ensure we're inserting a single object with the role properly cast to the Role type
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: role as Role // Cast to the Role type
-      });
-    
-    if (roleError) throw roleError;
+    // This function is kept for backward compatibility but not used directly
+    console.log('Legacy assignRole called but not used');
   };
 
   const assignStaffToGarage = async (userId: string, role: string) => {
@@ -75,25 +80,6 @@ export const useSignUp = () => {
       console.log(`Assigning staff to garage: ${anyGarage[0].name} (${garageId})`);
     } else {
       throw new Error("No garages exist in the system. Please contact an administrator.");
-    }
-    
-    // Update user_roles with garage ID
-    const { error: userRoleError } = await supabase
-      .from('user_roles')
-      .update({ garage_id: garageId })
-      .eq('user_id', userId);
-      
-    if (userRoleError) throw userRoleError;
-    
-    // Also update the user's profile with the garage ID for consistency
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userId);
-      
-    if (profileError) {
-      console.error("Error updating profile with garage ID:", profileError);
-      // Don't throw here - the user_roles update is more important
     }
     
     return garageId;

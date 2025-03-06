@@ -58,7 +58,7 @@ serve(async (req: Request) => {
       return createUserError;
     }
 
-    // Assign role and garage to user
+    // Assign role and garage to user (if garageId provided)
     const { result, error: assignRoleError } = await assignUserRole(
       supabaseClient,
       userData.user.id,
