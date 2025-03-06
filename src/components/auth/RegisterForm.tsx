@@ -1,10 +1,8 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useSignUp } from "@/hooks/auth/useSignUp";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 
@@ -68,32 +66,22 @@ export const RegisterForm = ({
   const setRole = propSetRole || setLocalRole;
   const isLoading = propIsLoading !== undefined ? propIsLoading : localIsLoading;
   
-  const { signUp } = useSignUp();
-  
-  const handleRegister = async (e: React.FormEvent) => {
+  // Handle form submission - use propOnSubmit if provided, otherwise use local handler
+  const handleSubmit = (e: React.FormEvent) => {
+    // If parent component provided onSubmit prop, use that
+    if (propOnSubmit) {
+      propOnSubmit(e);
+      return;
+    }
+    
+    // Otherwise fallback to local handling (direct navigation without API calls)
     e.preventDefault();
-    setLocalIsLoading(true);
     setFormError(null);
     
-    try {
-      await signUp(email, password, firstName, lastName, role, userType);
-      toast.success("Registration successful!");
-      
-      if (userType === "owner") {
-        navigate("/garage-management");
-      } else {
-        navigate("/dashboard");
-      }
-    } catch (error: any) {
-      console.error("Error signing up:", error);
-      setFormError(error.message || "Failed to register. Please try again.");
-      toast.error(error.message || "Failed to register");
-    } finally {
-      setLocalIsLoading(false);
-    }
+    // Just display a toast and navigate without actual API calls
+    toast.success("Please use the main authentication flow instead");
+    navigate("/");
   };
-  
-  const handleSubmit = propOnSubmit || handleRegister;
 
   // Handler to navigate to home page
   const navigateToHome = () => {
