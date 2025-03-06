@@ -122,8 +122,15 @@ export const useTicketMutations = (onClose: () => void) => {
 
   const enhanceDescription = async (description: string, vehicle: any) => {
     try {
+      const vehicleData = vehicle ? {
+        make: vehicle.make || '',
+        model: vehicle.model || '',
+        year: vehicle.year || '',
+        license_plate: vehicle.license_plate || ''
+      } : null;
+      
       const { data, error } = await supabase.functions.invoke('enhance-job-description', {
-        body: { description, vehicle }
+        body: { description, vehicle: vehicleData }
       });
 
       if (error) throw error;

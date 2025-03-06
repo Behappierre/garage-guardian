@@ -14,7 +14,14 @@ serve(async (req) => {
 
   try {
     const { description, vehicle } = await req.json();
-
+    
+    // Extract vehicle information for the prompt
+    const vehicleInfo = vehicle ? 
+      `${vehicle.make || ''} ${vehicle.model || ''} ${vehicle.year || ''}`.trim() : 
+      '';
+    
+    console.log('Processing enhancement request for vehicle:', vehicleInfo);
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -31,20 +38,19 @@ serve(async (req) => {
 2. Adding relevant diagnostic steps that should be checked
 3. Including any safety considerations for the repair
 4. Suggesting potential related issues to inspect
-5. If a vehicle is provided, including any model-specific considerations or known issues
 
 Format the response as:
 - First paragraph: Enhanced, professional description of the issue using proper automotive terminology that's still understandable to customers
 - Second paragraph: "Diagnostic Steps:" with a numbered list of recommended checks and tests
 - Third paragraph: "Safety Considerations:" highlighting any relevant safety precautions
 - Fourth paragraph: "Suggested Parts:" with a numbered list (only include parts with verified part numbers, exclude if uncertain)
-- Final paragraph: "Additional Notes:" including model-specific information and related systems to inspect
+- Final paragraph: "Additional Notes:" including model-specific information for the ${vehicleInfo}
 
 Keep the response professional and thorough while maintaining clarity for both technicians and customers.`
           },
           {
             role: 'user',
-            content: `Please analyze this job ticket description${vehicle ? ` for a ${vehicle}` : ''}: ${description}`
+            content: `Please analyze this job ticket description for a ${vehicleInfo}: ${description}`
           }
         ],
         temperature: 0.7,
