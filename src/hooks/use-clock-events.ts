@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { JobTicket } from "@/types/job-ticket";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 export const useClockEvents = () => {
   const queryClient = useQueryClient();
+  const { garageId } = useAuth();
 
   const { data: clockEvents } = useQuery({
     queryKey: ["clock_events"],
@@ -29,6 +31,8 @@ export const useClockEvents = () => {
       const userId = (await supabase.auth.getUser()).data.user?.id;
       if (!userId) throw new Error("User not authenticated");
 
+      console.log(`Processing ${eventType} for ticket ${ticketId} by user ${userId} in garage ${garageId}`);
+
       // Create clock event
       const { error: clockError } = await supabase
         .from("clock_events")
@@ -36,6 +40,7 @@ export const useClockEvents = () => {
           job_ticket_id: ticketId,
           technician_id: userId,
           event_type: eventType,
+          garage_id: garageId  // Add garage_id to the clock event
         });
 
       if (clockError) throw clockError;
@@ -48,6 +53,7 @@ export const useClockEvents = () => {
             job_ticket_id: ticketId,
             technician_id: userId,
             start_time: new Date().toISOString(),
+            garage_id: garageId  // Add garage_id to the time entry
           });
 
         if (timeEntryError) {
