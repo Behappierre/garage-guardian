@@ -7,11 +7,14 @@ import { ChatMessages } from "./components/ChatMessages";
 import { ChatInput } from "./components/ChatInput";
 import { ChatLauncher } from "./components/ChatLauncher";
 import { useChatMessages } from "./hooks/useChatMessages";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { toast } from "sonner";
 
 export function ChatAgent() {
   const [isWide, setIsWide] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const { messages, isLoading, sendMessage, clearMessages, initializeChat } = useChatMessages();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
@@ -27,9 +30,22 @@ export function ChatAgent() {
     sendMessage(message);
   };
 
+  const handleLauncherClick = () => {
+    if (user) {
+      setIsOpen(true);
+    } else {
+      toast.info("Please sign in to chat with the AI assistant", {
+        duration: 3000,
+      });
+    }
+  };
+
   return (
     <>
-      <ChatLauncher onClick={() => setIsOpen(true)} />
+      <ChatLauncher 
+        onClick={handleLauncherClick} 
+        isDisabled={!user}
+      />
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent 
