@@ -22,12 +22,12 @@ export function useChatMessages() {
     content: "👋 Welcome to GarageWizz AI Assistant! I'm here to help you with scheduling appointments, looking up vehicle information, managing clients, and answering automotive questions. How can I assist you today?"
   };
 
-  useEffect(() => {
+  const initializeChat = () => {
     if (!hasDisplayedWelcome && messages.length === 0) {
       setMessages([welcomeMessage]);
       setHasDisplayedWelcome(true);
     }
-  }, [hasDisplayedWelcome, messages.length]);
+  };
 
   const formatMessage = (content: string) => {
     return content
@@ -158,6 +158,7 @@ export function useChatMessages() {
     messages,
     isLoading,
     sendMessage,
-    clearMessages
+    clearMessages,
+    initializeChat
   };
 }

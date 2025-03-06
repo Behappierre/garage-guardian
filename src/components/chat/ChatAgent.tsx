@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { ChatHeader } from "./components/ChatHeader";
@@ -11,7 +11,13 @@ import { useChatMessages } from "./hooks/useChatMessages";
 export function ChatAgent() {
   const [isWide, setIsWide] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, isLoading, sendMessage, clearMessages } = useChatMessages();
+  const { messages, isLoading, sendMessage, clearMessages, initializeChat } = useChatMessages();
+
+  useEffect(() => {
+    if (isOpen) {
+      initializeChat();
+    }
+  }, [isOpen]);
 
   const toggleWidth = () => {
     setIsWide(prev => !prev);
@@ -42,7 +48,7 @@ export function ChatAgent() {
 
           <div className="flex flex-col h-[calc(90vh-8rem)]">
             <ChatMessages 
-              messages={isOpen ? messages : []} 
+              messages={messages} 
               isLoading={isLoading} 
             />
             <ChatInput 
