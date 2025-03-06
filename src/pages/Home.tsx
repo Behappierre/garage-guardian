@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,7 @@ const Home = () => {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
           {/* Header */}
           <div className="text-center mb-16">
             <h1 className="font-playfair text-5xl sm:text-6xl font-bold bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent mb-4">
@@ -110,7 +111,7 @@ const Home = () => {
           </div>
 
           {/* Features Section */}
-          <div className="mb-24">
+          <div className="mb-24 w-full max-w-7xl mx-auto">
             <h2 className="text-3xl font-bold text-center mb-12 text-white">
               Smart Garage Management
             </h2>
@@ -150,7 +151,7 @@ const Home = () => {
           </div>
 
           {/* Footer */}
-          <footer className="border-t border-white/10 pt-8 text-center text-white/70 text-sm">
+          <footer className="border-t border-white/10 pt-8 text-center text-white/70 text-sm w-full">
             <div className="flex justify-center space-x-6 mb-4">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
