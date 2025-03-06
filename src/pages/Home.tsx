@@ -43,8 +43,8 @@ const Home = () => {
             </p>
           </div>
 
-          {/* Main Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-24">
+          {/* Main Cards - moved down by 75% of their height */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-24 mt-[25vh]">
             {/* Garage Owner Card */}
             <div 
               className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 h-full flex flex-col ${
@@ -76,7 +76,7 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Staff Member Card */}
+            {/* Staff Member Card - Updated colors for better visibility */}
             <div 
               className={`relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 h-full flex flex-col ${
                 hovered === 'staff' 
@@ -86,20 +86,20 @@ const Home = () => {
               onMouseEnter={() => setHovered('staff')}
               onMouseLeave={() => setHovered(null)}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-pastel.purple to-blue-50 opacity-80 z-0"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-300 to-purple-100 opacity-90 z-0"></div>
               <div className="relative z-10 p-8 flex-1 flex flex-col">
                 <div className="flex items-center mb-6">
-                  <div className="bg-purple-500 p-3 rounded-lg text-white mr-4">
+                  <div className="bg-purple-600 p-3 rounded-lg text-white mr-4">
                     <Users className="h-6 w-6" />
                   </div>
                   <h2 className="text-2xl font-bold text-gray-800">Staff Member</h2>
                 </div>
-                <p className="text-gray-600 mb-8 flex-grow">
+                <p className="text-gray-700 mb-8 flex-grow">
                   Access the tools you need for day-to-day operations, including repair tracking, 
                   time management, and client service with AI-powered assistance.
                 </p>
                 <Button 
-                  className="w-full bg-purple-600 hover:bg-purple-700 transition-all duration-300 hover:scale-105 mt-auto"
+                  className="w-full bg-purple-600 hover:bg-purple-700 transition-all duration-300 hover:scale-105 mt-auto text-white"
                   onClick={() => navigateTo("/auth?type=staff")}
                 >
                   Sign In as Staff
