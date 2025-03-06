@@ -41,8 +41,8 @@ export async function validateRequest(req: Request) {
     return { body: null, error };
   }
 
-  // For owner registration, garageId should be null and is not required
-  if (role !== 'administrator' && !body.garageId) {
+  // garageId is not required for owner/administrator registration
+  if (role !== 'administrator' && body.garageId === undefined) {
     console.error('No garage ID provided for non-admin user');
     const error = createErrorResponse('No garage ID provided for staff user.', 400);
     return { body: null, error };
@@ -99,7 +99,7 @@ export async function createUserAccount(
   }
 }
 
-// Assign role and garage to the user
+// Assign role to the user
 export async function assignUserRole(
   supabaseClient: SupabaseClient,
   userId: string,
@@ -107,13 +107,13 @@ export async function assignUserRole(
   garageId: string | null
 ) {
   try {
-    // Step 1: Insert role into user_roles with garage_id if provided
+    // Step 1: Insert role into user_roles
     const roleData: any = { 
       user_id: userId, 
       role
     };
     
-    // Only add garage_id if it's provided (not for administrators/owners initially)
+    // Only add garage_id if it's provided and not null (not for administrators/owners initially)
     if (garageId) {
       roleData.garage_id = garageId;
       console.log('Assigning role with garage_id:', roleData);
@@ -139,7 +139,26 @@ export async function assignUserRole(
     }
     
     console.log('Successfully assigned role:', role);
-    if (garageId) {
+    
+    // For owners/administrators, create a garage_members entry without a garage_id initially
+    if (role === 'administrator') {
+      console.log('Creating owner entry in garage_members without a garage_id');
+      const { error: memberError } = await supabaseClient
+        .from('garage_members')
+        .insert([{
+          user_id: userId,
+          role: 'owner',
+          // No garage_id specified
+        }]);
+        
+      if (memberError) {
+        console.warn('Warning: Could not create garage_members entry:', memberError);
+        // Continue even if this fails
+      } else {
+        console.log('Successfully created garage_members entry for owner');
+      }
+    } else if (garageId) {
+      // For staff members with a garage, update profile with garage_id
       console.log('With garage:', garageId);
       
       // Step 2: Update profile with garage_id if provided

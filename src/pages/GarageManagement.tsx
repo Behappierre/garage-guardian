@@ -52,6 +52,16 @@ const GarageManagement = () => {
           return;
         }
 
+        // Check if the user is an owner in garage_members
+        const { data: memberData } = await supabase
+          .from('garage_members')
+          .select('garage_id, role')
+          .eq('user_id', userData.user.id)
+          .eq('role', 'owner')
+          .maybeSingle();
+
+        console.log("Owner membership data:", memberData);
+
         // User is an administrator
         setIsAdmin(true);
       } catch (error) {
