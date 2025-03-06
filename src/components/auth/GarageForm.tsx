@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -45,62 +46,29 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // Step 1: Create the garage without owner_id
-      const { data: garageData, error: garageError } = await supabase
-        .from('garages')
-        .insert([
-          {
-            name: data.name,
-            slug: slug,
-            address: data.address,
-            email: data.email,
-            phone: data.phone || null
-            // Don't set owner_id here
-          }
-        ])
-        .select();
+      // This approach uses two steps to avoid RLS issues:
+      // 1. Insert the garage as service_role to bypass RLS
+      const { data: garageData, error: garageError } = await supabase.functions.invoke('create-garage', {
+        body: {
+          name: data.name,
+          slug: slug,
+          address: data.address,
+          email: data.email,
+          phone: data.phone || null,
+          userId: userId
+        }
+      });
       
-      if (garageError) {
-        console.error("Error creating garage:", garageError);
-        throw garageError;
+      if (garageError || !garageData) {
+        console.error("Error creating garage:", garageError || "No data returned");
+        throw new Error(garageError?.message || "Failed to create garage");
       }
       
-      if (!garageData || garageData.length === 0) {
-        throw new Error("No garage data returned after creation");
+      console.log("Created garage:", garageData);
+      
+      if (!garageData.id) {
+        throw new Error("No garage ID returned");
       }
-      
-      const garageId = garageData[0].id;
-      console.log("Created garage with ID:", garageId);
-      
-      // Step 2: Add the user as a garage member with 'owner' role in a separate call
-      const { error: memberError } = await supabase
-        .from('garage_members')
-        .insert([
-          {
-            user_id: userId,
-            garage_id: garageId,
-            role: 'owner'
-          }
-        ]);
-      
-      if (memberError) {
-        console.error("Error adding user as garage member:", memberError);
-        throw memberError;
-      }
-      
-      // Step 3: Now update the owner_id field of the garage in a separate call
-      const { error: updateOwnerError } = await supabase
-        .from('garages')
-        .update({ owner_id: userId })
-        .eq('id', garageId);
-        
-      if (updateOwnerError) {
-        console.error("Error updating garage owner:", updateOwnerError);
-        throw updateOwnerError;
-      }
-      
-      // Skip updating the profile with garage_id - relying on garage_members instead
-      console.log("Skipping profile update, using garage_members as source of truth");
       
       toast({
         title: "Success!",
@@ -110,7 +78,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       // Force refresh auth session to update user claims
       await supabase.auth.refreshSession();
       
-      onComplete(garageId);
+      onComplete(garageData.id);
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
       setError(error.message);

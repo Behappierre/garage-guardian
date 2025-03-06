@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -53,58 +52,33 @@ export const NewGarageForm = ({ onBack, onComplete }: NewGarageFormProps) => {
         throw new Error("Authentication required to create a garage");
       }
       
-      // Step 1: Create the garage without owner_id
-      const { data: newGarage, error: garageError } = await supabase
-        .from('garages')
-        .insert([{
+      // Use the edge function to create garage
+      const { data: garageData, error: garageError } = await supabase.functions.invoke('create-garage', {
+        body: {
           name: data.name,
           slug: slug,
           address: data.address,
           email: data.email,
-          phone: data.phone || null
-          // Don't set owner_id here
-        }])
-        .select();
+          phone: data.phone || null,
+          userId: userData.user.id
+        }
+      });
       
-      if (garageError) {
-        console.error("Garage creation error:", garageError);
-        throw new Error(garageError.message);
+      if (garageError || !garageData) {
+        console.error("Error creating garage:", garageError || "No data returned");
+        throw new Error(garageError?.message || "Failed to create garage");
       }
       
-      if (!newGarage || newGarage.length === 0) {
-        throw new Error("Failed to create garage: No data returned");
+      if (!garageData.id) {
+        throw new Error("No garage ID returned");
       }
-      
-      // Step 2: Add the user as a garage member in a separate call
-      const { error: memberError } = await supabase
-        .from('garage_members')
-        .insert([{
-          user_id: userData.user.id,
-          garage_id: newGarage[0].id,
-          role: 'owner'
-        }]);
-        
-      if (memberError) {
-        console.error("Error adding member:", memberError);
-        throw new Error(memberError.message);
-      }
-      
-      // Step 3: Now update the owner_id field of the garage in a separate call
-      const { error: updateOwnerError } = await supabase
-        .from('garages')
-        .update({ owner_id: userData.user.id })
-        .eq('id', newGarage[0].id);
-        
-      if (updateOwnerError) {
-        console.error("Error updating garage owner:", updateOwnerError);
-        throw new Error(updateOwnerError.message);
-      }
-      
-      // Skip updating the profile with garage_id - relying on garage_members instead
-      console.log("Skipping profile update, using garage_members as source of truth");
       
       toast.success("Garage created successfully");
-      onComplete(newGarage[0].id);
+      
+      // Force refresh auth session to update user claims
+      await supabase.auth.refreshSession();
+      
+      onComplete(garageData.id);
     } catch (error: any) {
       console.error("Error creating garage:", error);
       setError(error.message || "Failed to create garage");

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,13 +61,8 @@ export const useAuthSubmit = (userType: UserType) => {
                 description: "Now let's set up your garage.",
               });
               
-              try {
-                // Try to sign in with the new credentials
-                await signIn(email, password, userType);
-              } catch (signInError: any) {
-                console.warn("Auto sign-in after registration failed:", signInError);
-                localStorage.setItem('auth_last_error', `Auto-login failed: ${signInError.message}`);
-              }
+              // Don't attempt auto sign-in for owner accounts
+              // They'll create a garage first, then we'll sign them in
             } else {
               try {
                 const signInData = await signIn(email, password, userType);
