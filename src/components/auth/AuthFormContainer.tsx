@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "./LoginForm";
@@ -47,7 +46,6 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   };
 
   useEffect(() => {
-    // Check for any session errors in URL params
     const urlParams = new URLSearchParams(location.search);
     const error = urlParams.get('error');
     const errorDescription = urlParams.get('error_description');
@@ -104,7 +102,7 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
           setLastName={setLastName}
           role={role}
           setRole={setRole}
-          loading={loading}
+          isLoading={loading}
           onSubmit={(e) => handleAuth(e, mode, email, password, firstName, lastName, role)}
           onToggleMode={toggleMode}
           userType={userType}
