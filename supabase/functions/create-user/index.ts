@@ -45,6 +45,8 @@ serve(async (req: Request) => {
 
     const { email, password, firstName, lastName, role, garageId, userType } = body;
     
+    console.log(`Creating user: ${email}, role: ${role}, userType: ${userType}, garageId: ${garageId || 'null'}`);
+    
     // Create user account
     const { userData, error: createUserError } = await createUserAccount(
       supabaseClient, 
@@ -57,6 +59,8 @@ serve(async (req: Request) => {
     if (createUserError) {
       return createUserError;
     }
+
+    console.log(`User created with ID: ${userData.user.id}, now assigning role...`);
 
     // Assign role to user (garageId may be null for owners/administrators)
     const { result, error: assignRoleError } = await assignUserRole(
@@ -78,6 +82,8 @@ serve(async (req: Request) => {
       );
     }
 
+    console.log('User creation completed successfully:', result);
+    
     return new Response(
       JSON.stringify(result),
       { 

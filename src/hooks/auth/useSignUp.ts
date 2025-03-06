@@ -21,7 +21,7 @@ export const useSignUp = () => {
     console.log(`Signing up user with role: ${userRole}, type: ${userType}`);
     
     try {
-      // For owner type, garageId should be null
+      // For owner type, garageId MUST be null
       // For staff type, use default garage ID or context garage ID
       const garageId = userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"; // Default garage ID for staff
       

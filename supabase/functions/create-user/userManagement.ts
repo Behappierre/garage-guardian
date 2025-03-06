@@ -129,16 +129,21 @@ export async function assignUserRole(
   userType: string = 'staff' // Default to staff if not provided
 ) {
   try {
+    console.log(`Starting assignUserRole for user ${userId}, role: ${role}, userType: ${userType}, garageId: ${garageId}`);
+    
     // For all users: Create a user_roles entry with the appropriate role
     // For owner users, DO NOT include garage_id in user_roles
-    const userRoleData = { 
+    const userRoleData: Record<string, any> = { 
       user_id: userId, 
       role
     };
     
     // Only include garage_id for staff members, not for owners
     if (userType !== 'owner' && garageId) {
-      userRoleData['garage_id'] = garageId;
+      console.log(`Adding garage_id ${garageId} to user_roles for staff member`);
+      userRoleData.garage_id = garageId;
+    } else {
+      console.log('Owner user - not adding garage_id to user_roles');
     }
     
     const { error: roleError } = await supabaseClient
@@ -163,68 +168,90 @@ export async function assignUserRole(
     // Determine garage_member role based on userType
     const memberRole = userType === 'owner' ? 'owner' : role;
     
-    // For owner users, DO NOT include garage_id in garage_members
-    const garageMemberData = {
+    // For garage_members table
+    const garageMemberData: Record<string, any> = {
       user_id: userId,
       role: memberRole
     };
     
     // Only include garage_id for staff members, not for owners
+    // IMPORTANT: For owners, we DON'T add garage_id yet as they'll create a garage later
     if (userType !== 'owner' && garageId) {
-      garageMemberData['garage_id'] = garageId;
-    }
-    
-    console.log(`Creating garage_members entry with role: ${memberRole}, userType: ${userType}`);
-    console.log('Garage members data:', garageMemberData);
-    
-    const { error: memberError } = await supabaseClient
-      .from('garage_members')
-      .insert([garageMemberData]);
+      console.log(`Adding garage_id ${garageId} to garage_members for staff member`);
+      garageMemberData.garage_id = garageId;
+    } else {
+      console.log('Owner user - not adding garage_id to garage_members');
       
-    if (memberError) {
-      console.warn('Warning: Could not create garage_members entry:', memberError);
-      // Continue even if this fails, but log the error
+      // IMPORTANT: For owners, we shouldn't create a garage_members entry yet
+      // They will create their own garage and then be assigned as owner
+      console.log('Skipping garage_members creation for owner - will be created when they create a garage');
+      
+      // Skip updating profile with garage_id for owners
+      console.log('Owner user - not updating profile with garage_id');
+      
+      // Return success for owner users
       return {
         result: { 
-          message: 'User created with role, but garage_members entry failed',
+          message: 'Owner user created successfully',
           userId: userId,
-          error: memberError.message,
-          status: 'partial_success' 
+          status: 'success' 
         },
-        error: true
+        error: null
       };
-    } else {
-      console.log(`Successfully created garage_members entry with role: ${memberRole}`);
     }
     
-    // Only update profile with garage_id for staff users, not owners
+    // Only create garage_members entry for staff users who have a garage_id
     if (userType !== 'owner' && garageId) {
-      // For users with a garage, update profile with garage_id
-      console.log('Updating profile with garage_id:', garageId);
+      console.log(`Creating garage_members entry for staff with role: ${memberRole}`);
+      console.log('Garage members data:', garageMemberData);
       
-      // Update profile with garage_id if provided
-      const { error: profileError } = await supabaseClient
-        .from('profiles')
-        .update({ garage_id: garageId })
-        .eq('id', userId);
-
-      if (profileError) {
-        console.warn('Warning: Error updating profile with garage_id:', profileError);
-        // Continue even if profile update fails
+      const { error: memberError } = await supabaseClient
+        .from('garage_members')
+        .insert([garageMemberData]);
+        
+      if (memberError) {
+        console.warn('Warning: Could not create garage_members entry:', memberError);
+        // Continue even if this fails, but log the error
         return {
           result: { 
-            message: 'User created with role, but profile update failed',
+            message: 'User created with role, but garage_members entry failed',
             userId: userId,
-            error: profileError.message,
+            error: memberError.message,
             status: 'partial_success' 
           },
           error: true
         };
       } else {
-        console.log('Successfully updated profile with garage_id:', garageId);
+        console.log(`Successfully created garage_members entry with role: ${memberRole}`);
       }
-    } else {
-      console.log('Owner user - not updating profile with garage_id');
+      
+      // Only update profile with garage_id for staff users, not owners
+      if (userType !== 'owner' && garageId) {
+        // For users with a garage, update profile with garage_id
+        console.log('Updating profile with garage_id:', garageId);
+        
+        // Update profile with garage_id if provided
+        const { error: profileError } = await supabaseClient
+          .from('profiles')
+          .update({ garage_id: garageId })
+          .eq('id', userId);
+
+        if (profileError) {
+          console.warn('Warning: Error updating profile with garage_id:', profileError);
+          // Continue even if profile update fails
+          return {
+            result: { 
+              message: 'User created with role, but profile update failed',
+              userId: userId,
+              error: profileError.message,
+              status: 'partial_success' 
+            },
+            error: true
+          };
+        } else {
+          console.log('Successfully updated profile with garage_id:', garageId);
+        }
+      }
     }
     
     // If everything succeeded, return success response
