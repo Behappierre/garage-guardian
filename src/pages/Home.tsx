@@ -39,7 +39,8 @@ const Home = () => {
               GarageWizz
             </h1>
             <p className="text-white text-xl">
-              Automate and Optimize Your Garage Operations with AI-Powered Management
+              Automate and Optimize Your Garage Operations<br />
+              with AI-Powered Management
             </p>
           </div>
 
