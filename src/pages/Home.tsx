@@ -157,7 +157,13 @@ const Home = () => {
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
               <a href="#" className="hover:text-white transition-colors">Contact Us</a>
             </div>
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center flex-wrap gap-2">
+              <a href="https://www.freepik.com/free-video/mechanic-young-female-posing-looking-camera-car-workshop-international-women-s-day_2489836" 
+                 className="text-white/70 hover:text-white mr-2" 
+                 target="_blank" 
+                 rel="noopener noreferrer">
+                Video by freepik
+              </a>
               <p>© 2025 GarageWizz. All rights reserved.</p>
               <a href="https://github.com" className="ml-2 text-white/70 hover:text-white">
                 <Github size={16} />
