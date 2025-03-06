@@ -1,10 +1,10 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { JobTicket, TicketStatus } from "@/types/job-ticket";
 import { StatusColumn } from "@/components/tickets/StatusColumn";
 import { useClockEvents } from "@/hooks/use-clock-events";
 import { PageHeader } from "@/components/ui/page-header";
-import { useTheme } from "next-themes";
 import { useState } from "react";
 import { JobTicketFormDialog } from "@/components/tickets/JobTicketFormDialog";
 import { DndProvider } from "react-dnd";
@@ -20,8 +20,6 @@ const statusColumns = [
 ] as const;
 
 const MyWork = () => {
-  const { theme } = useTheme();
-  const isDarkMode = theme === "dark";
   const [selectedTicket, setSelectedTicket] = useState<JobTicket | null>(null);
   const [showTicketForm, setShowTicketForm] = useState(false);
   const queryClient = useQueryClient();
