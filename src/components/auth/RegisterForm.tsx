@@ -78,7 +78,12 @@ export const RegisterForm = ({
     try {
       await signUp(email, password, firstName, lastName, role, userType);
       toast.success("Registration successful!");
-      navigate("/");
+      
+      if (userType === "owner") {
+        navigate("/garage-management");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error: any) {
       console.error("Error signing up:", error);
       setFormError(error.message || "Failed to register. Please try again.");

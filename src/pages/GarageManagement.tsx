@@ -52,7 +52,7 @@ const GarageManagement = () => {
           return;
         }
 
-        // Check if the user has a garage_members entry (either as an owner with or without a garage_id)
+        // Check garage_members entry for this administrator
         const { data: memberData, error: memberError } = await supabase
           .from('garage_members')
           .select('garage_id, role')
@@ -62,10 +62,10 @@ const GarageManagement = () => {
 
         if (memberError) {
           console.error("Error checking garage membership:", memberError);
-          // Continue anyway since this might be the first login
+          // Continue anyway as this might be a first login
+        } else {
+          console.log("Owner membership data:", memberData);
         }
-
-        console.log("Owner membership data:", memberData);
 
         // User is an administrator, allow access to garage management
         setIsAdmin(true);

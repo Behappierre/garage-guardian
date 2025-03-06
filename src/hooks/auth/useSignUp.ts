@@ -20,46 +20,49 @@ export const useSignUp = () => {
     console.log(`Signing up user with role: ${userRole}`);
     
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          },
-        },
+      // Instead of doing supabase.auth.signUp() and then edge function,
+      // only use the edge function which will handle both tasks
+      console.log("Calling create-user edge function directly");
+      
+      // Determine if we need to pass a garageId (null for owners)
+      const garageId = userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"; // Default garage ID for staff
+      
+      // Call edge function to create user with proper role
+      const { data, error: createUserError } = await supabase.functions.invoke('create-user', {
+        body: {
+          email,
+          password,
+          firstName,
+          lastName,
+          role: userRole,
+          garageId
+        }
       });
       
-      if (signUpError) throw signUpError;
-      
-      if (signUpData.user) {
-        // Determine if we need to pass a garageId (null for owners)
-        const garageId = userType === "owner" ? null : "64960ccf-e353-4b4f-b951-ff687f35c78c"; // Default garage ID for staff
-        
-        // Call edge function to create user with proper role
-        const { data, error: createUserError } = await supabase.functions.invoke('create-user', {
-          body: {
-            email,
-            password,
-            firstName,
-            lastName,
-            role: userRole,
-            garageId
-          }
-        });
-        
-        if (createUserError) {
-          console.error("Error creating user via edge function:", createUserError);
-          toast.error("Failed to set up your account. Please try again.");
-          throw new Error("Failed to set up your account. Please try again.");
-        }
-        
-        console.log("User created successfully:", data);
-        return signUpData.user;
+      if (createUserError) {
+        console.error("Error creating user via edge function:", createUserError);
+        throw new Error(createUserError.message || "Failed to set up your account. Please try again.");
       }
       
-      return null;
+      if (!data || data.status === 'error') {
+        console.error("Error response from create-user function:", data);
+        throw new Error(data?.error || "Failed to create user account");
+      }
+      
+      console.log("User created successfully:", data);
+      
+      // Sign in the user automatically after successful creation
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) {
+        console.warn("User created but automatic sign-in failed:", signInError);
+        // We don't throw here because user creation was successful
+      }
+      
+      return signInData?.user || { id: data.userId };
     } catch (error) {
       console.error("Error in signup process:", error);
       throw error;

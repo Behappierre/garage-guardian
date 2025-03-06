@@ -48,10 +48,11 @@ export const useAuthSubmit = (userType: UserType) => {
               setNewUserId(user.id);
               setShowGarageForm(true);
               
-              await supabase.auth.signInWithPassword({
-                email,
-                password
-              });
+              // We no longer need this as the signUp function now handles signin after registration
+              // await supabase.auth.signInWithPassword({
+              //   email,
+              //   password
+              // });
               
               uiToast({
                 title: "Account created!",
@@ -67,12 +68,13 @@ export const useAuthSubmit = (userType: UserType) => {
                 console.warn("No garage ID available for staff assignment");
               }
               
-              const { error: signInError } = await supabase.auth.signInWithPassword({
-                email,
-                password
-              });
+              // We no longer need this as the signUp function now handles signin after registration
+              // const { error: signInError } = await supabase.auth.signInWithPassword({
+              //   email,
+              //   password
+              // });
               
-              if (signInError) throw signInError;
+              // if (signInError) throw signInError;
               
               // Navigate based on role
               if (role === 'technician') {

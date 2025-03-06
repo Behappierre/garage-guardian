@@ -67,6 +67,25 @@ export async function createUserAccount(
   lastName: string
 ) {
   try {
+    // Check if user already exists
+    const { data: existingUsers, error: checkError } = await supabaseClient.auth.admin.listUsers({
+      filter: {
+        email: email
+      }
+    });
+
+    if (checkError) {
+      console.error('Error checking existing users:', checkError);
+      const error = createErrorResponse(checkError.message, 400);
+      return { userData: null, error };
+    }
+
+    if (existingUsers && existingUsers.users.length > 0) {
+      console.warn('User with this email already exists:', email);
+      const error = createErrorResponse('A user with this email address has already been registered', 409);
+      return { userData: null, error };
+    }
+
     // Create the user
     const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
       email,
