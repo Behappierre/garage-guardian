@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,13 +27,11 @@ export function ChatAgent() {
   const [hasDisplayedWelcome, setHasDisplayedWelcome] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Welcome message to show when the chat is first opened
   const welcomeMessage = {
     role: "assistant" as const,
     content: "👋 Welcome to GarageWizz AI Assistant! I'm here to help you with scheduling appointments, looking up vehicle information, managing clients, and answering automotive questions. How can I assist you today?"
   };
 
-  // Display welcome message when chat is opened
   useEffect(() => {
     if (isOpen && !hasDisplayedWelcome && messages.length === 0) {
       setMessages([welcomeMessage]);
@@ -75,7 +72,6 @@ export function ChatAgent() {
     setIsLoading(true);
 
     try {
-      // Basic validation
       if (!user?.id) {
         throw new Error('User not authenticated');
       }
@@ -85,10 +81,8 @@ export function ChatAgent() {
         throw new Error('No active session');
       }
 
-      // Check if this might be a booking request to give priority to GPT
       const isLikelyBookingRequest = checkIfBookingRequest(userMessage);
 
-      // Try GPT first now
       try {
         console.log('Attempting to invoke GPT Edge Function with:', {
           message: userMessage,
@@ -107,7 +101,7 @@ export function ChatAgent() {
 
         if (gptError) {
           console.warn('GPT function error, falling back to Gemini:', gptError);
-          throw gptError; // This will trigger the fallback
+          throw gptError;
         }
 
         if (!gptData?.response) {
@@ -115,7 +109,6 @@ export function ChatAgent() {
           throw new Error('No response received from GPT assistant');
         }
 
-        // Success with GPT
         setMessages(prev => [...prev, { 
           role: "assistant", 
           content: formatMessage(gptData.response)
@@ -127,10 +120,8 @@ export function ChatAgent() {
           refreshAppointments();
         }
 
-        return; // Exit if successful
-        
+        return;
       } catch (gptError) {
-        // Fall back to Gemini function
         console.log('Falling back to chat-with-gemini function');
         
         const { data: geminiData, error: geminiError } = await supabase.functions.invoke('chat-with-gemini', {
@@ -193,10 +184,10 @@ export function ChatAgent() {
     <>
       <Button
         size="icon"
-        className="fixed bottom-4 right-4 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 bg-indigo-600 hover:bg-indigo-700"
+        className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 bg-transparent hover:bg-gray-100/10"
         onClick={() => setIsOpen(true)}
       >
-        <div className="relative h-8 w-8">
+        <div className="relative h-12 w-12">
           <img 
             src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
             alt="AI Wizard" 
@@ -211,12 +202,11 @@ export function ChatAgent() {
             "max-h-[90vh] p-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-300",
             isWide ? "sm:max-w-[800px]" : "sm:max-w-[400px] md:sm:max-w-[540px]"
           )}
-          // This disables the automatic close button that is part of the Dialog component
           closeButton={false}
         >
           <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8">
+              <div className="h-10 w-10">
                 <img 
                   src="/lovable-uploads/1a78f9aa-9b33-4d28-9492-058c2342c6d5.png" 
                   alt="AI Wizard" 
