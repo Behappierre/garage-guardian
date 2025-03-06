@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export interface RegisterFormProps {
   setRole?: (value: Role) => void;
   isLoading?: boolean;
   onSubmit?: (e: React.FormEvent) => void; // Changed type to exactly match useAuthSubmit
+  onToggleMode?: () => void; // Added missing prop
   navigateToOtherLogin?: () => void;
 }
 
