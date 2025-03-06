@@ -52,17 +52,22 @@ const GarageManagement = () => {
           return;
         }
 
-        // Check if the user is an owner in garage_members
-        const { data: memberData } = await supabase
+        // Check if the user has a garage_members entry (either as an owner with or without a garage_id)
+        const { data: memberData, error: memberError } = await supabase
           .from('garage_members')
           .select('garage_id, role')
           .eq('user_id', userData.user.id)
           .eq('role', 'owner')
           .maybeSingle();
 
+        if (memberError) {
+          console.error("Error checking garage membership:", memberError);
+          // Continue anyway since this might be the first login
+        }
+
         console.log("Owner membership data:", memberData);
 
-        // User is an administrator
+        // User is an administrator, allow access to garage management
         setIsAdmin(true);
       } catch (error) {
         console.error("Error in admin check:", error);

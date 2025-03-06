@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSignUp } from "@/hooks/auth/useSignUp";
 import { Database } from "@/integrations/supabase/types";
+import { toast } from "sonner";
 
 type Role = Database['public']['Enums']['app_role'];
 
@@ -52,6 +53,7 @@ export const RegisterForm = ({
   const [localPassword, setLocalPassword] = useState("");
   const [localRole, setLocalRole] = useState<Role>("front_desk");
   const [localIsLoading, setLocalIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   
   // Use props or local state
   const firstName = propFirstName !== undefined ? propFirstName : localFirstName;
@@ -71,12 +73,16 @@ export const RegisterForm = ({
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalIsLoading(true);
+    setFormError(null);
     
     try {
       await signUp(email, password, firstName, lastName, role, userType);
+      toast.success("Registration successful!");
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing up:", error);
+      setFormError(error.message || "Failed to register. Please try again.");
+      toast.error(error.message || "Failed to register");
     } finally {
       setLocalIsLoading(false);
     }
@@ -91,6 +97,12 @@ export const RegisterForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 min-w-80">
+      {formError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <span className="block sm:inline">{formError}</span>
+        </div>
+      )}
+      
       <div className="space-y-2">
         <Label htmlFor="firstName">First Name</Label>
         <Input
@@ -184,17 +196,15 @@ export const RegisterForm = ({
         {isLoading ? "Registering..." : "Register"}
       </Button>
       
-      {navigateToOtherLogin && (
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={navigateToHome} 
-          className="w-full mt-2"
-          disabled={isLoading}
-        >
-          Back to Login
-        </Button>
-      )}
+      <Button 
+        type="button" 
+        variant="outline" 
+        onClick={navigateToHome} 
+        className="w-full mt-2"
+        disabled={isLoading}
+      >
+        Back to Login
+      </Button>
     </form>
   );
 };

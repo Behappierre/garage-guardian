@@ -163,7 +163,7 @@ export const useAuthSubmit = (userType: UserType) => {
         uiToast({
           variant: "destructive",
           title: "Error",
-          description: error.message,
+          description: error.message || "Failed to set up your account. Please try again.",
         });
       } finally {
         setLoading(false);

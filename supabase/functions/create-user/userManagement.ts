@@ -107,23 +107,15 @@ export async function assignUserRole(
   garageId: string | null
 ) {
   try {
-    // Step 1: Insert role into user_roles
-    const roleData: any = { 
-      user_id: userId, 
-      role
-    };
-    
-    // Only add garage_id if it's provided and not null (not for administrators/owners initially)
-    if (garageId) {
-      roleData.garage_id = garageId;
-      console.log('Assigning role with garage_id:', roleData);
-    } else {
-      console.log('Assigning role without garage_id:', roleData);
-    }
-    
+    // For administrators/owners: Create a user_roles entry with the administrator role
     const { error: roleError } = await supabaseClient
       .from('user_roles')
-      .insert([roleData]);
+      .insert([{ 
+        user_id: userId, 
+        role,
+        // Only include garage_id if it's provided and not null (for staff members)
+        ...(garageId ? { garage_id: garageId } : {})
+      }]);
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
@@ -148,20 +140,29 @@ export async function assignUserRole(
         .insert([{
           user_id: userId,
           role: 'owner',
-          // No garage_id specified
+          // No garage_id specified for owners initially
         }]);
         
       if (memberError) {
         console.warn('Warning: Could not create garage_members entry:', memberError);
-        // Continue even if this fails
+        // Continue even if this fails, but log the error
+        return {
+          result: { 
+            message: 'User created with role, but garage_members entry failed',
+            userId: userId,
+            error: memberError.message,
+            status: 'partial_success' 
+          },
+          error: true
+        };
       } else {
         console.log('Successfully created garage_members entry for owner');
       }
     } else if (garageId) {
       // For staff members with a garage, update profile with garage_id
-      console.log('With garage:', garageId);
+      console.log('Staff with garage:', garageId);
       
-      // Step 2: Update profile with garage_id if provided
+      // Update profile with garage_id if provided
       const { error: profileError } = await supabaseClient
         .from('profiles')
         .update({ garage_id: garageId })
@@ -170,6 +171,15 @@ export async function assignUserRole(
       if (profileError) {
         console.warn('Warning: Error updating profile with garage_id:', profileError);
         // Continue even if profile update fails
+        return {
+          result: { 
+            message: 'User created with role, but profile update failed',
+            userId: userId,
+            error: profileError.message,
+            status: 'partial_success' 
+          },
+          error: true
+        };
       } else {
         console.log('Successfully updated profile with garage_id:', garageId);
       }
