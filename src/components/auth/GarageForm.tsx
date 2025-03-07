@@ -37,6 +37,41 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
     try {
       console.log("Creating garage with data:", data);
       
+      // Check if user profile exists and create if not
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .single();
+        
+      if (profileError || !profileData) {
+        console.warn("User profile not found, creating it before garage creation");
+        
+        // Get user details to create profile
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (userData?.user) {
+          const userMeta = userData.user.user_metadata;
+          const firstName = userMeta?.first_name || '';
+          const lastName = userMeta?.last_name || '';
+          
+          // Create profile
+          const { error: createProfileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              first_name: firstName,
+              last_name: lastName
+            });
+            
+          if (createProfileError) {
+            console.error("Failed to create user profile:", createProfileError);
+          } else {
+            console.log("Created user profile before garage creation");
+          }
+        }
+      }
+      
       // Create a URL-friendly slug from the garage name
       const slug = data.name
         .toLowerCase()
@@ -78,6 +113,22 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       try {
         await supabase.auth.refreshSession();
         console.log("Auth session refreshed");
+        
+        // Verify user role exists
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('role', 'administrator');
+          
+        if (!roleData || roleData.length === 0) {
+          console.warn("User role missing, attempting to create it");
+          await supabase.from('user_roles').insert({
+            user_id: userId,
+            role: 'administrator',
+            garage_id: garageData.id
+          });
+        }
         
         // Use the safe completion handler
         if (typeof onComplete === 'function') {

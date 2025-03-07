@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { corsHeaders } from './utils.ts';
@@ -47,89 +46,6 @@ serve(async (req: Request) => {
     
     console.log(`Creating user: ${email}, role: ${role}, userType: ${userType}, garageId: ${garageId || 'null'}`);
     
-    // First check if user already exists
-    const { data: existingUser, error: existingError } = await supabaseClient.auth.admin.listUsers({
-      filter: { email }
-    });
-    
-    // If user already exists, proceed with role assignment instead of error
-    if (existingUser?.users && existingUser.users.length > 0) {
-      console.log(`User with email ${email} already exists, proceeding with update`);
-      
-      const userId = existingUser.users[0].id;
-      
-      // Check if profile exists for this user
-      const { data: profileData, error: profileError } = await supabaseClient
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (profileError || !profileData) {
-        console.log(`Profile for user ${userId} does not exist, creating it`);
-        
-        // Create profile manually
-        const { error: insertProfileError } = await supabaseClient
-          .from('profiles')
-          .insert({
-            id: userId,
-            first_name: firstName,
-            last_name: lastName,
-            garage_id: garageId
-          });
-          
-        if (insertProfileError) {
-          console.error("Error creating profile for existing user:", insertProfileError);
-        } else {
-          console.log(`Created profile for existing user ${userId}`);
-        }
-      } else {
-        console.log(`Profile for user ${userId} exists`);
-        
-        // Update profile with garage_id if provided
-        if (garageId) {
-          const { error: updateProfileError } = await supabaseClient
-            .from('profiles')
-            .update({ garage_id: garageId })
-            .eq('id', userId);
-            
-          if (updateProfileError) {
-            console.error("Error updating profile with garage_id:", updateProfileError);
-          } else {
-            console.log(`Updated profile for user ${userId} with garage_id: ${garageId}`);
-          }
-        }
-      }
-      
-      // Assign role to existing user
-      const { result, error: assignRoleError } = await assignUserRole(
-        supabaseClient,
-        userId,
-        role,
-        garageId,
-        userType
-      );
-      
-      if (assignRoleError) {
-        console.error("Error assigning role to existing user:", assignRoleError);
-      } else {
-        console.log("Successfully assigned role to existing user");
-      }
-      
-      // Return success response with existing user id
-      return new Response(
-        JSON.stringify({ 
-          message: 'User already exists and has been updated',
-          userId: userId,
-          status: 'success' 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200, // Return 200 OK instead of 409
-        }
-      );
-    }
-    
     // Create new user account if user doesn't exist
     const { userData, error: createUserError, isExisting } = await createUserAccount(
       supabaseClient, 
@@ -144,6 +60,31 @@ serve(async (req: Request) => {
     }
 
     console.log(`User ${isExisting ? 'already exists' : 'created'} with ID: ${userData.user.id}, now assigning role...`);
+
+    // Double-check that the profile exists and create it if not
+    const { data: profileExists } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('id', userData.user.id)
+      .single();
+      
+    if (!profileExists) {
+      console.log('Profile not found, creating it now');
+      const { error: createProfileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: userData.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          garage_id: garageId
+        });
+        
+      if (createProfileError) {
+        console.error('Error creating profile after user creation:', createProfileError);
+      } else {
+        console.log('Created profile for user after checking:', userData.user.id);
+      }
+    }
 
     // Assign role to user (garageId may be null for owners/administrators)
     const { result, error: assignRoleError } = await assignUserRole(

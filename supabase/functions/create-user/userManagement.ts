@@ -1,3 +1,4 @@
+
 import { corsHeaders, createErrorResponse } from './utils.ts';
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 
@@ -93,7 +94,8 @@ export async function createUserAccount(
       };
     }
 
-    // Create the user
+    // Create the user with first_name and last_name in user_metadata
+    // This is important for the trigger to create the profile
     const { data: userData, error: createUserError } = await supabaseClient.auth.admin.createUser({
       email,
       password,
@@ -118,17 +120,10 @@ export async function createUserAccount(
 
     console.log('User created successfully with ID:', userData.user.id);
     
-    // Check if profile was created by trigger
-    const { data: profileData, error: profileError } = await supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('id', userData.user.id)
-      .single();
-      
-    if (profileError || !profileData) {
-      console.warn('Profile may not have been created by trigger, creating manually');
-      
-      // Manually create profile if trigger failed
+    // ALWAYS create a profile manually to ensure it exists
+    // Don't rely on the trigger which might be failing
+    try {
+      console.log('Creating profile for user:', userData.user.id);
       const { error: insertProfileError } = await supabaseClient
         .from('profiles')
         .insert({
@@ -139,12 +134,21 @@ export async function createUserAccount(
         
       if (insertProfileError) {
         console.error('Error creating profile manually:', insertProfileError);
-        // Continue anyway, as the user was created successfully
+        // Create another attempt with just the ID if there was an error
+        const { error: fallbackProfileError } = await supabaseClient
+          .from('profiles')
+          .insert({ id: userData.user.id });
+          
+        if (fallbackProfileError) {
+          console.error('Fallback profile creation also failed:', fallbackProfileError);
+        } else {
+          console.log('Created basic profile via fallback mechanism');
+        }
       } else {
         console.log('Profile created manually for user:', userData.user.id);
       }
-    } else {
-      console.log('Profile created by trigger for user:', userData.user.id);
+    } catch (profileError) {
+      console.error('Exception creating profile:', profileError);
     }
     
     return { userData, error: null, isExisting: false };
