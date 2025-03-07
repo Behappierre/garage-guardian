@@ -118,7 +118,7 @@ serve(async (req: Request) => {
     
     if (memberError) {
       console.error("Error adding user as garage member:", memberError);
-      // Continue with other operations despite this error
+      // Don't fail the request, but log it
     } else {
       console.log(`Added user ${userId} as owner in garage_members`);
     }
@@ -131,61 +131,9 @@ serve(async (req: Request) => {
     
     if (profileError) {
       console.error("Error updating user profile:", profileError);
-      // Continue despite this error
+      // Don't fail the request, but log it
     } else {
       console.log(`Updated user profile with garage_id: ${garageId}`);
-    }
-    
-    // Step 4: Ensure user has administrator role
-    const { data: roleData, error: roleCheckError } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    if (roleCheckError) {
-      console.error("Error checking user role:", roleCheckError);
-    } else {
-      // If no role found or role is not administrator, set it to administrator
-      if (!roleData || roleData.role !== 'administrator') {
-        if (!roleData) {
-          // Insert new role record
-          const { error: roleInsertError } = await supabase
-            .from('user_roles')
-            .insert([{ user_id: userId, role: 'administrator', garage_id: garageId }]);
-            
-          if (roleInsertError) {
-            console.error("Error inserting administrator role:", roleInsertError);
-          } else {
-            console.log(`Set user ${userId} as administrator`);
-          }
-        } else {
-          // Update existing role to administrator
-          const { error: roleUpdateError } = await supabase
-            .from('user_roles')
-            .update({ role: 'administrator', garage_id: garageId })
-            .eq('user_id', userId);
-            
-          if (roleUpdateError) {
-            console.error("Error updating to administrator role:", roleUpdateError);
-          } else {
-            console.log(`Updated user ${userId} to administrator role`);
-          }
-        }
-      } else {
-        // Update existing administrator role with garage_id
-        const { error: roleUpdateError } = await supabase
-          .from('user_roles')
-          .update({ garage_id: garageId })
-          .eq('user_id', userId)
-          .eq('role', 'administrator');
-          
-        if (roleUpdateError) {
-          console.error("Error updating role with garage_id:", roleUpdateError);
-        } else {
-          console.log(`Updated administrator role with garage_id: ${garageId}`);
-        }
-      }
     }
     
     return new Response(

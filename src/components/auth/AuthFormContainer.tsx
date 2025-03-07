@@ -47,26 +47,6 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
     }
   };
 
-  const handleGarageComplete = (garageId: string) => {
-    console.log("Garage created, ID:", garageId);
-    
-    // Force a session refresh before redirecting
-    supabase.auth.refreshSession().then(() => {
-      console.log("Session refreshed after garage creation");
-      
-      // For owner accounts, redirect to garage management
-      if (userType === "owner") {
-        navigate("/garage-management");
-      } else {
-        navigate("/dashboard");
-      }
-    }).catch(error => {
-      console.error("Error refreshing session:", error);
-      // Fallback to direct navigation
-      navigate(userType === "owner" ? "/garage-management" : "/dashboard");
-    });
-  };
-
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const error = urlParams.get('error');
@@ -78,7 +58,7 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   }, [location]);
 
   if (showGarageForm && newUserId) {
-    return <GarageFormContainer userId={newUserId} userType={userType} onComplete={handleGarageComplete} />;
+    return <GarageFormContainer userId={newUserId} userType={userType} onComplete={() => navigate('/dashboard')} />;
   }
 
   return (
