@@ -1,4 +1,3 @@
-
 import { corsHeaders, createErrorResponse } from './utils.ts';
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 

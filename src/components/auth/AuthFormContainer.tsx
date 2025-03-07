@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "./LoginForm";
@@ -18,6 +19,7 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  // Set default role based on userType
   const [role, setRole] = useState<"administrator" | "technician" | "front_desk">(
     userType === "owner" ? "administrator" : "front_desk"
   );
@@ -56,7 +58,7 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   }, [location]);
 
   if (showGarageForm && newUserId) {
-    return <GarageFormContainer userId={newUserId} userType={userType} />;
+    return <GarageFormContainer userId={newUserId} userType={userType} onComplete={() => navigate('/dashboard')} />;
   }
 
   return (

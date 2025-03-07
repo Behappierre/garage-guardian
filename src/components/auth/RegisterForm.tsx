@@ -42,6 +42,7 @@ export const RegisterForm = ({
   setRole: propSetRole,
   isLoading: propIsLoading,
   onSubmit: propOnSubmit,
+  onToggleMode,
   navigateToOtherLogin
 }: RegisterFormProps) => {
   const navigate = useNavigate();
@@ -51,7 +52,9 @@ export const RegisterForm = ({
   const [localLastName, setLocalLastName] = useState("");
   const [localEmail, setLocalEmail] = useState("");
   const [localPassword, setLocalPassword] = useState("");
-  const [localRole, setLocalRole] = useState<Role>("front_desk");
+  // Set default role based on userType
+  const defaultRole = userType === "owner" ? "administrator" : "front_desk";
+  const [localRole, setLocalRole] = useState<Role>(defaultRole);
   const [localIsLoading, setLocalIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   
