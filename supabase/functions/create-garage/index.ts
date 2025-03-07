@@ -60,13 +60,44 @@ serve(async (req: Request) => {
       );
     }
 
+    // Generate a unique slug by adding a random suffix if needed
+    const createUniqueSlug = async (baseSlug: string): Promise<string> => {
+      // Check if the slug already exists
+      const { data: existingGarage, error } = await supabase
+        .from('garages')
+        .select('slug')
+        .eq('slug', baseSlug)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error("Error checking slug:", error);
+        throw new Error(`Failed to check slug uniqueness: ${error.message}`);
+      }
+      
+      // If slug exists, add a random suffix
+      if (existingGarage) {
+        const randomSuffix = Math.floor(Math.random() * 10000);
+        const newSlug = `${baseSlug}-${randomSuffix}`;
+        console.log(`Slug ${baseSlug} already exists, trying ${newSlug}`);
+        
+        // Recursively check until we find a unique slug
+        return createUniqueSlug(newSlug);
+      }
+      
+      return baseSlug;
+    };
+    
+    // Ensure slug is unique before proceeding
+    const uniqueSlug = await createUniqueSlug(slug);
+    console.log(`Using unique slug: ${uniqueSlug}`);
+
     // Step 1: Create the garage record
     const { data: garageData, error: garageError } = await supabase
       .from('garages')
       .insert([
         {
           name,
-          slug,
+          slug: uniqueSlug,
           address,
           email,
           phone,
@@ -134,6 +165,31 @@ serve(async (req: Request) => {
       // Don't fail the request, but log it
     } else {
       console.log(`Updated user profile with garage_id: ${garageId}`);
+    }
+    
+    // Step 4: Add administrator role to the user if not already present
+    const { data: existingRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'administrator');
+      
+    if (!existingRoles || existingRoles.length === 0) {
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert([
+          {
+            user_id: userId,
+            role: 'administrator',
+            garage_id: garageId
+          }
+        ]);
+      
+      if (roleError) {
+        console.error("Error adding administrator role:", roleError);
+      } else {
+        console.log(`Added administrator role to user ${userId}`);
+      }
     }
     
     return new Response(

@@ -75,14 +75,27 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       });
       
       // Force refresh auth session to update user claims
-      await supabase.auth.refreshSession();
-      
-      // Use the safe completion handler
-      if (typeof onComplete === 'function') {
-        onComplete(garageData.id);
-      } else {
-        console.warn("onComplete is not a function, redirecting to dashboard instead");
-        navigate('/dashboard');
+      try {
+        await supabase.auth.refreshSession();
+        console.log("Auth session refreshed");
+        
+        // Use the safe completion handler
+        if (typeof onComplete === 'function') {
+          onComplete(garageData.id);
+        } else {
+          console.warn("onComplete is not a function, redirecting to dashboard instead");
+          // Add a small delay to ensure the toast is seen
+          setTimeout(() => navigate('/garage-management'), 500);
+        }
+      } catch (refreshError) {
+        console.error("Error refreshing session:", refreshError);
+        // Still try to redirect even if refresh fails
+        if (typeof onComplete === 'function') {
+          onComplete(garageData.id);
+        } else {
+          console.warn("onComplete is not a function, redirecting to dashboard instead");
+          setTimeout(() => navigate('/garage-management'), 500);
+        }
       }
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
