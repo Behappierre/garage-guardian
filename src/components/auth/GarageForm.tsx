@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 interface GarageFormProps {
   userId: string;
@@ -27,7 +28,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors } } = useForm<GarageFormValues>();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   const navigate = useNavigate();
 
   const onSubmit = async (data: GarageFormValues) => {
@@ -45,8 +46,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // This approach uses two steps to avoid RLS issues:
-      // 1. Insert the garage as service_role to bypass RLS
+      // Use the edge function to create garage
       const { data: garageData, error: garageError } = await supabase.functions.invoke('create-garage', {
         body: {
           name: data.name,
@@ -69,25 +69,29 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw new Error("No garage ID returned");
       }
       
-      toast({
-        title: "Success!",
-        description: "Your garage has been created successfully.",
-      });
+      toast.success("Your garage has been created successfully.");
       
       // Force refresh auth session to update user claims
       await supabase.auth.refreshSession();
       
+      // Get the current session to ensure it's properly refreshed
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      console.log("Session after garage creation:", sessionData?.session ? "Active" : "None");
+
       // Use the safe completion handler
       if (typeof onComplete === 'function') {
         onComplete(garageData.id);
       } else {
-        console.warn("onComplete is not a function, redirecting to dashboard instead");
-        navigate('/dashboard');
+        console.warn("onComplete is not a function, redirecting to sign in page instead");
+        // Sign out and redirect to sign in page
+        await supabase.auth.signOut();
+        navigate('/?message=garage-created');
       }
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
       setError(error.message);
-      toast({
+      uiToast({
         variant: "destructive",
         title: "Error",
         description: `Failed to create garage: ${error.message}`,
