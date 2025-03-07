@@ -12,5 +12,12 @@ export const GarageFormContainer = ({
   userType,
   onComplete 
 }: GarageFormContainerProps) => {
-  return <GarageForm userId={userId} onComplete={onComplete} />;
+  // Define a safe callback wrapper to ensure onComplete is a function before calling it
+  const handleComplete = (garageId: string) => {
+    if (typeof onComplete === 'function') {
+      onComplete(garageId);
+    }
+  };
+
+  return <GarageForm userId={userId} onComplete={handleComplete} />;
 };

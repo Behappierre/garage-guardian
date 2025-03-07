@@ -10,7 +10,6 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Garage } from "@/types/garage";
 
 interface GarageFormProps {
   userId: string;
@@ -78,7 +77,13 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       // Force refresh auth session to update user claims
       await supabase.auth.refreshSession();
       
-      onComplete(garageData.id);
+      // Use the safe completion handler
+      if (typeof onComplete === 'function') {
+        onComplete(garageData.id);
+      } else {
+        console.warn("onComplete is not a function, redirecting to dashboard instead");
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
       setError(error.message);
