@@ -10,20 +10,9 @@ export const useSignIn = () => {
     console.log(`Attempting to sign in user ${email} as ${userType} type`);
     
     try {
-      // Before signing in, check if user exists
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers({
-        filter: {
-          email: email
-        }
-      });
-
-      // If there was an error checking user, we can still try to sign in
-      if (userError) {
-        console.log("Error checking user existence, proceeding with login attempt:", userError);
-      } else if (userData && userData.users.length === 0) {
-        console.error("User does not exist in auth system");
-        throw new Error("Invalid login credentials");
-      }
+      // Before signing in, check if user exists by attempting to get the user
+      // Note: We're using signInWithPassword directly instead of checking user existence first
+      // since the admin.listUsers with filter is not supported in the current Supabase JS client
       
       const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
