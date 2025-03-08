@@ -39,6 +39,7 @@ const Auth = () => {
     try {
       setIsRunningDiagnostics(true);
       setDiagnosticResult(null);
+      setDebugInfo(null);
       const { data } = await supabase.auth.getUser();
       
       if (data.user) {
