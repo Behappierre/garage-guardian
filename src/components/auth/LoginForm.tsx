@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface LoginFormProps {
   email: string;
@@ -28,6 +29,7 @@ export const LoginForm = ({
   navigateToOtherLogin
 }: LoginFormProps) => {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
   
   // Handle sign up link click based on user type
   const handleSignUpClick = () => {
@@ -55,13 +57,22 @@ export const LoginForm = ({
 
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button 
+            type="button"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? "Hide" : "Show"}
+          </button>
+        </div>
       </div>
 
       <Button 

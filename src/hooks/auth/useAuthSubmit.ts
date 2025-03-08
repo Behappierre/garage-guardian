@@ -92,7 +92,7 @@ export const useAuthSubmit = (userType: UserType) => {
           }
         } else {
           try {
-            console.log(`Attempting to sign in ${email} as ${userType}`);
+            console.log(`Attempting to sign in ${email} as ${userType} with password ${password ? "[PROVIDED]" : "[EMPTY]"}`);
             const signInData = await signIn(email, password, userType);
 
             if (signInData.user) {

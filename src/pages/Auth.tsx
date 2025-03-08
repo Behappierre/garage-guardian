@@ -13,6 +13,7 @@ const Auth = () => {
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
   const [diagnosticResult, setDiagnosticResult] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Listen for auth state errors from localStorage
   useEffect(() => {
@@ -41,6 +42,48 @@ const Auth = () => {
       const { data } = await supabase.auth.getUser();
       
       if (data.user) {
+        // Get profile info
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+          
+        if (profileError) {
+          setDebugInfo(`User has no profile: ${profileError.message}`);
+          
+          // Try to create a profile
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({ 
+              id: data.user.id,
+              first_name: data.user.user_metadata?.first_name || '',
+              last_name: data.user.user_metadata?.last_name || ''
+            });
+            
+          if (createError) {
+            setDebugInfo((prev) => `${prev}\nFailed to create profile: ${createError.message}`);
+          } else {
+            setDebugInfo((prev) => `${prev}\nCreated missing profile for user`);
+          }
+        } else {
+          setDebugInfo(`User has profile: ${JSON.stringify(profileData)}`);
+          
+          // Get user roles
+          const { data: rolesData, error: rolesError } = await supabase
+            .from('user_roles')
+            .select('*')
+            .eq('user_id', data.user.id);
+            
+          if (rolesError) {
+            setDebugInfo((prev) => `${prev}\nError fetching roles: ${rolesError.message}`);
+          } else if (!rolesData || rolesData.length === 0) {
+            setDebugInfo((prev) => `${prev}\nUser has no roles assigned`);
+          } else {
+            setDebugInfo((prev) => `${prev}\nUser roles: ${JSON.stringify(rolesData)}`);
+          }
+        }
+        
         // Execute the diagnostics but don't test its return value directly in an if statement
         const result = await runGarageDiagnostics(data.user.id);
         // Set the result based on the boolean return value
@@ -92,17 +135,22 @@ const Auth = () => {
           </Alert>
         )}
         
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-6 text-center">
-            <button
-              onClick={runDiagnostics}
-              disabled={isRunningDiagnostics}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              {isRunningDiagnostics ? "Running diagnostics..." : "Run garage diagnostics"}
-            </button>
+        {debugInfo && (
+          <div className="mt-4 p-3 bg-gray-100 text-xs overflow-auto rounded-md whitespace-pre-wrap">
+            <h3 className="font-semibold mb-1">Debug Info:</h3>
+            {debugInfo}
           </div>
         )}
+        
+        <div className="mt-6 text-center">
+          <button
+            onClick={runDiagnostics}
+            disabled={isRunningDiagnostics}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            {isRunningDiagnostics ? "Running diagnostics..." : "Run diagnostics"}
+          </button>
+        </div>
       </div>
     </div>
   );
