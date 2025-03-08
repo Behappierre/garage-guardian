@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useNavigate } from "react-router-dom";
 
 interface LoginFormProps {
   email: string;
@@ -26,6 +27,19 @@ export const LoginForm = ({
   userType,
   navigateToOtherLogin
 }: LoginFormProps) => {
+  const navigate = useNavigate();
+  
+  // Handle sign up link click based on user type
+  const handleSignUpClick = () => {
+    if (userType === "owner") {
+      // Owner sign-in page - regular toggle to registration
+      onToggleMode();
+    } else {
+      // Staff sign-in page - redirect to owner registration
+      navigate("/auth?type=owner");
+    }
+  };
+
   return (
     <form onSubmit={onSubmit} className="mt-8 space-y-6">
       <div className="space-y-2">
@@ -61,7 +75,7 @@ export const LoginForm = ({
       <div className="text-center text-sm">
         <button
           type="button"
-          onClick={onToggleMode}
+          onClick={handleSignUpClick}
           className="text-primary hover:underline"
         >
           Don't have an account? Sign up

@@ -27,6 +27,13 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // Force staff users to signin mode - they cannot register directly
+  useEffect(() => {
+    if (userType === "staff" && mode === "signup") {
+      setMode("signin");
+    }
+  }, [userType, mode]);
+  
   const { 
     loading, 
     showGarageForm, 
@@ -36,7 +43,10 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   } = useAuthSubmit(userType);
 
   const toggleMode = () => {
-    setMode(mode === "signin" ? "signup" : "signin");
+    // Only owners can toggle between signin and signup
+    if (userType === "owner") {
+      setMode(mode === "signin" ? "signup" : "signin");
+    }
   };
 
   const navigateToOtherLogin = () => {
