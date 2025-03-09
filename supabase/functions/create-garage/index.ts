@@ -153,22 +153,68 @@ serve(async (req: Request) => {
     const garageId = garageData[0].id;
     console.log(`Created garage with ID: ${garageId}`);
     
-    // Step 2: Add the user as an owner in garage_members
-    const { error: memberError } = await supabase
+    // Step 2: Check if the user already has a membership, if not, add them as an owner
+    const { data: existingMembership, error: membershipCheckError } = await supabase
       .from('garage_members')
-      .insert([
-        {
-          user_id: userId,
-          garage_id: garageId,
-          role: 'owner'
-        }
-      ]);
+      .select('id, garage_id')
+      .eq('user_id', userId)
+      .eq('role', 'owner')
+      .maybeSingle();
+      
+    if (membershipCheckError) {
+      console.error("Error checking existing membership:", membershipCheckError);
+    }
     
-    if (memberError) {
-      console.error("Error adding user as garage member:", memberError);
-      // Don't fail the request, but log it
+    if (!existingMembership) {
+      // No existing membership found, create a new one
+      console.log(`No existing membership found, creating one for user ${userId} and garage ${garageId}`);
+      const { error: memberError } = await supabase
+        .from('garage_members')
+        .insert([
+          {
+            user_id: userId,
+            garage_id: garageId,
+            role: 'owner'
+          }
+        ]);
+      
+      if (memberError) {
+        console.error("Error adding user as garage member:", memberError);
+        // Don't fail the request, but log it
+      } else {
+        console.log(`Added user ${userId} as owner in garage_members`);
+      }
+    } else if (existingMembership.garage_id === null) {
+      // Update the existing membership with null garage_id
+      console.log(`Updating existing membership with null garage_id for user ${userId}`);
+      const { error: updateError } = await supabase
+        .from('garage_members')
+        .update({ garage_id: garageId })
+        .eq('id', existingMembership.id);
+        
+      if (updateError) {
+        console.error("Error updating garage member:", updateError);
+      } else {
+        console.log(`Updated membership for user ${userId} with garage ${garageId}`);
+      }
     } else {
-      console.log(`Added user ${userId} as owner in garage_members`);
+      // Create a new membership for this specific garage
+      console.log(`Creating additional membership for user ${userId} and garage ${garageId}`);
+      const { error: memberError } = await supabase
+        .from('garage_members')
+        .insert([
+          {
+            user_id: userId,
+            garage_id: garageId,
+            role: 'owner'
+          }
+        ]);
+      
+      if (memberError) {
+        console.error("Error adding user as garage member:", memberError);
+      } else {
+        console.log(`Added user ${userId} as owner in garage_members`);
+      }
     }
     
     // Step 3: Update the user's profile with the garage_id

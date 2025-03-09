@@ -265,23 +265,36 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
       }
     }
     
-    // For userType owner, add to garage_members if garageId provided
+    // For userType owner, add to garage_members ONLY if garageId is provided
+    // We'll handle the initial membership entry differently
     if (userType === 'owner' && garageId) {
       console.log(`Adding owner to garage_members for garage: ${garageId}`);
       
-      const { error: membershipError } = await supabase
+      // First check if entry already exists to prevent duplicates
+      const { data: existingMembership } = await supabase
         .from('garage_members')
-        .insert({
-          user_id: userId,
-          garage_id: garageId,
-          role: 'owner'
-        });
+        .select('id')
+        .eq('user_id', userId)
+        .eq('garage_id', garageId)
+        .maybeSingle();
         
-      if (membershipError) {
-        console.error('Error adding owner to garage_members:', membershipError);
-        // Continue anyway, not critical
+      if (existingMembership) {
+        console.log('User already has membership for this garage');
       } else {
-        console.log('Owner added to garage_members successfully');
+        const { error: membershipError } = await supabase
+          .from('garage_members')
+          .insert({
+            user_id: userId,
+            garage_id: garageId,
+            role: 'owner'
+          });
+          
+        if (membershipError) {
+          console.error('Error adding owner to garage_members:', membershipError);
+          // Continue anyway, not critical
+        } else {
+          console.log('Owner added to garage_members successfully');
+        }
       }
     }
     
