@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
@@ -7,7 +8,7 @@ import { AppointmentFilters } from "@/components/appointments/AppointmentFilters
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAppointments } from "@/hooks/use-appointments";
-import type { AppointmentWithRelations } from "@/types/appointment";
+import type { AppointmentWithRelations, AppointmentSortField } from "@/types/appointment";
 import { PageHeader, PageActionButton } from "@/components/ui/page-header";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/auth/AuthProvider";
