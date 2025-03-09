@@ -87,39 +87,39 @@ export const AppointmentList = ({
   });
   
   // Sort dates for display
-  let sortedDateKeys: string[] = [];
+  const sortedDateKeys: string[] = [];
   
   // Get today's date key
   const todayStr = format(today, 'yyyy-MM-dd');
   
   // Sort based on date and sort preferences
   if (sortField === 'start_time') {
-    // Array to hold date keys with their corresponding Date objects for proper sorting
+    // Convert date keys to objects with date information for sorting
     const dateKeysWithDates = Object.keys(appointmentsByDate).map(dateKey => {
       return { dateKey, date: new Date(dateKey) };
     });
     
-    // First, always include today if it exists
+    // First add today if it exists
     if (appointmentsByDate[todayStr]) {
       sortedDateKeys.push(todayStr);
     }
     
-    // Then add future dates in ascending order (closest future dates first)
-    const futureDates = dateKeysWithDates
-      .filter(item => isAfter(item.date, today) && item.dateKey !== todayStr)
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-    
-    sortedDateKeys = [...sortedDateKeys, ...futureDates.map(item => item.dateKey)];
-    
-    // Then add past dates in descending order (most recent past dates first)
+    // Add past dates in descending order (most recent first)
     const pastDates = dateKeysWithDates
-      .filter(item => isBefore(item.date, today) || isEqual(item.date, today) && item.dateKey !== todayStr)
+      .filter(item => isBefore(item.date, today) && !isEqual(item.date, today))
       .sort((a, b) => b.date.getTime() - a.date.getTime());
     
-    sortedDateKeys = [...sortedDateKeys, ...pastDates.map(item => item.dateKey)];
+    // Add future dates in ascending order (earliest first)
+    const futureDates = dateKeysWithDates
+      .filter(item => isAfter(item.date, today))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    // Combine in correct order: past dates (descending), today, future dates (ascending)
+    sortedDateKeys.unshift(...pastDates.map(item => item.dateKey));
+    sortedDateKeys.push(...futureDates.map(item => item.dateKey));
   } else {
     // If sorting by client name or another field, use the default date order
-    sortedDateKeys = Object.keys(appointmentsByDate).sort();
+    sortedDateKeys.push(...Object.keys(appointmentsByDate).sort());
   }
   
   console.log("Sorted date keys:", sortedDateKeys);
