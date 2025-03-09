@@ -24,10 +24,11 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
         <li>
           <NavLink
             to="/dashboard"
+            end
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                 isCollapsed && "justify-center px-2"
               )
             }
@@ -43,8 +44,8 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
               to="/dashboard/my-work"
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                  isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                  "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                  isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                   isCollapsed && "justify-center px-2"
                 )
               }
@@ -60,8 +61,8 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
             to="/dashboard/appointments"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                 isCollapsed && "justify-center px-2"
               )
             }
@@ -76,8 +77,8 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
             to="/dashboard/clients"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                 isCollapsed && "justify-center px-2"
               )
             }
@@ -92,8 +93,8 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
             to="/dashboard/job-tickets"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                 isCollapsed && "justify-center px-2"
               )
             }
@@ -109,8 +110,8 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
               to="/dashboard/admin"
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                  isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                  "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                  isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                   isCollapsed && "justify-center px-2"
                 )
               }
@@ -126,8 +127,8 @@ export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavPro
             to="/dashboard/help"
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent",
-                isActive && "bg-sidebar-accent text-sidebar-primary hover:bg-sidebar-accent",
+                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
+                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
                 isCollapsed && "justify-center px-2"
               )
             }
