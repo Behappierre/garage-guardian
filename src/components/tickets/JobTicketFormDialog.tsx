@@ -53,8 +53,8 @@ export const JobTicketFormDialog = ({
             <Skeleton className="h-32 w-full" />
           </div>
         ) : (
-          <ScrollArea className="px-6 pb-6 max-h-[calc(90vh-120px)]">
-            <div className="pr-4 pl-0">
+          <ScrollArea className="max-h-[calc(90vh-120px)]">
+            <div className="px-6 pb-6">
               <JobTicketForm
                 initialData={selectedTicket}
                 onClose={onClose}

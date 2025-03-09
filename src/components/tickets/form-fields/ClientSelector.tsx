@@ -74,7 +74,7 @@ export const ClientSelector = ({
   };
 
   return (
-    <div>
+    <div className="w-full">
       <Label>Client</Label>
       <Select
         value={clientId || ""}

@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/components/auth/AuthProvider";
+import { useAuth } from "@/hooks/auth/useAuth";
 
 interface TechnicianSelectorProps {
   technicianId: string | null;
