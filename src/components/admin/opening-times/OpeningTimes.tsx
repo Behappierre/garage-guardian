@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -10,13 +10,22 @@ import { useOpeningTimeMutation } from "./useOpeningTimeMutation";
 import { useOpeningTimes } from "@/hooks/use-opening-times";
 
 export const OpeningTimes = () => {
-  const { data: openingTimes, isLoading, error } = useOpeningTimes();
+  const { data: openingTimes, isLoading, error, refetch } = useOpeningTimes();
   const [savingDay, setSavingDay] = useState<number | null>(null);
   
   const updateOpeningTimeMutation = useOpeningTimeMutation();
 
+  useEffect(() => {
+    // Log the loaded opening times for debugging
+    if (openingTimes) {
+      console.log("Loaded opening times:", openingTimes);
+    }
+  }, [openingTimes]);
+
   const handleToggleDay = (day: OpeningTime) => {
+    console.log("Toggle day request:", day);
     setSavingDay(day.day_of_week);
+    
     updateOpeningTimeMutation.mutate(
       {
         day_of_week: day.day_of_week,
@@ -25,20 +34,44 @@ export const OpeningTimes = () => {
         ...(day.is_closed && { start_time: "09:00:00", end_time: "17:00:00" })
       },
       {
-        onSettled: () => setSavingDay(null)
+        onSuccess: (data) => {
+          console.log("Toggle success:", data);
+          // Force refetch to ensure UI consistency
+          refetch();
+        },
+        onError: (err) => {
+          console.error("Toggle error:", err);
+          toast.error(`Failed to update ${DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label}: ${err.message}`);
+        },
+        onSettled: () => {
+          setSavingDay(null);
+        }
       }
     );
   };
 
   const handleTimeChange = (day: OpeningTime, field: 'start_time' | 'end_time', value: string) => {
+    console.log(`Time change request: ${field} for day ${day.day_of_week} to ${value}`);
     setSavingDay(day.day_of_week);
+    
     updateOpeningTimeMutation.mutate(
       {
         day_of_week: day.day_of_week,
         [field]: value
       },
       {
-        onSettled: () => setSavingDay(null)
+        onSuccess: (data) => {
+          console.log("Time change success:", data);
+          // Force refetch to ensure UI consistency
+          refetch();
+        },
+        onError: (err) => {
+          console.error("Time change error:", err);
+          toast.error(`Failed to update ${DAYS_OF_WEEK.find(d => d.value === day.day_of_week)?.label}: ${err.message}`);
+        },
+        onSettled: () => {
+          setSavingDay(null);
+        }
       }
     );
   };
@@ -58,6 +91,7 @@ export const OpeningTimes = () => {
   }
 
   if (error) {
+    console.error("Opening times load error:", error);
     return (
       <Card>
         <CardHeader>
@@ -66,6 +100,7 @@ export const OpeningTimes = () => {
         </CardHeader>
         <CardContent>
           <p>Please try refreshing the page or contact support if the problem persists.</p>
+          <p className="text-sm text-gray-500 mt-2">Error details: {error.message}</p>
         </CardContent>
       </Card>
     );

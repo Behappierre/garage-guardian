@@ -14,7 +14,7 @@ export const HOURS = Array.from({ length: 24 }, (_, i) => {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const hour12 = hour % 12 || 12;
   return {
-    value: `${hour.toString().padStart(2, '0')}:00:00`,
+    value: `${hour.toString().padStart(2, '0')}:00`,
     label: `${hour12}:00 ${ampm}`
   };
 });
