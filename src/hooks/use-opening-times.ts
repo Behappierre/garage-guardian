@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { DAYS_OF_WEEK } from "@/components/admin/opening-times/constants";
 
 export type OpeningTime = {
   id: string;
@@ -36,7 +37,7 @@ export const useOpeningTimes = () => {
       // If no garage_id found in user_roles, log this clearly and return empty array
       if (!roleData?.garage_id) {
         console.error("No garage ID found in user_roles for user:", user.id);
-        return [];
+        return createDefaultOpeningTimes(null);
       }
 
       const garageId = roleData.garage_id;
@@ -52,20 +53,14 @@ export const useOpeningTimes = () => {
         throw error;
       }
 
-      // Default opening times if none set (9am-5pm weekdays, closed weekends)
       if (!data || data.length === 0) {
         console.log("No opening times found, creating defaults for garage:", garageId);
-        return Array.from({ length: 7 }, (_, i) => ({
-          id: `default-${i}`,
-          garage_id: garageId,
-          day_of_week: i,
-          start_time: "09:00:00",
-          end_time: "17:00:00",
-          is_closed: i === 0 || i === 6, // Weekends closed by default
-        }));
+        return createDefaultOpeningTimes(garageId);
       }
 
-      return data as OpeningTime[];
+      // Check if we have all days of the week, if not, fill in the missing ones
+      const existingTimes = data as OpeningTime[];
+      return ensureAllDaysExist(existingTimes, garageId);
     },
     enabled: !!user?.id,
   });
@@ -77,6 +72,48 @@ export const useOpeningTimes = () => {
     ...query,
     garageId
   };
+};
+
+// Helper function to create default opening times
+const createDefaultOpeningTimes = (garageId: string | null): OpeningTime[] => {
+  return Array.from({ length: 7 }, (_, i) => ({
+    id: `default-${i}`,
+    garage_id: garageId || '',
+    day_of_week: i,
+    start_time: "09:00:00",
+    end_time: "17:00:00",
+    is_closed: i === 0 || i === 6, // Weekends closed by default
+  }));
+};
+
+// Helper function to ensure all days exist
+const ensureAllDaysExist = (existingTimes: OpeningTime[], garageId: string): OpeningTime[] => {
+  // Create a map of day -> opening time
+  const openingTimesByDay = new Map<number, OpeningTime>();
+  existingTimes.forEach(time => {
+    openingTimesByDay.set(time.day_of_week, time);
+  });
+
+  // Ensure all days exist
+  const fullWeek: OpeningTime[] = [];
+  
+  for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+    if (openingTimesByDay.has(dayIndex)) {
+      fullWeek.push(openingTimesByDay.get(dayIndex)!);
+    } else {
+      // Create a default for this missing day
+      fullWeek.push({
+        id: `default-${dayIndex}`,
+        garage_id: garageId,
+        day_of_week: dayIndex,
+        start_time: "09:00:00",
+        end_time: "17:00:00",
+        is_closed: dayIndex === 0 || dayIndex === 6, // Weekends closed by default
+      });
+    }
+  }
+
+  return fullWeek;
 };
 
 // Helper function to convert time string (HH:MM:SS) to hour number

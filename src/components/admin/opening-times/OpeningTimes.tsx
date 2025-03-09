@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from "lucide-react";
@@ -106,7 +105,9 @@ export const OpeningTimes = () => {
     );
   }
 
-  if (!openingTimes || openingTimes.length === 0) {
+  const sortedOpeningTimes = [...(openingTimes || [])].sort((a, b) => a.day_of_week - b.day_of_week);
+
+  if (!sortedOpeningTimes || sortedOpeningTimes.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -133,7 +134,7 @@ export const OpeningTimes = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {openingTimes.map((day) => (
+          {sortedOpeningTimes.map((day) => (
             <OpeningTimeRow
               key={day.day_of_week}
               day={day}
