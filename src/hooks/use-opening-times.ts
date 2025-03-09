@@ -32,9 +32,9 @@ export const useOpeningTimes = () => {
         throw roleError;
       }
 
-      // If no garage_id found in user_roles, return empty array
+      // If no garage_id found in user_roles, log this clearly and return empty array
       if (!roleData?.garage_id) {
-        console.log("No garage ID found in user_roles for user:", user.id);
+        console.error("No garage ID found in user_roles for user:", user.id);
         return [];
       }
 
@@ -71,9 +71,12 @@ export const useOpeningTimes = () => {
     enabled: !!user?.id,
   });
 
+  // Return garageId from the query data, or try to get it from the query itself
+  const garageId = query.data?.[0]?.garage_id || null;
+  
   return {
     ...query,
-    garageId: query.data?.[0]?.garage_id || null
+    garageId
   };
 };
 

@@ -26,6 +26,7 @@ export const useOpeningTimeMutation = () => {
       }
 
       if (!roleData?.garage_id) {
+        console.error("No garage found in user_roles for user:", user.id);
         throw new Error("No garage found in user_roles");
       }
 

@@ -10,10 +10,9 @@ import { useOpeningTimeMutation } from "./useOpeningTimeMutation";
 import { useOpeningTimes } from "@/hooks/use-opening-times";
 
 export const OpeningTimes = () => {
-  const { data: openingTimes, isLoading } = useOpeningTimes();
+  const { data: openingTimes, isLoading, error } = useOpeningTimes();
   const [savingDay, setSavingDay] = useState<number | null>(null);
-  const { garageId } = useOpeningTimes();
-
+  
   const updateOpeningTimeMutation = useOpeningTimeMutation();
 
   const handleToggleDay = (day: OpeningTime) => {
@@ -58,6 +57,34 @@ export const OpeningTimes = () => {
     );
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-destructive">Error Loading Opening Times</CardTitle>
+          <CardDescription>We couldn't load your business hours.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>Please try refreshing the page or contact support if the problem persists.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!openingTimes || openingTimes.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Opening Times</CardTitle>
+          <CardDescription>No business hours found.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p>Please select a garage to manage business hours.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -71,7 +98,7 @@ export const OpeningTimes = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {openingTimes?.map((day) => (
+          {openingTimes.map((day) => (
             <OpeningTimeRow
               key={day.day_of_week}
               day={day}
