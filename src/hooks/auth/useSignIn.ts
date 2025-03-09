@@ -10,43 +10,20 @@ export const useSignIn = () => {
     console.log(`Attempting to sign in user ${email} as ${userType} type`);
     
     try {
-      // Before signing in, check if user exists by attempting to get the user
-      // Note: We're using signInWithPassword directly instead of checking user existence first
-      // since the admin.listUsers with filter is not supported in the current Supabase JS client
-      
+      // Directly attempt to sign in the user
       const { data: signInData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Sign-in error:", error.message);
+        throw error;
+      }
       
-      // Check if profile exists, create if it doesn't
+      // Ensure profile exists for the successfully authenticated user
       if (signInData.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', signInData.user.id)
-          .single();
-          
-        if (profileError || !profileData) {
-          console.log("Profile not found, creating one now");
-          // Create profile if missing
-          const { error: createProfileError } = await supabase
-            .from('profiles')
-            .insert({
-              id: signInData.user.id,
-              first_name: signInData.user.user_metadata?.first_name || '',
-              last_name: signInData.user.user_metadata?.last_name || ''
-            });
-            
-          if (createProfileError) {
-            console.error("Error creating profile:", createProfileError);
-            toast.error("Error creating user profile");
-          } else {
-            console.log("Created missing profile during login");
-          }
-        }
+        await ensureUserProfileExists(signInData.user);
       }
       
       return signInData;
@@ -56,10 +33,65 @@ export const useSignIn = () => {
     }
   };
 
+  // Helper function to ensure the user profile exists
+  const ensureUserProfileExists = async (user: any) => {
+    console.log("Ensuring profile exists for user:", user.id);
+    
+    // Check if profile exists
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, garage_id')
+      .eq('id', user.id)
+      .single();
+      
+    if (profileError || !profileData) {
+      console.log("Profile not found, creating one now");
+      // Extract user metadata
+      const firstName = user.user_metadata?.first_name || '';
+      const lastName = user.user_metadata?.last_name || '';
+      
+      // Create profile if missing
+      const { error: createProfileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          first_name: firstName,
+          last_name: lastName
+        });
+        
+      if (createProfileError) {
+        console.error("Error creating profile:", createProfileError);
+        toast.error("Error creating user profile");
+      } else {
+        console.log("Created missing profile during login");
+      }
+    } else {
+      console.log("User profile exists:", profileData);
+      
+      // If user has no garage ID in profile but owns garages, update profile
+      if (!profileData.garage_id) {
+        const { data: ownedGarages } = await supabase
+          .from('garages')
+          .select('id')
+          .eq('owner_id', user.id)
+          .limit(1);
+          
+        if (ownedGarages && ownedGarages.length > 0) {
+          console.log("Found owner's garage, updating profile:", ownedGarages[0].id);
+          
+          await supabase
+            .from('profiles')
+            .update({ garage_id: ownedGarages[0].id })
+            .eq('id', user.id);
+        }
+      }
+    }
+  };
+
   const verifyUserAccess = async (userId: string, userType: "owner" | "staff") => {
     console.log(`Verifying user access for ${userId} as ${userType}`);
     
-    // Changed to select all roles instead of using maybeSingle
+    // Select all roles for the user
     const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
@@ -100,6 +132,7 @@ export const useSignIn = () => {
     signIn,
     verifyUserAccess,
     handleOwnerSignIn,
-    handleStaffSignIn
+    handleStaffSignIn,
+    ensureUserProfileExists
   };
 };

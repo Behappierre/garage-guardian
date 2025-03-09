@@ -80,9 +80,38 @@ const Auth = () => {
             setDebugInfo((prev) => `${prev}\nError fetching roles: ${rolesError.message}`);
           } else if (!rolesData || rolesData.length === 0) {
             setDebugInfo((prev) => `${prev}\nUser has no roles assigned`);
+            
+            // Try to add a default role if missing
+            const defaultRole = 'front_desk'; // Default role for recovery
+            const { error: createRoleError } = await supabase
+              .from('user_roles')
+              .insert({
+                user_id: data.user.id,
+                role: defaultRole
+              });
+              
+            if (createRoleError) {
+              setDebugInfo((prev) => `${prev}\nFailed to create default role: ${createRoleError.message}`);
+            } else {
+              setDebugInfo((prev) => `${prev}\nCreated default ${defaultRole} role for recovery`);
+            }
           } else {
             setDebugInfo((prev) => `${prev}\nUser roles: ${JSON.stringify(rolesData)}`);
           }
+        }
+        
+        // Check garage membership
+        const { data: membershipData, error: membershipError } = await supabase
+          .from('garage_members')
+          .select('*')
+          .eq('user_id', data.user.id);
+          
+        if (membershipError) {
+          setDebugInfo((prev) => `${prev}\nError fetching garage memberships: ${membershipError.message}`);
+        } else if (!membershipData || membershipData.length === 0) {
+          setDebugInfo((prev) => `${prev}\nUser has no garage memberships`);
+        } else {
+          setDebugInfo((prev) => `${prev}\nUser garage memberships: ${JSON.stringify(membershipData)}`);
         }
         
         // Execute the diagnostics but don't test its return value directly in an if statement
