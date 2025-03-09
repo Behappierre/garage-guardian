@@ -55,10 +55,10 @@ export const useTicketMutations = (onClose: () => void) => {
         
         ticketId = initialTicketId;
       } else {
-        // For new tickets, use the direct insertion method since the function hasn't been updated yet
+        // Use a different approach by skipping the explicit ticket_number (trigger will handle it)
         const { data, error } = await supabase
           .from('job_tickets')
-          .insert({
+          .insert([{
             description: formData.description,
             status: formData.status,
             priority: formData.priority,
@@ -67,7 +67,7 @@ export const useTicketMutations = (onClose: () => void) => {
             vehicle_id: formData.vehicle_id,
             garage_id: garageId,
             ticket_type: formData.ticket_type
-          })
+          }])
           .select('id')
           .single();
 
