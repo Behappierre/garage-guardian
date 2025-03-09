@@ -1,4 +1,3 @@
-
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
 import { DatabaseCache } from './cache.ts';
 
@@ -302,6 +301,7 @@ export class GarageDataService {
     vehicleId?: string, 
     status?: string,
     technicianId?: string,
+    ticketType?: string,
     limit?: number 
   } = {}): Promise<any[]> {
     let query = this.supabase.from('job_tickets').select(`
@@ -329,6 +329,10 @@ export class GarageDataService {
     
     if (options.technicianId) {
       query = query.eq('assigned_technician_id', options.technicianId);
+    }
+    
+    if (options.ticketType) {
+      query = query.eq('ticket_type', options.ticketType);
     }
     
     // Apply limit

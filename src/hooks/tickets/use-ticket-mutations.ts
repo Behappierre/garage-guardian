@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,7 +29,8 @@ export const useTicketMutations = (onClose: () => void) => {
           priority: formData.priority,
           assigned_technician_id: formData.assigned_technician_id,
           client_id: formData.client_id,
-          vehicle_id: formData.vehicle_id
+          vehicle_id: formData.vehicle_id,
+          ticket_type: formData.ticket_type
         });
         
         const { error } = await supabase
@@ -42,7 +42,8 @@ export const useTicketMutations = (onClose: () => void) => {
             assigned_technician_id: formData.assigned_technician_id,
             client_id: formData.client_id,
             vehicle_id: formData.vehicle_id,
-            garage_id: garageId
+            garage_id: garageId,
+            ticket_type: formData.ticket_type
           })
           .eq("id", initialTicketId);
 
@@ -62,7 +63,8 @@ export const useTicketMutations = (onClose: () => void) => {
             p_assigned_technician_id: formData.assigned_technician_id,
             p_client_id: formData.client_id,
             p_vehicle_id: formData.vehicle_id,
-            p_garage_id: garageId
+            p_garage_id: garageId,
+            p_ticket_type: formData.ticket_type
           });
 
         if (ticketError) throw ticketError;

@@ -143,3 +143,34 @@ export async function getRelatedServiceHistory(vehicleId: string, serviceType: s
     return [];
   }
 }
+
+export async function getJobTicketsByType(ticketType: string, supabase: any, garageId?: string) {
+  try {
+    let query = supabase
+      .from('job_tickets')
+      .select(`
+        *,
+        client:clients(*),
+        vehicle:vehicles(*)
+      `)
+      .eq('ticket_type', ticketType)
+      .limit(10);
+    
+    // If garage ID is provided, filter by garage
+    if (garageId) {
+      query = query.eq('garage_id', garageId);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error(`Error fetching ${ticketType} tickets:`, error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (err) {
+    console.error(`Exception in getJobTicketsByType for ${ticketType}:`, err);
+    return [];
+  }
+}

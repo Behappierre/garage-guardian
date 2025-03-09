@@ -1,7 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { JobTicket, TicketPriority, TicketStatus } from "@/types/job-ticket";
+import type { JobTicket, TicketPriority, TicketStatus, TicketType } from "@/types/job-ticket";
 import type { SortField, SortOrder } from "./use-job-ticket-filters";
 
 export const useTicketData = (
@@ -11,12 +11,13 @@ export const useTicketData = (
   registrationFilter: string,
   priorityFilter: TicketPriority | "all",
   technicianFilter: string | "all",
+  typeFilter: TicketType | "all",
   hideCompleted: boolean,
   sortField: SortField,
   sortOrder: SortOrder
 ) => {
   const { data: tickets, isLoading } = useQuery({
-    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, technicianFilter, hideCompleted, sortField, sortOrder, garageId],
+    queryKey: ["job_tickets", nameFilter, statusFilter, registrationFilter, priorityFilter, technicianFilter, typeFilter, hideCompleted, sortField, sortOrder, garageId],
     queryFn: async () => {
       if (!garageId) {
         return [];
@@ -45,6 +46,11 @@ export const useTicketData = (
       // Only apply filter if it's not "all"
       if (technicianFilter !== "all") {
         query = query.eq('assigned_technician_id', technicianFilter);
+      }
+      
+      // Only apply filter if it's not "all"
+      if (typeFilter !== "all") {
+        query = query.eq('ticket_type', typeFilter as TicketType);
       }
 
       const { data, error } = await query;

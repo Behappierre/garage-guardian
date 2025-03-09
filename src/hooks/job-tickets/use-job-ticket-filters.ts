@@ -1,6 +1,6 @@
 
 import { useState, useCallback } from "react";
-import type { TicketPriority, TicketStatus } from "@/types/job-ticket";
+import type { TicketPriority, TicketStatus, TicketType } from "@/types/job-ticket";
 import { toast } from "sonner";
 
 type SortField = "created_at" | "client_name";
@@ -12,6 +12,7 @@ export const useJobTicketFilters = () => {
   const [registrationFilter, setRegistrationFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<TicketPriority | "all">("all");
   const [technicianFilter, setTechnicianFilter] = useState<string | "all">("all");
+  const [typeFilter, setTypeFilter] = useState<TicketType | "all">("all");
   const [hideCompleted, setHideCompleted] = useState(false);
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -31,6 +32,7 @@ export const useJobTicketFilters = () => {
     setRegistrationFilter("");
     setPriorityFilter("all");
     setTechnicianFilter("all");
+    setTypeFilter("all");
     setHideCompleted(false);
     setSortField("created_at");
     setSortOrder("desc");
@@ -48,6 +50,8 @@ export const useJobTicketFilters = () => {
     setPriorityFilter,
     technicianFilter,
     setTechnicianFilter,
+    typeFilter,
+    setTypeFilter,
     hideCompleted,
     setHideCompleted,
     sortField,

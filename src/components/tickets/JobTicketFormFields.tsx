@@ -1,5 +1,5 @@
 
-import { JobTicketFormData } from "@/types/job-ticket";
+import { JobTicketFormData, TicketType } from "@/types/job-ticket";
 import {
   ClientSelector,
   VehicleSelector,
@@ -7,6 +7,7 @@ import {
   TechnicianSelector,
   StatusPrioritySelectors,
   DescriptionField,
+  TicketTypeSelector,
 } from "./form-fields";
 
 interface JobTicketFormFieldsProps {
@@ -80,22 +81,33 @@ export const JobTicketFormFields = ({
         }
       />
 
-      <StatusPrioritySelectors
-        status={formData.status}
-        priority={formData.priority}
-        onStatusChange={(status) =>
-          setFormData({
-            ...formData,
-            status: status,
-          })
-        }
-        onPriorityChange={(priority) =>
-          setFormData({
-            ...formData,
-            priority: priority,
-          })
-        }
-      />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatusPrioritySelectors
+          status={formData.status}
+          priority={formData.priority}
+          onStatusChange={(status) =>
+            setFormData({
+              ...formData,
+              status: status,
+            })
+          }
+          onPriorityChange={(priority) =>
+            setFormData({
+              ...formData,
+              priority: priority,
+            })
+          }
+        />
+        <TicketTypeSelector
+          ticketType={formData.ticket_type}
+          onTicketTypeChange={(ticketType) =>
+            setFormData({
+              ...formData,
+              ticket_type: ticketType,
+            })
+          }
+        />
+      </div>
 
       <DescriptionField
         description={formData.description}

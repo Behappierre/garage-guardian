@@ -32,6 +32,8 @@ const JobTickets = () => {
     setPriorityFilter,
     technicianFilter,
     setTechnicianFilter,
+    typeFilter,
+    setTypeFilter,
     technicians,
     hideCompleted,
     setHideCompleted,
@@ -74,6 +76,7 @@ const JobTickets = () => {
           statusFilter={statusFilter}
           registrationFilter={registrationFilter}
           priorityFilter={priorityFilter}
+          typeFilter={typeFilter}
           technicianFilter={technicianFilter}
           technicians={technicians}
           hideCompleted={hideCompleted}
@@ -83,6 +86,7 @@ const JobTickets = () => {
           onStatusFilterChange={setStatusFilter}
           onRegistrationFilterChange={setRegistrationFilter}
           onPriorityFilterChange={setPriorityFilter}
+          onTypeFilterChange={setTypeFilter}
           onTechnicianFilterChange={setTechnicianFilter}
           onHideCompletedChange={setHideCompleted}
           onSortChange={toggleSort}

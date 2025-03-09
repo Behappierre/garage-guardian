@@ -2,16 +2,17 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ChevronUp, ChevronDown, ArrowUpDown, ToggleLeft, ToggleRight, User, RefreshCw } from "lucide-react";
+import { ChevronUp, ChevronDown, ArrowUpDown, ToggleLeft, ToggleRight, User, RefreshCw, WrenchIcon, ClipboardListIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { TicketPriority, TicketStatus } from "@/types/job-ticket";
+import type { TicketPriority, TicketStatus, TicketType } from "@/types/job-ticket";
 
 interface JobTicketFiltersProps {
   nameFilter: string;
   statusFilter: TicketStatus | "all";
   registrationFilter: string;
   priorityFilter: TicketPriority | "all";
+  typeFilter: TicketType | "all";
   hideCompleted: boolean;
   technicianFilter: string | "all";
   sortField: "created_at" | "client_name";
@@ -21,6 +22,7 @@ interface JobTicketFiltersProps {
   onStatusFilterChange: (value: TicketStatus | "all") => void;
   onRegistrationFilterChange: (value: string) => void;
   onPriorityFilterChange: (value: TicketPriority | "all") => void;
+  onTypeFilterChange: (value: TicketType | "all") => void;
   onHideCompletedChange: (value: boolean) => void;
   onTechnicianFilterChange: (value: string | "all") => void;
   onSortChange: (field: "created_at" | "client_name") => void;
@@ -32,6 +34,7 @@ export const JobTicketFilters = ({
   statusFilter,
   registrationFilter,
   priorityFilter,
+  typeFilter,
   hideCompleted,
   technicianFilter,
   sortField,
@@ -41,6 +44,7 @@ export const JobTicketFilters = ({
   onStatusFilterChange,
   onRegistrationFilterChange,
   onPriorityFilterChange,
+  onTypeFilterChange,
   onHideCompletedChange,
   onTechnicianFilterChange,
   onSortChange,
@@ -56,7 +60,7 @@ export const JobTicketFilters = ({
 
   return (
     <div className="mb-8">
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
         <div className="space-y-2">
           <Label htmlFor="statusFilter">Filter by Status</Label>
           <Select
@@ -92,6 +96,28 @@ export const JobTicketFilters = ({
               <SelectItem value="normal">Normal</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="urgent">Urgent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="typeFilter">Filter by Type</Label>
+          <Select
+            value={typeFilter}
+            onValueChange={(value) => onTypeFilterChange(value as TicketType | "all")}
+          >
+            <SelectTrigger id="typeFilter">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="routine_service" className="flex items-center gap-2">
+                <ClipboardListIcon className="h-4 w-4" />
+                <span>Routine Service</span>
+              </SelectItem>
+              <SelectItem value="repair" className="flex items-center gap-2">
+                <WrenchIcon className="h-4 w-4" />
+                <span>Repair</span>
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

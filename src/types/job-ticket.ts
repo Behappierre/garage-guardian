@@ -7,6 +7,7 @@ export type JobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
 };
 export type TicketStatus = "received" | "in_progress" | "pending_parts" | "completed" | "cancelled" | "draft";
 export type TicketPriority = Database["public"]["Enums"]["ticket_priority"];
+export type TicketType = "routine_service" | "repair";
 
 export type JobTicketFormData = {
   description: string;
@@ -15,6 +16,7 @@ export type JobTicketFormData = {
   assigned_technician_id: string | null;
   client_id: string | null;
   vehicle_id: string | null;
+  ticket_type: TicketType;
 };
 
 export interface JobTicketFormProps {

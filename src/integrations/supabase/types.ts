@@ -397,6 +397,7 @@ export type Database = {
           priority: Database["public"]["Enums"]["ticket_priority"]
           status: Database["public"]["Enums"]["ticket_status"]
           ticket_number: string
+          ticket_type: Database["public"]["Enums"]["ticket_type"]
           updated_at: string
           vehicle_id: string | null
         }
@@ -410,6 +411,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["ticket_priority"]
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number: string
+          ticket_type?: Database["public"]["Enums"]["ticket_type"]
           updated_at?: string
           vehicle_id?: string | null
         }
@@ -423,6 +425,7 @@ export type Database = {
           priority?: Database["public"]["Enums"]["ticket_priority"]
           status?: Database["public"]["Enums"]["ticket_status"]
           ticket_number?: string
+          ticket_type?: Database["public"]["Enums"]["ticket_type"]
           updated_at?: string
           vehicle_id?: string | null
         }
@@ -916,6 +919,7 @@ export type Database = {
         | "pending_parts"
         | "cancelled"
         | "draft"
+      ticket_type: "routine_service" | "repair"
     }
     CompositeTypes: {
       [_ in never]: never

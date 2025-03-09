@@ -14,6 +14,7 @@ export const useJobTicketForm = ({ clientId, vehicleId, onClose, initialData, li
     assigned_technician_id: initialData?.assigned_technician_id || null,
     client_id: initialData?.client_id || clientId || null,
     vehicle_id: initialData?.vehicle_id || vehicleId || null,
+    ticket_type: initialData?.ticket_type || "repair",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(linkedAppointmentId || null);
