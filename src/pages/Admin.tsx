@@ -7,6 +7,7 @@ import { UserManagement } from "@/components/admin/UserManagement";
 import { TechnicianCosts } from "@/components/admin/TechnicianCosts";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { AdminOperations } from "@/components/admin/AdminOperations";
+import { OpeningTimes } from "@/components/admin/opening-times";
 
 export default function Admin() {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
@@ -23,6 +24,7 @@ export default function Admin() {
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="technician-costs">Technician Costs</TabsTrigger>
           <TabsTrigger value="operations">Operations</TabsTrigger>
+          <TabsTrigger value="opening-times">Business Hours</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users" className="space-y-4">
@@ -45,6 +47,10 @@ export default function Admin() {
         
         <TabsContent value="operations">
           <AdminOperations />
+        </TabsContent>
+
+        <TabsContent value="opening-times">
+          <OpeningTimes />
         </TabsContent>
       </Tabs>
     </div>

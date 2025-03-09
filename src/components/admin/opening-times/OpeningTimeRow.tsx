@@ -3,7 +3,7 @@ import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { OpeningTime } from "./types";
-import { HOURS } from "./constants";
+import { HOURS, formatTimeForDisplay } from "./constants";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface OpeningTimeRowProps {
@@ -23,13 +23,8 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
 }) => {
   const isLoading = savingDay === day.day_of_week;
   
-  // Convert database time format (HH:MM:SS) to display format (HH:MM)
-  const displayTimeValue = (timeValue: string) => {
-    return timeValue.substring(0, 5);
-  };
-
   // Debug - log values to help troubleshoot
-  console.log(`Day ${dayLabel} - start_time: ${day.start_time}, display value: ${displayTimeValue(day.start_time)}`);
+  console.log(`Day ${dayLabel} - start_time: ${day.start_time}, display value: ${formatTimeForDisplay(day.start_time)}`);
   
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
@@ -65,7 +60,7 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
           ) : (
             <>
               <Select
-                value={displayTimeValue(day.start_time)}
+                value={formatTimeForDisplay(day.start_time)}
                 onValueChange={(value) => {
                   console.log(`Changing start time for ${dayLabel} to ${value}`);
                   onTimeChange(day, 'start_time', `${value}:00`);
@@ -87,7 +82,7 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
               <span className="text-gray-500">to</span>
 
               <Select
-                value={displayTimeValue(day.end_time)}
+                value={formatTimeForDisplay(day.end_time)}
                 onValueChange={(value) => {
                   console.log(`Changing end time for ${dayLabel} to ${value}`);
                   onTimeChange(day, 'end_time', `${value}:00`);
@@ -102,7 +97,7 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
                     <SelectItem 
                       key={`end-${hour.value}`} 
                       value={hour.value}
-                      disabled={hour.value <= displayTimeValue(day.start_time)}
+                      disabled={hour.value <= formatTimeForDisplay(day.start_time)}
                     >
                       {hour.label}
                     </SelectItem>

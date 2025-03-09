@@ -18,3 +18,15 @@ export const HOURS = Array.from({ length: 24 }, (_, i) => {
     label: `${hour12}:00 ${ampm}`
   };
 });
+
+// Helper function to convert database time format (HH:MM:SS) to display format (HH:MM)
+export const formatTimeForDisplay = (timeValue: string): string => {
+  if (!timeValue) return "";
+  return timeValue.substring(0, 5);
+};
+
+// Helper function to convert display time format (HH:MM) to database format (HH:MM:SS)
+export const formatTimeForDatabase = (timeValue: string): string => {
+  if (!timeValue) return "";
+  return `${timeValue}:00`;
+};
