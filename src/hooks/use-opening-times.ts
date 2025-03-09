@@ -42,12 +42,10 @@ export const useOpeningTimes = () => {
       const garageId = roleData.garage_id;
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
-      // Use match() instead of eq() to avoid ambiguous column references
-      const { data, error } = await supabase
-        .from("opening_times")
-        .select("*")
-        .match({ garage_id: garageId })
-        .order("day_of_week", { ascending: true });
+      // Using raw SQL to avoid column ambiguity
+      const { data, error } = await supabase.rpc('get_opening_times_for_garage', {
+        p_garage_id: garageId
+      });
 
       if (error) {
         console.error("Error loading opening times:", error);

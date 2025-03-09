@@ -36,23 +36,24 @@ export const useOpeningTimeMutation = () => {
       
       const { day_of_week, ...updateData } = openingTime;
       
-      // Use match() with object syntax to avoid ambiguous column references
-      const { data: existingTime } = await supabase
-        .from("opening_times")
-        .select("id")
-        .match({ 
-          garage_id: garageId,
-          day_of_week: day_of_week 
-        })
-        .maybeSingle();
+      // Use rpc to call a stored procedure
+      const { data: existingTime, error: findError } = await supabase.rpc('find_opening_time', {
+        p_garage_id: garageId,
+        p_day_of_week: day_of_week
+      });
 
-      if (existingTime) {
-        console.log("Updating existing opening time:", existingTime.id);
+      if (findError) {
+        console.error("Error finding existing opening time:", findError);
+        throw findError;
+      }
+
+      if (existingTime && existingTime.length > 0) {
+        console.log("Updating existing opening time:", existingTime[0].id);
         // Update existing record
         const { data, error } = await supabase
           .from("opening_times")
           .update({ ...updateData })
-          .eq("id", existingTime.id)
+          .eq("id", existingTime[0].id)
           .select()
           .single();
 
