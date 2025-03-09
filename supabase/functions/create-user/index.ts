@@ -2,7 +2,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { corsHeaders } from './utils.ts';
-import { validateRequest, createUserAccount, assignUserRole } from './userManagement.ts';
+import { validateRequest } from './validation.ts';
+import { createUserAccount } from './profile-management.ts';
+import { assignUserRole } from './role-management.ts';
 
 serve(async (req: Request) => {
   // Handle CORS preflight requests
@@ -53,7 +55,8 @@ serve(async (req: Request) => {
       email, 
       password, 
       firstName, 
-      lastName
+      lastName,
+      garageId
     );
     
     if (createUserError) {
