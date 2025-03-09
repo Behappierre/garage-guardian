@@ -23,24 +23,14 @@ const GarageManagement = () => {
         const { data: userData, error: userError } = await supabase.auth.getUser();
         
         if (userError || !userData.user) {
+          console.log("No authenticated user found, redirecting to auth");
           navigate("/auth?type=owner");
           return;
         }
 
-        // Check if user has administrator role in user_roles - Get all matching roles
-        const { data: roleData, error: roleError } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', userData.user.id);
-        
-        if (roleError) {
-          console.error("Error checking admin role:", roleError);
-          toast.error("Error verifying your permissions");
-          navigate("/auth?type=owner");
-          return;
-        }
+        console.log("Checking admin status for user:", userData.user.id);
 
-        // Check if user is an owner in garage_members - Get all matching roles
+        // Check if user is an owner in garage_members - this is our primary check
         const { data: ownerData, error: ownerError } = await supabase
           .from('garage_members')
           .select('role')
@@ -51,11 +41,29 @@ const GarageManagement = () => {
           console.error("Error checking owner status:", ownerError);
         }
 
-        // Check if user has admin role in any of the results
-        const hasAdminRole = roleData?.some(role => role.role === 'administrator');
-        const isOwner = ownerData && ownerData.length > 0;
+        // Check if user has administrator role in user_roles
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userData.user.id)
+          .eq('role', 'administrator');
+        
+        if (roleError) {
+          console.error("Error checking admin role:", roleError);
+          toast.error("Error verifying your permissions");
+          navigate("/auth?type=owner");
+          return;
+        }
 
-        // If user is neither an administrator in user_roles nor an owner in garage_members, redirect
+        // If user is either an owner in garage_members OR has administrator role in user_roles, allow access
+        const isOwner = ownerData && ownerData.length > 0;
+        const hasAdminRole = roleData && roleData.length > 0;
+
+        console.log("Access check results:", {
+          isOwnerInGarageMembers: isOwner,
+          isAdminInUserRoles: hasAdminRole
+        });
+
         if (!hasAdminRole && !isOwner) {
           console.log("User is not an administrator or owner, redirecting to staff login");
           toast.error("Only administrators and owners can access garage management");
@@ -65,11 +73,6 @@ const GarageManagement = () => {
           navigate("/auth");
           return;
         }
-
-        console.log("Access granted to garage management:", {
-          isAdminInUserRoles: hasAdminRole,
-          isOwnerInGarageMembers: isOwner
-        });
 
         // User is either an administrator or owner, allow access to garage management
         setIsAdmin(true);

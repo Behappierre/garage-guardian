@@ -53,41 +53,42 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
       }
     }
     
-    // Check if user already has this role
-    const { data: existingRoles } = await supabase
+    // Important change: First delete any existing roles for this user to prevent duplicates
+    const { error: deleteRoleError } = await supabase
       .from('user_roles')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('role', role)
-      .maybeSingle();
+      .delete()
+      .eq('user_id', userId);
       
-    if (existingRoles) {
-      console.log('User already has this role assigned');
+    if (deleteRoleError) {
+      console.error('Error deleting existing roles:', deleteRoleError);
+      // Continue anyway, as we still want to insert the new role
     } else {
-      // Insert role record
-      console.log(`Inserting new role record: user_id=${userId}, role=${role}, garage_id=${garageId || 'null'}`);
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: role,
-          garage_id: garageId
-        });
-        
-      if (roleError) {
-        console.error('Error assigning role:', roleError);
-        return {
-          result: { 
-            userId, 
-            status: 'warning', 
-            message: 'User created but role assignment failed' 
-          },
-          error: roleError
-        };
-      }
-      
-      console.log('Role assigned successfully');
+      console.log('Successfully removed any existing roles for user');
     }
+    
+    // Insert new role record
+    console.log(`Inserting new role record: user_id=${userId}, role=${role}, garage_id=${garageId || 'null'}`);
+    const { error: roleError } = await supabase
+      .from('user_roles')
+      .insert({
+        user_id: userId,
+        role: role,
+        garage_id: garageId
+      });
+      
+    if (roleError) {
+      console.error('Error assigning role:', roleError);
+      return {
+        result: { 
+          userId, 
+          status: 'warning', 
+          message: 'User created but role assignment failed' 
+        },
+        error: roleError
+      };
+    }
+    
+    console.log('Role assigned successfully');
     
     // For staff users, update profile with garage_id
     if (userType === 'staff' && garageId) {

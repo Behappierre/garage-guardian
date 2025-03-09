@@ -21,7 +21,7 @@ export const useAuthSubmit = (userType: UserType) => {
   const [lastError, setLastError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
-  const { garageId } = useAuth();
+  const { garageId, refreshGarageId } = useAuth();
   
   const { signIn, verifyUserAccess } = useSignIn();
   const { signUp, assignStaffToGarage } = useSignUp();
@@ -76,6 +76,9 @@ export const useAuthSubmit = (userType: UserType) => {
                   } else {
                     console.warn("No garage ID available for staff assignment");
                   }
+                  
+                  // Refresh the garage ID in context after assignment
+                  await refreshGarageId();
                   
                   if (role === 'technician') {
                     navigate("/dashboard/job-tickets");
@@ -132,6 +135,9 @@ export const useAuthSubmit = (userType: UserType) => {
                 if (userRole) {
                   console.log(`Processing ${userRole} staff sign-in...`);
                   await handleStaffSignIn(signInData.user.id, userRole);
+                  
+                  // Refresh garage ID in context after sign-in
+                  await refreshGarageId();
                   
                   console.log(`Redirecting ${userRole} to appropriate dashboard`);
                   
