@@ -23,9 +23,9 @@ export const useAppointmentFilters = () => {
   const [bayFilter, setBayFilter] = useState<string | "all">("all");
   
   // Date range filtering
-  const [dateRangeType, setDateRangeType] = useState<DateRangeFilter>("all"); // Default to 'all' instead of 'today'
-  const [startDate, setStartDate] = useState<Date | null>(null); // Initialize to null
-  const [endDate, setEndDate] = useState<Date | null>(null); // Initialize to null
+  const [dateRangeType, setDateRangeType] = useState<DateRangeFilter>("all"); // Default to 'all' to show all dates
+  const [startDate, setStartDate] = useState<Date | null>(null); 
+  const [endDate, setEndDate] = useState<Date | null>(null);
   
   // Sorting
   const [sortField, setSortField] = useState<AppointmentSortField>("start_time");
@@ -61,6 +61,7 @@ export const useAppointmentFilters = () => {
         break;
       case "all":
       default:
+        // Set to null to not filter by date at all
         setStartDate(null);
         setEndDate(null);
         break;
@@ -85,7 +86,7 @@ export const useAppointmentFilters = () => {
     setRegistrationFilter("");
     setStatusFilter("all");
     setBayFilter("all");
-    setDateRange("all"); // Reset to all instead of today
+    setDateRange("all"); // Keep this as 'all' to show all appointments
     setSortField("start_time");
     setSortOrder("asc");
   };

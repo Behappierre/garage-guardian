@@ -72,46 +72,17 @@ export const AppointmentList = ({
     return matchesName && matchesRegistration && matchesStatus && matchesBay && matchesDateRange;
   });
   
-  // Sort appointments first by date (today, future, past)
-  const today = startOfDay(new Date());
-  filteredAppointments.sort((a, b) => {
-    const aDate = new Date(a.start_time);
-    const bDate = new Date(b.start_time);
-    
-    // Check if appointments are today, in the future, or in the past
-    const aIsToday = isSameDay(aDate, today);
-    const bIsToday = isSameDay(bDate, today);
-    const aIsFuture = isAfter(aDate, today) && !aIsToday;
-    const bIsFuture = isAfter(bDate, today) && !bIsToday;
-    
-    // Order: Today > Future > Past
-    if (aIsToday && !bIsToday) return -1;
-    if (bIsToday && !aIsToday) return 1;
-    if (aIsFuture && !bIsFuture) return -1;
-    if (bIsFuture && !aIsFuture) return 1;
-    
-    // If both are in the same category (today/future/past), use the selected sort
-    if (sortField === "client_name") {
-      const aName = `${a.client?.first_name || ''} ${a.client?.last_name || ''}`.toLowerCase();
-      const bName = `${b.client?.first_name || ''} ${b.client?.last_name || ''}`.toLowerCase();
-      return sortOrder === "asc" 
-        ? aName.localeCompare(bName)
-        : bName.localeCompare(aName);
-    } else {
-      // Sort by date within the category
-      return sortOrder === "asc" ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
-    }
-  });
-
   // Helper function to check if a date is the same day
   function isSameDay(date1: Date, date2: Date) {
     return date1.getDate() === date2.getDate() &&
       date1.getMonth() === date2.getMonth() &&
       date1.getFullYear() === date2.getFullYear();
   }
-
+  
   // Group appointments by date for better readability
   const appointmentsByDate: Record<string, AppointmentWithRelations[]> = {};
+  const today = startOfDay(new Date());
+  
   filteredAppointments.forEach(appointment => {
     if (!appointment.start_time) return;
     
@@ -122,21 +93,40 @@ export const AppointmentList = ({
     appointmentsByDate[dateKey].push(appointment);
   });
   
-  // Sort date keys to ensure correct order (today first, then future dates, then past dates)
+  // Sort date keys correctly (today first, then future dates in ascending order, then past dates in descending order)
   const sortedDateKeys = Object.keys(appointmentsByDate).sort((a, b) => {
     const dateA = new Date(a);
     const dateB = new Date(b);
     const todayStr = format(today, 'yyyy-MM-dd');
     
+    // Today always comes first
     if (a === todayStr) return -1;
     if (b === todayStr) return 1;
     
-    // Future dates come before past dates
-    if (isAfter(dateA, today) && isBefore(dateB, today)) return -1;
-    if (isAfter(dateB, today) && isBefore(dateA, today)) return 1;
+    // Future dates (after today)
+    const aIsFuture = isAfter(dateA, today);
+    const bIsFuture = isAfter(dateB, today);
     
-    // Within the same category, use chronological order
-    return sortOrder === "asc" ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+    // Past dates (before today)
+    const aIsPast = isBefore(dateA, today);
+    const bIsPast = isBefore(dateB, today);
+    
+    // If both are future dates, show nearest future date first
+    if (aIsFuture && bIsFuture) {
+      return dateA.getTime() - dateB.getTime(); // Ascending
+    }
+    
+    // If both are past dates, show most recent past date first
+    if (aIsPast && bIsPast) {
+      return dateB.getTime() - dateA.getTime(); // Descending
+    }
+    
+    // If one is future and one is past, future comes first
+    if (aIsFuture && bIsPast) return -1;
+    if (bIsFuture && aIsPast) return 1;
+    
+    // Default chronological order
+    return dateA.getTime() - dateB.getTime();
   });
 
   return (
