@@ -1,22 +1,14 @@
 
 import { useState } from "react";
-import { 
-  Search, 
-  Calendar, 
-  ArrowUpAZ, 
-  ArrowDownAZ, 
-  ArrowUp10, 
-  ArrowDown10, 
-  RefreshCw, 
-  Filter 
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DateRange, DateRangePicker } from "@/components/ui/date-range-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppointmentSortField, SortOrder, DateRangeFilter } from "@/types/appointment";
+import { ChevronUp, ChevronDown, CalendarIcon, Filter, X } from "lucide-react";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
 
 interface AppointmentFiltersProps {
   nameFilter: string;
@@ -24,15 +16,15 @@ interface AppointmentFiltersProps {
   statusFilter: string | "all";
   bayFilter: string | "all";
   dateRangeType: DateRangeFilter;
-  dateRange: DateRange | undefined;
+  dateRange?: DateRange;
   sortField: AppointmentSortField;
   sortOrder: SortOrder;
   onNameFilterChange: (value: string) => void;
   onRegistrationFilterChange: (value: string) => void;
   onStatusFilterChange: (value: string) => void;
   onBayFilterChange: (value: string) => void;
-  onDateRangeChange: (range: DateRange | undefined) => void;
-  onDateRangeTypeChange: (type: DateRangeFilter) => void;
+  onDateRangeChange: (range?: DateRange) => void;
+  onDateRangeTypeChange: (type: DateRangeFilter, customStart?: Date, customEnd?: Date) => void;
   onSortChange: (field: AppointmentSortField) => void;
   onResetFilters: () => void;
 }
@@ -55,109 +47,100 @@ export const AppointmentFilters = ({
   onSortChange,
   onResetFilters,
 }: AppointmentFiltersProps) => {
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
-  // Get the sort direction icon for a field
-  const getSortIcon = (field: AppointmentSortField) => {
-    if (sortField !== field) {
-      if (field === "client_name") {
-        return <ArrowUpAZ className="h-4 w-4 text-gray-400" />;
-      } else {
-        return <ArrowUp10 className="h-4 w-4 text-gray-400" />;
-      }
-    }
-    
-    if (field === "client_name") {
-      return sortOrder === "asc" 
-        ? <ArrowUpAZ className="h-4 w-4 text-primary" />
-        : <ArrowDownAZ className="h-4 w-4 text-primary" />;
-    } else {
-      return sortOrder === "asc"
-        ? <ArrowUp10 className="h-4 w-4 text-primary" />
-        : <ArrowDown10 className="h-4 w-4 text-primary" />;
-    }
+  // Set a data-test-id to help debug the date sorting button
+  const renderSortButton = (field: AppointmentSortField, label: string) => {
+    const isActive = sortField === field;
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        data-test-id={`sort-button-${field}`}
+        onClick={() => {
+          console.log(`Sort button clicked: ${field}`);
+          onSortChange(field);
+        }}
+        className={`flex items-center gap-1 ${isActive ? 'font-semibold' : ''}`}
+      >
+        {label}
+        {isActive && (
+          sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+        )}
+      </Button>
+    );
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-background pb-4 pt-2 shadow-sm">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+        <div className="flex flex-wrap items-center gap-2">
+          {renderSortButton("start_time", "Date")}
+          {renderSortButton("client_name", "Client Name")}
+          
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onSortChange("start_time")}
-            className="gap-2"
-            data-test-id="date-sort-button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-1 ml-2"
           >
-            Date {getSortIcon("start_time")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSortChange("client_name")}
-            className="gap-2"
-          >
-            Client Name {getSortIcon("client_name")}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsFiltersExpanded(!isFiltersExpanded)}
-            className="gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            {isFiltersExpanded ? "Hide Filters" : "Show Filters"}
+            <Filter className="w-4 h-4" />
+            <span>Filters</span>
+            {(nameFilter || registrationFilter || statusFilter !== "all" || bayFilter !== "all" || dateRangeType !== "all") && (
+              <span className="ml-1 inline-flex items-center justify-center w-5 h-5 text-xs bg-primary text-primary-foreground rounded-full">
+                {[
+                  nameFilter,
+                  registrationFilter,
+                  statusFilter !== "all" ? 1 : null,
+                  bayFilter !== "all" ? 1 : null,
+                  dateRangeType !== "all" ? 1 : null
+                ].filter(Boolean).length}
+              </span>
+            )}
           </Button>
         </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={onResetFilters}
-          className="gap-2 border-dashed"
-        >
-          Reset All Filters
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+
+        {(nameFilter || registrationFilter || statusFilter !== "all" || bayFilter !== "all" || dateRangeType !== "all") && (
+          <Button variant="ghost" size="sm" onClick={onResetFilters} className="flex items-center gap-1">
+            <X className="w-4 h-4" />
+            <span>Reset All Filters</span>
+          </Button>
+        )}
       </div>
-      
-      {isFiltersExpanded && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm mb-4">
+
+      {showFilters && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 bg-background border rounded-md">
           <div className="space-y-2">
-            <Label htmlFor="nameFilter">Client Name</Label>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                id="nameFilter"
-                placeholder="Search by name..."
-                value={nameFilter}
-                onChange={(e) => onNameFilterChange(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="registrationFilter">Vehicle Registration</Label>
+            <label className="text-sm font-medium">Client Name</label>
             <Input
-              id="registrationFilter"
-              placeholder="Enter registration..."
-              value={registrationFilter}
-              onChange={(e) => onRegistrationFilterChange(e.target.value)}
+              placeholder="Filter by client name"
+              value={nameFilter}
+              onChange={(e) => onNameFilterChange(e.target.value)}
+              className="w-full"
             />
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="statusFilter">Status</Label>
+            <label className="text-sm font-medium">Vehicle Registration</label>
+            <Input
+              placeholder="Filter by registration"
+              value={registrationFilter}
+              onChange={(e) => onRegistrationFilterChange(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Status</label>
             <Select
               value={statusFilter}
-              onValueChange={onStatusFilterChange}
+              onValueChange={(value) => onStatusFilterChange(value)}
             >
-              <SelectTrigger id="statusFilter">
+              <SelectTrigger>
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -165,53 +148,82 @@ export const AppointmentFilters = ({
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
-            <Label htmlFor="bayFilter">Bay</Label>
+            <label className="text-sm font-medium">Bay</label>
             <Select
               value={bayFilter}
-              onValueChange={onBayFilterChange}
+              onValueChange={(value) => onBayFilterChange(value)}
             >
-              <SelectTrigger id="bayFilter">
+              <SelectTrigger>
                 <SelectValue placeholder="Select bay" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All bays</SelectItem>
+                <SelectItem value="all">All Bays</SelectItem>
                 <SelectItem value="bay1">Bay 1</SelectItem>
                 <SelectItem value="bay2">Bay 2</SelectItem>
                 <SelectItem value="mot">MOT</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          
-          <div className="space-y-2 md:col-span-2">
-            <Label>Date Range</Label>
-            <div className="flex gap-2">
-              <Select
-                value={dateRangeType}
-                onValueChange={(value) => onDateRangeTypeChange(value as DateRangeFilter)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select date range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All dates</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                  <SelectItem value="thisWeek">This week</SelectItem>
-                  <SelectItem value="thisMonth">This month</SelectItem>
-                  <SelectItem value="custom">Custom range</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              {dateRangeType === "custom" && (
-                <DateRangePicker 
-                  value={dateRange}
-                  onChange={onDateRangeChange}
-                />
-              )}
-            </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Date Range</label>
+            <Select
+              value={dateRangeType}
+              onValueChange={(value: DateRangeFilter) => onDateRangeTypeChange(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                <SelectItem value="thisWeek">This Week</SelectItem>
+                <SelectItem value="thisMonth">This Month</SelectItem>
+                <SelectItem value="custom">Custom Date Range</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {dateRangeType === "custom" && (
+            <div className="space-y-2 col-span-1 md:col-span-2">
+              <label className="text-sm font-medium">Custom Date Range</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "LLL dd, y")} -{" "}
+                          {format(dateRange.to, "LLL dd, y")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "LLL dd, y")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={onDateRangeChange}
+                    numberOfMonths={2}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 
 import { format } from "date-fns";
-import { isWithinInterval, addDays, startOfDay, isAfter, isBefore, isEqual } from "date-fns";
+import { isWithinInterval, startOfDay, isAfter, isBefore, isEqual } from "date-fns";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -72,7 +72,7 @@ export const AppointmentList = ({
     return matchesName && matchesRegistration && matchesStatus && matchesBay && matchesDateRange;
   });
   
-  // Group appointments by date for better readability
+  // Group appointments by date
   const appointmentsByDate: Record<string, AppointmentWithRelations[]> = {};
   const today = startOfDay(new Date());
   
@@ -86,37 +86,44 @@ export const AppointmentList = ({
     appointmentsByDate[dateKey].push(appointment);
   });
   
-  // Enhanced date classification for sorting
-  const dateGroups: { [key: string]: { type: string, date: Date, key: string }[] } = {
-    today: [],
-    future: [],
-    past: []
-  };
+  // Sort dates for display
+  let sortedDateKeys: string[] = [];
   
-  // Classify each date in the correct group
-  Object.keys(appointmentsByDate).forEach(dateKey => {
-    const dateObj = new Date(dateKey);
-    const todayStr = format(today, 'yyyy-MM-dd');
+  // Get today's date key
+  const todayStr = format(today, 'yyyy-MM-dd');
+  
+  // Sort based on date and sort preferences
+  if (sortField === 'start_time') {
+    // Array to hold date keys with their corresponding Date objects for proper sorting
+    const dateKeysWithDates = Object.keys(appointmentsByDate).map(dateKey => {
+      return { dateKey, date: new Date(dateKey) };
+    });
     
-    if (dateKey === todayStr) {
-      dateGroups.today.push({ type: 'today', date: dateObj, key: dateKey });
-    } else if (isAfter(dateObj, today)) {
-      dateGroups.future.push({ type: 'future', date: dateObj, key: dateKey });
-    } else {
-      dateGroups.past.push({ type: 'past', date: dateObj, key: dateKey });
+    // First, always include today if it exists
+    if (appointmentsByDate[todayStr]) {
+      sortedDateKeys.push(todayStr);
     }
-  });
+    
+    // Then add future dates in ascending order (closest future dates first)
+    const futureDates = dateKeysWithDates
+      .filter(item => isAfter(item.date, today) && item.dateKey !== todayStr)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    sortedDateKeys = [...sortedDateKeys, ...futureDates.map(item => item.dateKey)];
+    
+    // Then add past dates in descending order (most recent past dates first)
+    const pastDates = dateKeysWithDates
+      .filter(item => isBefore(item.date, today) || isEqual(item.date, today) && item.dateKey !== todayStr)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+    
+    sortedDateKeys = [...sortedDateKeys, ...pastDates.map(item => item.dateKey)];
+  } else {
+    // If sorting by client name or another field, use the default date order
+    sortedDateKeys = Object.keys(appointmentsByDate).sort();
+  }
   
-  // Sort each group individually
-  dateGroups.future.sort((a, b) => a.date.getTime() - b.date.getTime()); // Ascending (nearest future first)
-  dateGroups.past.sort((a, b) => b.date.getTime() - a.date.getTime()); // Descending (most recent past first)
-  
-  // Combine all groups in the right order: today, future, past
-  const sortedDateKeys = [
-    ...dateGroups.today.map(item => item.key),
-    ...dateGroups.future.map(item => item.key),
-    ...dateGroups.past.map(item => item.key)
-  ];
+  console.log("Sorted date keys:", sortedDateKeys);
+  console.log("Sort field:", sortField, "Sort order:", sortOrder);
 
   return (
     <ScrollArea className="h-[calc(100vh-240px)]">
