@@ -50,7 +50,7 @@ export const AppointmentSelector = ({
   };
 
   return (
-    <div>
+    <div className="w-full">
       <Label>Related Appointment (Optional)</Label>
       <Select
         value={appointmentId || "no-selection"}
