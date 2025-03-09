@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppointmentSortField, SortOrder, DateRangeFilter } from "@/types/appointment";
-import { ChevronUp, ChevronDown, CalendarIcon, Filter, X } from "lucide-react";
+import { ChevronUp, ChevronDown, CalendarIcon, Filter, X, CalendarDays } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 
@@ -27,6 +27,7 @@ interface AppointmentFiltersProps {
   onDateRangeTypeChange: (type: DateRangeFilter, customStart?: Date, customEnd?: Date) => void;
   onSortChange: (field: AppointmentSortField) => void;
   onResetFilters: () => void;
+  onScrollToToday: () => void; // New prop for handling Today button click
 }
 
 export const AppointmentFilters = ({
@@ -46,6 +47,7 @@ export const AppointmentFilters = ({
   onDateRangeTypeChange,
   onSortChange,
   onResetFilters,
+  onScrollToToday, // New prop
 }: AppointmentFiltersProps) => {
   const [showFilters, setShowFilters] = useState(false);
 
@@ -97,6 +99,17 @@ export const AppointmentFilters = ({
                 ].filter(Boolean).length}
               </span>
             )}
+          </Button>
+          
+          {/* Today button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onScrollToToday}
+            className="flex items-center gap-1"
+          >
+            <CalendarDays className="w-4 h-4" />
+            <span>Today</span>
           </Button>
         </div>
 

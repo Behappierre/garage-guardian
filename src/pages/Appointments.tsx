@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
@@ -25,6 +24,8 @@ const Appointments = () => {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const { garageId } = useAuth();
+  
+  const appointmentListRef = useRef<{ scrollToToday: () => void } | null>(null);
 
   const { 
     data: appointments, 
@@ -105,6 +106,17 @@ const Appointments = () => {
   const handleSortFieldToggle = (field: AppointmentSortField) => {
     console.log(`Toggling sort on field: ${field}, current field: ${sortField}, current order: ${sortOrder}`);
     toggleSort(field);
+  };
+
+  const handleScrollToToday = () => {
+    if (viewMode === "list" && appointmentListRef.current) {
+      appointmentListRef.current.scrollToToday();
+    } else if (viewMode === "calendar") {
+      const calendarApi = document.querySelector('.fc')?.querySelector('.fc-view-harness')?.firstChild;
+      if (calendarApi && 'scrollToTime' in calendarApi) {
+        (calendarApi as any).scrollToTime({ hour: 8 });
+      }
+    }
   };
 
   if (error) {
@@ -211,6 +223,7 @@ const Appointments = () => {
               onDateRangeTypeChange={setDateRange}
               onSortChange={handleSortFieldToggle}
               onResetFilters={resetAllFilters}
+              onScrollToToday={handleScrollToToday}
             />
           )}
         </div>
@@ -226,6 +239,7 @@ const Appointments = () => {
             />
           ) : (
             <AppointmentList 
+              ref={appointmentListRef}
               appointments={appointments || []}
               onSelectAppointment={(appointment) => {
                 setSelectedAppointment(appointment);
@@ -269,4 +283,3 @@ const Appointments = () => {
 };
 
 export default Appointments;
-

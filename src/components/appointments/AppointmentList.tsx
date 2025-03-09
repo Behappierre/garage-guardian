@@ -1,7 +1,6 @@
-
 import { format } from "date-fns";
 import { isWithinInterval, startOfDay, isAfter, isBefore, isEqual } from "date-fns";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -23,7 +22,11 @@ interface AppointmentListProps {
   sortOrder: SortOrder;
 }
 
-export const AppointmentList = ({
+export interface AppointmentListRef {
+  scrollToToday: () => void;
+}
+
+export const AppointmentList = forwardRef<AppointmentListRef, AppointmentListProps>(({
   appointments,
   onSelectAppointment,
   onTicketClick,
@@ -36,11 +39,21 @@ export const AppointmentList = ({
   endDate,
   sortField,
   sortOrder
-}: AppointmentListProps) => {
+}, ref) => {
   const navigate = useNavigate();
-  // Add ref for today's section
   const todaySectionRef = useRef<HTMLDivElement>(null);
   
+  useImperativeHandle(ref, () => ({
+    scrollToToday: () => {
+      if (todaySectionRef.current) {
+        todaySectionRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+    }
+  }));
+
   if (isLoading) {
     return <div className="p-6 text-center">Loading appointments...</div>;
   }
@@ -49,23 +62,17 @@ export const AppointmentList = ({
     return <div className="p-6 text-center">No appointments found</div>;
   }
 
-  // Filter appointments
   let filteredAppointments = appointments.filter(appointment => {
-    // Filter by client name
     const clientName = `${appointment.client?.first_name || ''} ${appointment.client?.last_name || ''}`.toLowerCase();
     const matchesName = nameFilter ? clientName.includes(nameFilter.toLowerCase()) : true;
     
-    // Filter by vehicle registration
     const registration = appointment.vehicle?.license_plate?.toLowerCase() || '';
     const matchesRegistration = registrationFilter ? registration.includes(registrationFilter.toLowerCase()) : true;
     
-    // Filter by status
     const matchesStatus = statusFilter === "all" || appointment.status === statusFilter;
     
-    // Filter by bay
     const matchesBay = bayFilter === "all" || appointment.bay === bayFilter;
     
-    // Filter by date range
     let matchesDateRange = true;
     if (startDate && endDate && appointment.start_time) {
       const appointmentDate = new Date(appointment.start_time);
@@ -75,7 +82,6 @@ export const AppointmentList = ({
     return matchesName && matchesRegistration && matchesStatus && matchesBay && matchesDateRange;
   });
   
-  // Group appointments by date
   const appointmentsByDate: Record<string, AppointmentWithRelations[]> = {};
   const today = startOfDay(new Date());
   
@@ -89,47 +95,37 @@ export const AppointmentList = ({
     appointmentsByDate[dateKey].push(appointment);
   });
   
-  // Sort dates for display
   const sortedDateKeys: string[] = [];
   
-  // Get today's date key
   const todayStr = format(today, 'yyyy-MM-dd');
   
-  // Sort based on date and sort preferences
   if (sortField === 'start_time') {
-    // Convert date keys to objects with date information for sorting
     const dateKeysWithDates = Object.keys(appointmentsByDate).map(dateKey => {
       return { dateKey, date: new Date(dateKey) };
     });
     
-    // Sort all dates in chronological order (oldest to newest)
     dateKeysWithDates.sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    // Convert back to array of date keys
     sortedDateKeys.push(...dateKeysWithDates.map(item => item.dateKey));
   } else {
-    // If sorting by client name or another field, use the default date order
     sortedDateKeys.push(...Object.keys(appointmentsByDate).sort());
   }
   
   console.log("Sorted date keys:", sortedDateKeys);
   console.log("Sort field:", sortField, "Sort order:", sortOrder);
 
-  // Add useEffect to scroll to today's section when component mounts
   useEffect(() => {
-    // Short timeout to ensure DOM is ready
     const scrollTimeout = setTimeout(() => {
       if (todaySectionRef.current) {
-        // Scroll today's section into view with smooth behavior
         todaySectionRef.current.scrollIntoView({
           behavior: 'smooth',
-          block: 'center' // Center the element in the viewport
+          block: 'center'
         });
       }
     }, 100);
 
     return () => clearTimeout(scrollTimeout);
-  }, [appointments, nameFilter, registrationFilter, statusFilter, bayFilter]); // Re-run when filters change
+  }, [appointments, nameFilter, registrationFilter, statusFilter, bayFilter]);
 
   return (
     <ScrollArea className="h-[calc(100vh-240px)]">
@@ -138,7 +134,6 @@ export const AppointmentList = ({
           <div 
             key={dateKey} 
             className="space-y-4"
-            // Add ref to today's section
             ref={dateKey === todayStr ? todaySectionRef : null}
           >
             <h3 className="sticky top-0 z-10 py-2 font-semibold text-lg bg-background border-b">
@@ -152,7 +147,6 @@ export const AppointmentList = ({
             
             <div className="space-y-4">
               {appointmentsByDate[dateKey].map((appointment) => {
-                // Skip rendering if appointment data is missing
                 if (!appointment || !appointment.id) return null;
                 
                 return (
@@ -229,4 +223,6 @@ export const AppointmentList = ({
       </div>
     </ScrollArea>
   );
-};
+});
+
+AppointmentList.displayName = "AppointmentList";
