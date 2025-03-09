@@ -1,175 +1,149 @@
 
 import { corsHeaders } from './utils.ts';
 
-// Helper function to ensure a profile exists with retry logic
-export async function ensureProfileExists(supabase: any, userId: string, firstName: string, lastName: string, garageId?: string | null) {
-  // First check if profile already exists
-  const { data: existingProfile, error: checkError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', userId)
-    .single();
+export const createUserAccount = async (
+  supabaseClient: any,
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string,
+  garageId: string | null
+) => {
+  try {
+    console.log(`Attempting to create or retrieve user with email: ${email}`);
     
-  if (checkError) {
-    console.log('Error checking for existing profile:', checkError.message);
-  }
+    // First check if user already exists in auth
+    const { data: existingUsers, error: lookupError } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+      
+    if (lookupError) {
+      console.warn('Error checking for existing user:', lookupError);
+      // Continue with creation attempt
+    }
     
-  if (existingProfile) {
-    console.log('Profile already exists for user:', userId);
-    return true;
-  }
-  
-  console.log('Creating profile for user:', userId);
-  
-  // Try up to 3 times to create the profile
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const { error: profileError } = await supabase
+    let userData: any;
+    let isExisting = false;
+    
+    if (existingUsers?.id) {
+      // User exists, get their data
+      console.log('User already exists, retrieving data');
+      isExisting = true;
+      
+      const { data: existingUserData, error: getUserError } = await supabaseClient.auth.admin.getUserById(
+        existingUsers.id
+      );
+      
+      if (getUserError) {
+        console.error('Error retrieving existing user:', getUserError);
+        return {
+          userData: null,
+          error: new Response(
+            JSON.stringify({ 
+              error: 'Failed to retrieve existing user account',
+              status: 'error'
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 500,
+            }
+          ),
+          isExisting: false
+        };
+      }
+      
+      userData = existingUserData;
+    } else {
+      // Create new user
+      console.log('Creating new user account');
+      
+      const { data: newUserData, error: createUserError } = await supabaseClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          first_name: firstName,
+          last_name: lastName
+        },
+      });
+      
+      if (createUserError) {
+        console.error('Error creating user:', createUserError);
+        return {
+          userData: null,
+          error: new Response(
+            JSON.stringify({ 
+              error: createUserError.message,
+              status: 'error'
+            }),
+            { 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 400,
+            }
+          ),
+          isExisting: false
+        };
+      }
+      
+      userData = newUserData;
+      
+      // Immediately create profile for new user
+      console.log(`Creating profile for new user: ${userData.user.id}`);
+      const { error: profileError } = await supabaseClient
         .from('profiles')
         .insert({
-          id: userId,
-          first_name: firstName,
-          last_name: lastName,
-          garage_id: garageId
-        });
-        
-      if (profileError) {
-        console.error(`Profile creation attempt ${attempt} failed:`, profileError);
-        if (attempt < 3) {
-          console.log(`Waiting before retry ${attempt+1}...`);
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms between attempts
-        } else {
-          console.error('All profile creation attempts failed for user:', userId);
-          return false;
-        }
-      } else {
-        console.log('Profile created successfully for user:', userId);
-        return true; // Success, exit the function
-      }
-    } catch (error) {
-      console.error(`Unexpected error in profile creation attempt ${attempt}:`, error);
-      if (attempt >= 3) {
-        console.error('All profile creation attempts failed with exceptions');
-        return false;
-      }
-    }
-  }
-  
-  return false;
-}
-
-export const createUserAccount = async (supabase: any, email: string, password: string, firstName: string, lastName: string, garageId?: string | null) => {
-  try {
-    console.log(`Attempting to create user with email: ${email}`);
-    
-    // Check if user already exists
-    const { data: existingUsers, error: getUserError } = await supabase.auth.admin.listUsers({
-      filter: {
-        email: email
-      }
-    });
-    
-    if (getUserError) {
-      console.error('Error checking if user exists:', getUserError);
-      return {
-        userData: null,
-        error: new Response(
-          JSON.stringify({ 
-            error: getUserError.message,
-            status: 'error'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-          }
-        ),
-        isExisting: false
-      };
-    }
-    
-    // If user exists, return user
-    if (existingUsers && existingUsers.users && existingUsers.users.length > 0) {
-      console.log('User already exists:', existingUsers.users[0].id);
-      
-      // Ensure profile exists for existing user
-      await ensureProfileExists(supabase, existingUsers.users[0].id, firstName, lastName, garageId);
-      
-      return {
-        userData: { user: existingUsers.users[0] },
-        error: null,
-        isExisting: true
-      };
-    }
-    
-    // Create user if does not exist
-    console.log('Creating new user...');
-    const { data: userData, error: createUserError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName
-      }
-    });
-    
-    if (createUserError) {
-      console.error('Error creating user:', createUserError);
-      return {
-        userData: null,
-        error: new Response(
-          JSON.stringify({ 
-            error: createUserError.message,
-            status: 'error'
-          }),
-          { 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
-          }
-        ),
-        isExisting: false
-      };
-    }
-    
-    console.log('User created successfully:', userData.user.id);
-    
-    // CRITICAL: Create profile for the new user with multiple attempts if needed
-    const profileResult = await ensureProfileExists(supabase, userData.user.id, firstName, lastName, garageId);
-    console.log('Profile creation result:', profileResult ? 'Success' : 'Failed');
-    
-    if (!profileResult) {
-      console.error('CRITICAL: Failed to create profile after multiple attempts');
-      // Create one more attempt with a direct SQL query as a last resort
-      try {
-        const { error: rawInsertError } = await supabase.from('profiles').insert({
           id: userData.user.id,
           first_name: firstName,
           last_name: lastName,
-          garage_id: garageId
+          garage_id: garageId,
+          email: email
         });
         
-        if (rawInsertError) {
-          console.error('Last resort profile creation failed:', rawInsertError);
-        } else {
-          console.log('Last resort profile creation succeeded');
-        }
-      } catch (e) {
-        console.error('Exception in last resort profile creation:', e);
+      if (profileError) {
+        console.error('Error creating profile for new user:', profileError);
+        // Log error but continue since user was created
+      } else {
+        console.log('Successfully created profile for new user');
       }
     }
     
-    return {
-      userData,
-      error: null,
-      isExisting: false
-    };
+    // Double check profile exists and create if missing
+    const { data: profileExists } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('id', userData.user.id)
+      .single();
+      
+    if (!profileExists) {
+      console.log(`Profile not found for user: ${userData.user.id}, creating it now`);
+      const { error: createProfileError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: userData.user.id,
+          first_name: firstName,
+          last_name: lastName,
+          garage_id: garageId,
+          email: email
+        });
+        
+      if (createProfileError) {
+        console.error('Error creating missing profile:', createProfileError);
+        // Log error but continue since user exists
+      } else {
+        console.log('Successfully created missing profile');
+      }
+    }
+    
+    return { userData, error: null, isExisting };
   } catch (error: any) {
-    console.error('Unexpected error creating user account:', error);
+    console.error('Unexpected error in createUserAccount:', error);
     return {
       userData: null,
       error: new Response(
         JSON.stringify({ 
-          error: error.message,
+          error: error.message || 'Failed to create or retrieve user account',
           status: 'error'
         }),
         { 
@@ -179,5 +153,45 @@ export const createUserAccount = async (supabase: any, email: string, password: 
       ),
       isExisting: false
     };
+  }
+};
+
+export const ensureProfileExists = async (supabaseClient: any, userId: string, firstName: string, lastName: string, garageId: string | null = null) => {
+  try {
+    // Check if profile exists
+    const { data: profileData } = await supabaseClient
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+      
+    if (!profileData) {
+      // Get user email from auth
+      const { data: userData } = await supabaseClient.auth.admin.getUserById(userId);
+      const email = userData?.user?.email || '';
+      
+      // Create profile if missing
+      const { error: createError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          id: userId,
+          first_name: firstName,
+          last_name: lastName,
+          garage_id: garageId,
+          email: email
+        });
+        
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        return { success: false, error: createError };
+      }
+      
+      return { success: true, created: true };
+    }
+    
+    return { success: true, created: false };
+  } catch (error) {
+    console.error('Error in ensureProfileExists:', error);
+    return { success: false, error };
   }
 };
