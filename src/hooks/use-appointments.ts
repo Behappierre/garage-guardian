@@ -3,10 +3,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useAppointmentFilters } from "./appointments/use-appointment-filters";
 
 export const useAppointments = () => {
   const queryClient = useQueryClient();
   const { garageId } = useAuth();
+  
+  // Get all filters and sorting from the filters hook
+  const filters = useAppointmentFilters();
 
   const query = useQuery({
     queryKey: ["appointments", garageId],
@@ -96,5 +100,6 @@ export const useAppointments = () => {
   return {
     ...query,
     refreshAppointments,
+    ...filters // Spread all filter properties and methods
   };
 };

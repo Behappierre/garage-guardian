@@ -1,16 +1,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { JobTicket } from "@/types/job-ticket";
+import type { JobTicket, TicketPriority, TicketStatus } from "@/types/job-ticket";
 import type { SortField, SortOrder } from "./use-job-ticket-filters";
 
 export const useTicketData = (
   garageId: string | undefined,
   nameFilter: string,
-  statusFilter: string,
+  statusFilter: TicketStatus | "all",
   registrationFilter: string,
-  priorityFilter: string,
-  technicianFilter: string,
+  priorityFilter: TicketPriority | "all",
+  technicianFilter: string | "all",
   hideCompleted: boolean,
   sortField: SortField,
   sortOrder: SortOrder
@@ -34,12 +34,12 @@ export const useTicketData = (
       
       // Only apply filter if it's not "all"
       if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
+        query = query.eq('status', statusFilter as TicketStatus);
       }
       
       // Only apply filter if it's not "all"
       if (priorityFilter !== "all") {
-        query = query.eq('priority', priorityFilter);
+        query = query.eq('priority', priorityFilter as TicketPriority);
       }
       
       // Only apply filter if it's not "all"
@@ -71,7 +71,7 @@ export const useTicketData = (
         if (sortField === "client_name") {
           const aName = `${a.client?.first_name} ${a.client?.last_name}`.toLowerCase();
           const bName = `${b.client?.first_name} ${b.client?.last_name}`.toLowerCase();
-          return sortOrder === "asc" 
+          return sortDirection === "asc" 
             ? aName.localeCompare(bName)
             : bName.localeCompare(aName);
         } else {

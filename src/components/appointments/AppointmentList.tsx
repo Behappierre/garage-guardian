@@ -1,21 +1,39 @@
 
 import { format } from "date-fns";
+import { isWithinInterval } from "date-fns";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import type { AppointmentSortField, SortOrder } from "@/hooks/appointments/use-appointment-filters";
 
 interface AppointmentListProps {
   appointments: AppointmentWithRelations[];
   onSelectAppointment: (appointment: AppointmentWithRelations) => void;
   onTicketClick: (ticketId: string, e: React.MouseEvent) => void;
   isLoading: boolean;
+  nameFilter: string;
+  registrationFilter: string;
+  statusFilter: string | "all";
+  bayFilter: string | "all";
+  startDate: Date | null;
+  endDate: Date | null;
+  sortField: AppointmentSortField;
+  sortOrder: SortOrder;
 }
 
 export const AppointmentList = ({
   appointments,
   onSelectAppointment,
   onTicketClick,
-  isLoading
+  isLoading,
+  nameFilter,
+  registrationFilter,
+  statusFilter,
+  bayFilter,
+  startDate,
+  endDate,
+  sortField,
+  sortOrder
 }: AppointmentListProps) => {
   const navigate = useNavigate();
 
@@ -27,6 +45,47 @@ export const AppointmentList = ({
     return <div className="p-6 text-center">No appointments found</div>;
   }
 
+  // Filter appointments
+  let filteredAppointments = appointments.filter(appointment => {
+    // Filter by client name
+    const clientName = `${appointment.client?.first_name || ''} ${appointment.client?.last_name || ''}`.toLowerCase();
+    const matchesName = nameFilter ? clientName.includes(nameFilter.toLowerCase()) : true;
+    
+    // Filter by vehicle registration
+    const registration = appointment.vehicle?.license_plate?.toLowerCase() || '';
+    const matchesRegistration = registrationFilter ? registration.includes(registrationFilter.toLowerCase()) : true;
+    
+    // Filter by status
+    const matchesStatus = statusFilter === "all" || appointment.status === statusFilter;
+    
+    // Filter by bay
+    const matchesBay = bayFilter === "all" || appointment.bay === bayFilter;
+    
+    // Filter by date range
+    let matchesDateRange = true;
+    if (startDate && endDate && appointment.start_time) {
+      const appointmentDate = new Date(appointment.start_time);
+      matchesDateRange = isWithinInterval(appointmentDate, { start: startDate, end: endDate });
+    }
+    
+    return matchesName && matchesRegistration && matchesStatus && matchesBay && matchesDateRange;
+  });
+  
+  // Sort appointments
+  filteredAppointments.sort((a, b) => {
+    if (sortField === "client_name") {
+      const aName = `${a.client?.first_name || ''} ${a.client?.last_name || ''}`.toLowerCase();
+      const bName = `${b.client?.first_name || ''} ${b.client?.last_name || ''}`.toLowerCase();
+      return sortOrder === "asc" 
+        ? aName.localeCompare(bName)
+        : bName.localeCompare(aName);
+    } else {
+      const aDate = new Date(a.start_time).getTime();
+      const bDate = new Date(b.start_time).getTime();
+      return sortOrder === "asc" ? aDate - bDate : bDate - aDate;
+    }
+  });
+
   const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     // Navigate to the job tickets page with the ticket ID
@@ -35,7 +94,7 @@ export const AppointmentList = ({
 
   return (
     <div className="space-y-4">
-      {appointments.map((appointment) => {
+      {filteredAppointments.map((appointment) => {
         // Skip rendering if appointment data is missing
         if (!appointment || !appointment.id) return null;
         

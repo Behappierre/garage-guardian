@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
 import { AppointmentForm } from "@/components/appointments/AppointmentForm";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
+import { AppointmentFilters } from "@/components/appointments/AppointmentFilters";
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useAppointments } from "@/hooks/use-appointments";
@@ -25,17 +26,36 @@ const Appointments = () => {
   const isDarkMode = theme === "dark";
   const { garageId } = useAuth();
 
-  const { data: appointments, isLoading, error } = useAppointments();
+  // Get appointments with filtering and sorting capabilities
+  const { 
+    data: appointments, 
+    isLoading, 
+    error,
+    nameFilter,
+    setNameFilter,
+    registrationFilter,
+    setRegistrationFilter,
+    statusFilter,
+    setStatusFilter,
+    bayFilter,
+    setBayFilter,
+    dateRangeType,
+    startDate,
+    endDate,
+    setDateRange,
+    sortField,
+    sortOrder,
+    toggleSort,
+    resetAllFilters
+  } = useAppointments();
 
+  // Parse URL parameters on component mount and when URL changes
   useEffect(() => {
     console.log("Appointments loaded:", appointments?.length);
     console.log("Loading state:", isLoading);
     console.log("Error state:", error);
     console.log("Garage ID:", garageId);
-  }, [appointments, isLoading, error, garageId]);
-
-  // Parse URL parameters on component mount and when URL changes
-  useEffect(() => {
+    
     const dateParam = searchParams.get('date');
     const viewParam = searchParams.get('view') as "dayGridMonth" | "timeGridWeek" | "timeGridDay" | null;
     
@@ -51,7 +71,7 @@ const Appointments = () => {
     if (dateParam) {
       setViewMode("calendar");
     }
-  }, [searchParams]);
+  }, [searchParams, appointments, isLoading, error, garageId]);
 
   const handleDateSelect = (arg: { start: Date; end: Date }) => {
     setSelectedDate(arg.start);
@@ -66,6 +86,16 @@ const Appointments = () => {
   const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/dashboard/job-tickets?id=${ticketId}`);
+  };
+
+  const handleDateRangeChange = (range: { from: Date, to: Date } | undefined) => {
+    if (range?.from) {
+      const customStart = range.from;
+      const customEnd = range.to || range.from;
+      setDateRange("custom", customStart, customEnd);
+    } else {
+      setDateRange("all");
+    }
   };
 
   if (error) {
@@ -102,7 +132,7 @@ const Appointments = () => {
 
       <div className="px-8 pb-8 w-full">
         <div className="mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex items-center">
               <div className={`rounded-md p-0.5 flex ${isDarkMode ? "bg-gray-800" : "bg-gray-100"}`}>
                 <button 
@@ -153,6 +183,27 @@ const Appointments = () => {
               </div>
             </div>
           </div>
+          
+          {viewMode === "list" && (
+            <AppointmentFilters
+              nameFilter={nameFilter}
+              registrationFilter={registrationFilter}
+              statusFilter={statusFilter}
+              bayFilter={bayFilter}
+              dateRangeType={dateRangeType}
+              dateRange={startDate && endDate ? { from: startDate, to: endDate } : undefined}
+              sortField={sortField}
+              sortOrder={sortOrder}
+              onNameFilterChange={setNameFilter}
+              onRegistrationFilterChange={setRegistrationFilter}
+              onStatusFilterChange={setStatusFilter}
+              onBayFilterChange={setBayFilter}
+              onDateRangeChange={handleDateRangeChange}
+              onDateRangeTypeChange={setDateRange}
+              onSortChange={toggleSort}
+              onResetFilters={resetAllFilters}
+            />
+          )}
         </div>
 
         <div className={`rounded-lg shadow-sm w-full ${isDarkMode ? "bg-gray-900" : "bg-white"}`}>
@@ -173,6 +224,14 @@ const Appointments = () => {
               }}
               onTicketClick={handleTicketClick}
               isLoading={isLoading}
+              nameFilter={nameFilter}
+              registrationFilter={registrationFilter}
+              statusFilter={statusFilter}
+              bayFilter={bayFilter}
+              startDate={startDate}
+              endDate={endDate}
+              sortField={sortField}
+              sortOrder={sortOrder}
             />
           )}
         </div>
