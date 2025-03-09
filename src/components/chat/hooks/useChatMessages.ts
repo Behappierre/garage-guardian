@@ -147,9 +147,23 @@ export function useChatMessages() {
           throw new Error('No response received from GPT assistant');
         }
 
+        // Extract metadata from GPT response
+        const metadata = {
+          intent: gptData.metadata?.query_type,
+          confidence: gptData.metadata?.confidence,
+          entities: gptData.metadata?.entities,
+          context: gptData.metadata?.context
+        };
+
+        // Update context if present
+        if (gptData.metadata?.context) {
+          setConversationContext(gptData.metadata.context);
+        }
+
         setMessages(prev => [...prev, { 
           role: "assistant", 
-          content: formatMessage(gptData.response)
+          content: formatMessage(gptData.response),
+          metadata
         }]);
 
         if (gptData.response.toLowerCase().includes('booking is confirmed') || 
@@ -226,8 +240,16 @@ export function useChatMessages() {
       // Use a more descriptive error message based on the error type
       let errorMessage = "I apologize, but I'm having trouble processing your request at the moment. Please try again later.";
       
-      if (error instanceof Error && error.message.includes("Failed to fetch")) {
-        errorMessage = "I'm having trouble connecting to the AI service. This could be due to network issues or service unavailability. Please try again in a moment.";
+      if (error instanceof Error) {
+        console.error("Error details:", error.message);
+        
+        if (error.message.includes("Failed to fetch") || error.message.includes("network")) {
+          errorMessage = "I'm having trouble connecting to the AI service. This could be due to network issues or service unavailability. Please try again in a moment.";
+        } else if (error.message.includes("timeout")) {
+          errorMessage = "The request to the AI service timed out. Please try again with a shorter message or try later when the system might be less busy.";
+        } else if (error.message.includes("not authenticated") || error.message.includes("session")) {
+          errorMessage = "Your session appears to have expired. Please refresh the page and sign in again to continue chatting.";
+        }
       }
       
       toast.error("Failed to get response from AI assistant");

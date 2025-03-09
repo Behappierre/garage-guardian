@@ -18,6 +18,9 @@ serve(async (req) => {
 
   try {
     const { message, user_id } = await req.json();
+    console.log("Received message:", message);
+    console.log("User ID:", user_id);
+    
     const supabase = initSupabase();
     
     // Get previous conversation context to provide more continuity
@@ -63,7 +66,15 @@ serve(async (req) => {
       supabase
     );
 
-    return new Response(JSON.stringify({ response }), {
+    return new Response(JSON.stringify({ 
+      response,
+      metadata: {
+        query_type: classification.intent,
+        confidence: classification.confidence,
+        entities: classification.entities,
+        context: conversationContext
+      }
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {

@@ -36,7 +36,7 @@ export function ChatAgent() {
     console.log("Sending message:", message);
     
     // Add retry mechanism for critical errors
-    const maxRetries = 1;
+    const maxRetries = 2;
     let retryCount = 0;
     
     const attemptSend = () => {
@@ -46,7 +46,7 @@ export function ChatAgent() {
           retryCount++;
           console.log(`Retrying send (${retryCount}/${maxRetries})...`);
           // Wait a short time before retrying
-          setTimeout(attemptSend, 1000);
+          setTimeout(attemptSend, 1500);
         }
       });
     };
