@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Sidebar } from "@/components/Sidebar";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,17 @@ import { ClientForm } from "@/components/forms/ClientForm";
 import { useTheme } from "next-themes";
 
 const Dashboard = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Use localStorage to persist the sidebar's collapsed state
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const savedState = localStorage.getItem("sidebarCollapsed");
+    return savedState !== null ? JSON.parse(savedState) : false;
+  });
+  
+  // Save to localStorage whenever isCollapsed changes
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", JSON.stringify(isCollapsed));
+  }, [isCollapsed]);
+
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
   const [showJobTicketForm, setShowJobTicketForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
