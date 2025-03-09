@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -5,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppointmentSortField, SortOrder, DateRangeFilter } from "@/types/appointment";
-import { ChevronUp, ChevronDown, CalendarIcon, Filter, X, CalendarDays } from "lucide-react";
+import { ChevronUp, ChevronDown, CalendarIcon, Filter, X, CalendarDays, ArrowUpDown } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 
@@ -50,33 +51,43 @@ export const AppointmentFilters = ({
 }: AppointmentFiltersProps) => {
   const [showFilters, setShowFilters] = useState(false);
 
-  const renderSortButton = (field: AppointmentSortField, label: string) => {
-    const isActive = sortField === field;
-    return (
-      <Button
-        variant="ghost" 
-        size="sm"
-        data-test-id={`sort-button-${field}`}
-        onClick={() => {
-          console.log(`Sort button clicked: ${field}`);
-          onSortChange(field);
-        }}
-        className={`flex items-center gap-1 ${isActive ? 'font-semibold' : ''}`}
-      >
-        {label}
-        {isActive && (
-          sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-        )}
-      </Button>
-    );
+  // Get the sort direction icon for a field - similar to JobTicketFilters
+  const getSortIcon = (field: AppointmentSortField) => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+    return sortOrder === "asc"
+      ? <ChevronUp className="h-4 w-4 text-primary" />
+      : <ChevronDown className="h-4 w-4 text-primary" />;
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 w-full">
         <div className="flex flex-wrap items-center gap-2">
-          {renderSortButton("start_time", "Date")}
-          {renderSortButton("client_name", "Client Name")}
+          <Button
+            variant="ghost" 
+            size="sm"
+            data-test-id="sort-button-start_time"
+            onClick={() => {
+              console.log(`Sort button clicked: start_time`);
+              onSortChange("start_time");
+            }}
+            className="gap-2"
+          >
+            Date {getSortIcon("start_time")}
+          </Button>
+          
+          <Button
+            variant="ghost" 
+            size="sm"
+            data-test-id="sort-button-client_name"
+            onClick={() => {
+              console.log(`Sort button clicked: client_name`);
+              onSortChange("client_name");
+            }}
+            className="gap-2"
+          >
+            Client Name {getSortIcon("client_name")}
+          </Button>
           
           <Button
             variant="ghost" 
