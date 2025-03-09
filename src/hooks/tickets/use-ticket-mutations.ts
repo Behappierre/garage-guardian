@@ -55,28 +55,25 @@ export const useTicketMutations = (onClose: () => void) => {
         
         ticketId = initialTicketId;
       } else {
-        // Use a different approach by skipping the explicit ticket_number (trigger will handle it)
-        const { data, error } = await supabase
-          .from('job_tickets')
-          .insert([{
-            description: formData.description,
-            status: formData.status,
-            priority: formData.priority,
-            assigned_technician_id: formData.assigned_technician_id,
-            client_id: formData.client_id,
-            vehicle_id: formData.vehicle_id,
-            garage_id: garageId,
-            ticket_type: formData.ticket_type
-          }])
-          .select('id')
-          .single();
+        // Use rpc to call a function that will handle the ticket_number generation
+        // This avoids the TypeScript error related to missing ticket_number
+        const { data, error } = await supabase.rpc('create_job_ticket', {
+          p_description: formData.description,
+          p_status: formData.status,
+          p_priority: formData.priority,
+          p_assigned_technician_id: formData.assigned_technician_id || null,
+          p_client_id: formData.client_id || null,
+          p_vehicle_id: formData.vehicle_id || null,
+          p_garage_id: garageId,
+          p_ticket_type: formData.ticket_type
+        });
 
         if (error) {
           console.error("Error creating job ticket:", error);
           throw error;
         }
         
-        ticketId = data.id;
+        ticketId = data;
       }
 
       if (selectedAppointmentId) {
