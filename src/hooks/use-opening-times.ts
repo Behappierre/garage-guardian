@@ -13,16 +13,35 @@ export type OpeningTime = {
 };
 
 export const useOpeningTimes = () => {
-  const { garageId } = useAuth();
+  const { user } = useAuth();
 
   const query = useQuery({
-    queryKey: ["opening-times", garageId],
+    queryKey: ["opening-times", user?.id],
     queryFn: async () => {
-      if (!garageId) return [];
+      if (!user?.id) return [];
 
-      console.log("Fetching opening times for garage:", garageId);
+      // First, get the garage_id from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("garage_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error("Error fetching user role:", roleError);
+        throw roleError;
+      }
+
+      // If no garage_id found in user_roles, return empty array
+      if (!roleData?.garage_id) {
+        console.log("No garage ID found in user_roles for user:", user.id);
+        return [];
+      }
+
+      const garageId = roleData.garage_id;
+      console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
-      // Fixed query using explicit order parameters and proper column qualification
+      // Fetch opening times using the garage_id from user_roles
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
@@ -36,7 +55,7 @@ export const useOpeningTimes = () => {
 
       // Default opening times if none set (9am-5pm weekdays, closed weekends)
       if (!data || data.length === 0) {
-        console.log("No opening times found, creating defaults");
+        console.log("No opening times found, creating defaults for garage:", garageId);
         return Array.from({ length: 7 }, (_, i) => ({
           id: `default-${i}`,
           garage_id: garageId,
@@ -49,12 +68,12 @@ export const useOpeningTimes = () => {
 
       return data as OpeningTime[];
     },
-    enabled: !!garageId,
+    enabled: !!user?.id,
   });
 
   return {
     ...query,
-    garageId
+    garageId: query.data?.[0]?.garage_id || null
   };
 };
 

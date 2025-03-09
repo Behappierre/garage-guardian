@@ -3,19 +3,38 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OpeningTime } from "./types";
+import { useAuth } from "@/hooks/auth/useAuth";
 
-export const useOpeningTimeMutation = (garageId: string | null) => {
+export const useOpeningTimeMutation = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: async (openingTime: Partial<OpeningTime> & { day_of_week: number }) => {
-      if (!garageId) throw new Error("No garage selected");
+      if (!user?.id) throw new Error("User not authenticated");
 
-      console.log("Updating opening time for garage:", garageId, "day:", openingTime.day_of_week);
+      // First, get the garage_id from user_roles table
+      const { data: roleData, error: roleError } = await supabase
+        .from("user_roles")
+        .select("garage_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error("Error fetching user role:", roleError);
+        throw roleError;
+      }
+
+      if (!roleData?.garage_id) {
+        throw new Error("No garage found in user_roles");
+      }
+
+      const garageId = roleData.garage_id;
+      console.log("Updating opening time for garage from user_roles:", garageId, "day:", openingTime.day_of_week);
       
       const { day_of_week, ...updateData } = openingTime;
       
-      // Try to find if this day already exists - with improved query syntax
+      // Try to find if this day already exists
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
@@ -57,7 +76,7 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["opening-times", garageId] });
+      queryClient.invalidateQueries({ queryKey: ["opening-times", user?.id] });
       toast.success("Opening times updated successfully");
     },
     onError: (error) => {
