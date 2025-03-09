@@ -17,15 +17,15 @@ export const DescriptionField = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 w-full">
       <Label htmlFor="description">Description</Label>
-      <div className="relative">
+      <div className="relative w-full">
         <Textarea
           id="description"
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="Enter job description and details"
-          className={`resize-none ${isExpanded ? "min-h-[300px]" : "min-h-[120px]"}`}
+          className={`resize-none w-full ${isExpanded ? "min-h-[300px]" : "min-h-[120px]"}`}
         />
         <Button
           type="button"
