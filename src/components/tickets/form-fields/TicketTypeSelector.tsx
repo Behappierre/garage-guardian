@@ -29,7 +29,7 @@ export const TicketTypeSelector = ({
         <SelectTrigger className="w-full">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="min-w-[150px]">
+        <SelectContent className="min-w-[180px]">
           <SelectItem value="routine_service" className="flex items-center gap-2">
             <ClipboardListIcon className="h-4 w-4" />
             <span>Routine Service</span>

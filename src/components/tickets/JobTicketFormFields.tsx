@@ -82,31 +82,35 @@ export const JobTicketFormFields = ({
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatusPrioritySelectors
-          status={formData.status}
-          priority={formData.priority}
-          onStatusChange={(status) =>
-            setFormData({
-              ...formData,
-              status: status,
-            })
-          }
-          onPriorityChange={(priority) =>
-            setFormData({
-              ...formData,
-              priority: priority,
-            })
-          }
-        />
-        <TicketTypeSelector
-          ticketType={formData.ticket_type}
-          onTicketTypeChange={(ticketType) =>
-            setFormData({
-              ...formData,
-              ticket_type: ticketType,
-            })
-          }
-        />
+        <div className="md:col-span-2">
+          <StatusPrioritySelectors
+            status={formData.status}
+            priority={formData.priority}
+            onStatusChange={(status) =>
+              setFormData({
+                ...formData,
+                status: status,
+              })
+            }
+            onPriorityChange={(priority) =>
+              setFormData({
+                ...formData,
+                priority: priority,
+              })
+            }
+          />
+        </div>
+        <div>
+          <TicketTypeSelector
+            ticketType={formData.ticket_type}
+            onTicketTypeChange={(ticketType) =>
+              setFormData({
+                ...formData,
+                ticket_type: ticketType,
+              })
+            }
+          />
+        </div>
       </div>
 
       <DescriptionField

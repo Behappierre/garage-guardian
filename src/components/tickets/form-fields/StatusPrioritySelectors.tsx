@@ -38,7 +38,7 @@ export const StatusPrioritySelectors = ({
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="min-w-[150px]">
+          <SelectContent className="min-w-[180px]">
             <SelectItem value="draft">Draft</SelectItem>
             <SelectItem value="received">Received</SelectItem>
             <SelectItem value="in_progress">In Progress</SelectItem>
@@ -58,7 +58,7 @@ export const StatusPrioritySelectors = ({
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="min-w-[150px]">
+          <SelectContent className="min-w-[180px]">
             <SelectItem value="low">Low</SelectItem>
             <SelectItem value="normal">Normal</SelectItem>
             <SelectItem value="high">High</SelectItem>
