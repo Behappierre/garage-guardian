@@ -457,6 +457,47 @@ export type Database = {
           },
         ]
       }
+      opening_times: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          garage_id: string
+          id: string
+          is_closed: boolean
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          garage_id: string
+          id?: string
+          is_closed?: boolean
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          garage_id?: string
+          id?: string
+          is_closed?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_times_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

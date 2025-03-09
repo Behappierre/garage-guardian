@@ -1,48 +1,53 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { deleteRequestedUsers } from "@/utils/deleteBatchUsers";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OpeningTimes } from "@/components/admin/OpeningTimes";
 
-export function AdminOperations() {
-  const [isDeleting, setIsDeleting] = useState(false);
-  
-  const handleBatchDelete = async () => {
-    if (confirm("Are you sure you want to delete these users? This action cannot be undone.")) {
-      setIsDeleting(true);
-      try {
-        await deleteRequestedUsers();
-      } catch (error) {
-        console.error("Error during batch deletion:", error);
-      } finally {
-        setIsDeleting(false);
-      }
-    }
-  };
-  
+export const AdminOperations = () => {
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Admin Operations</CardTitle>
-        <CardDescription>
-          Special administrative operations for system maintenance
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <h3 className="text-lg font-medium">User Management</h3>
-          <p className="text-sm text-muted-foreground mb-2">
-            Delete specific test users from the system
-          </p>
-          <Button 
-            variant="destructive" 
-            onClick={handleBatchDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting ? "Deleting..." : "Delete Test Users"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Garage Operations</h2>
+      
+      <Tabs defaultValue="opening-times">
+        <TabsList>
+          <TabsTrigger value="opening-times">Opening Times</TabsTrigger>
+          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="opening-times" className="space-y-4 pt-4">
+          <OpeningTimes />
+        </TabsContent>
+        
+        <TabsContent value="advanced" className="space-y-4 pt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Operations</CardTitle>
+              <CardDescription>
+                Use with caution! These operations affect data across your garage.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Data Export</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Export all your garage data in CSV format.
+                </p>
+                <Button variant="outline">Export Data</Button>
+              </div>
+              
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium mb-2 text-destructive">Danger Zone</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  These actions cannot be undone. Please be certain before proceeding.
+                </p>
+                <Button variant="destructive">Reset Database</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
-}
+};

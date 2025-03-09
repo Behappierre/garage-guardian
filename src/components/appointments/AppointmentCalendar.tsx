@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -13,6 +12,7 @@ import type { AppointmentWithRelations } from "@/types/appointment";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { useOpeningTimes, isWithinBusinessHours, timeToHour } from "@/hooks/use-opening-times";
 
 type BayType = 'all' | 'bay1' | 'bay2' | 'mot';
 type CalendarViewType = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay';
@@ -41,8 +41,9 @@ export const AppointmentCalendar = ({
   const [calendarTitle, setCalendarTitle] = useState('');
   const calendarRef = useRef<FullCalendar | null>(null);
   const queryClient = useQueryClient();
+  
+  const { data: openingTimes, isLoading: isLoadingOpeningTimes } = useOpeningTimes();
 
-  // Update the calendar when initialDate or initialView changes
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
     if (calendarApi) {
@@ -112,6 +113,18 @@ export const AppointmentCalendar = ({
     const { event } = eventDropInfo;
     const appointment = event.extendedProps as AppointmentWithBay;
     
+    if (openingTimes && openingTimes.length > 0) {
+      const newStartDate = new Date(event.startStr);
+      const newEndDate = new Date(event.endStr);
+      
+      if (!isWithinBusinessHours(newStartDate, openingTimes) || 
+          !isWithinBusinessHours(newEndDate, openingTimes)) {
+        toast.error("Cannot schedule appointments outside business hours");
+        eventDropInfo.revert();
+        return;
+      }
+    }
+    
     updateAppointmentMutation.mutate({
       id: appointment.id,
       start_time: event.startStr,
@@ -123,11 +136,33 @@ export const AppointmentCalendar = ({
     const { event } = eventResizeInfo;
     const appointment = event.extendedProps as AppointmentWithBay;
     
+    if (openingTimes && openingTimes.length > 0) {
+      const newEndDate = new Date(event.endStr);
+      
+      if (!isWithinBusinessHours(newEndDate, openingTimes)) {
+        toast.error("Cannot schedule appointments outside business hours");
+        eventResizeInfo.revert();
+        return;
+      }
+    }
+    
     updateAppointmentMutation.mutate({
       id: appointment.id,
       start_time: event.startStr,
       end_time: event.endStr,
     });
+  };
+
+  const handleDateSelect = (arg: { start: Date; end: Date }) => {
+    if (openingTimes && openingTimes.length > 0) {
+      if (!isWithinBusinessHours(arg.start, openingTimes) || 
+          !isWithinBusinessHours(arg.end, openingTimes)) {
+        toast.error("Cannot schedule appointments outside business hours");
+        return;
+      }
+    }
+    
+    onDateSelect(arg);
   };
 
   const calendarEvents = filterAppointmentsByBay(appointments)
@@ -149,7 +184,6 @@ export const AppointmentCalendar = ({
     onEventClick(clickInfo.event.extendedProps as AppointmentWithBay);
   };
 
-  // Calendar navigation functions
   const handlePrev = () => {
     const calendarApi = calendarRef.current?.getApi();
     if (calendarApi) {
@@ -181,21 +215,31 @@ export const AppointmentCalendar = ({
       calendarApi.changeView(view);
       setCalendarTitle(calendarApi.view.title);
       
-      // When changing to a specific view, update the URL to reflect the change
-      // This helps preserve the view when navigating between pages
       const url = new URL(window.location.href);
       url.searchParams.set('view', view);
       window.history.replaceState({}, '', url.toString());
     }
   };
 
-  // Update calendar title when view changes
   useEffect(() => {
     const calendarApi = calendarRef.current?.getApi();
     if (calendarApi) {
       setCalendarTitle(calendarApi.view.title);
     }
   }, [currentView]);
+
+  const businessHoursConfig = openingTimes?.map((day) => {
+    if (day.is_closed) return null;
+    
+    const [startHours, startMinutes] = day.start_time.split(':').map(Number);
+    const [endHours, endMinutes] = day.end_time.split(':').map(Number);
+    
+    return {
+      daysOfWeek: [day.day_of_week],
+      startTime: `${startHours.toString().padStart(2, '0')}:${startMinutes.toString().padStart(2, '0')}`,
+      endTime: `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`,
+    };
+  }).filter(Boolean);
 
   return (
     <div className="space-y-2 w-full">
@@ -205,7 +249,13 @@ export const AppointmentCalendar = ({
             variant="outline"
             size="sm"
             className="rounded-l-md rounded-r-none"
-            onClick={handlePrev}
+            onClick={() => {
+              const calendarApi = calendarRef.current?.getApi();
+              if (calendarApi) {
+                calendarApi.prev();
+                setCalendarTitle(calendarApi.view.title);
+              }
+            }}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -213,7 +263,13 @@ export const AppointmentCalendar = ({
             variant="outline"
             size="sm"
             className="rounded-l-none rounded-r-md"
-            onClick={handleNext}
+            onClick={() => {
+              const calendarApi = calendarRef.current?.getApi();
+              if (calendarApi) {
+                calendarApi.next();
+                setCalendarTitle(calendarApi.view.title);
+              }
+            }}
           >
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -221,7 +277,13 @@ export const AppointmentCalendar = ({
             size="sm"
             variant="secondary"
             className="ml-2"
-            onClick={handleToday}
+            onClick={() => {
+              const calendarApi = calendarRef.current?.getApi();
+              if (calendarApi) {
+                calendarApi.today();
+                setCalendarTitle(calendarApi.view.title);
+              }
+            }}
           >
             Today
           </Button>
@@ -244,7 +306,18 @@ export const AppointmentCalendar = ({
               variant={currentView === 'dayGridMonth' ? 'default' : 'outline'}
               size="sm"
               className="rounded-l-md rounded-r-none"
-              onClick={() => handleViewChange('dayGridMonth')}
+              onClick={() => {
+                setCurrentView('dayGridMonth');
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.changeView('dayGridMonth');
+                  setCalendarTitle(calendarApi.view.title);
+                  
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('view', 'dayGridMonth');
+                  window.history.replaceState({}, '', url.toString());
+                }
+              }}
             >
               Month
             </Button>
@@ -252,7 +325,18 @@ export const AppointmentCalendar = ({
               variant={currentView === 'timeGridWeek' ? 'default' : 'outline'}
               size="sm"
               className="rounded-none border-x-0"
-              onClick={() => handleViewChange('timeGridWeek')}
+              onClick={() => {
+                setCurrentView('timeGridWeek');
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.changeView('timeGridWeek');
+                  setCalendarTitle(calendarApi.view.title);
+                  
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('view', 'timeGridWeek');
+                  window.history.replaceState({}, '', url.toString());
+                }
+              }}
             >
               Week
             </Button>
@@ -260,7 +344,18 @@ export const AppointmentCalendar = ({
               variant={currentView === 'timeGridDay' ? 'default' : 'outline'}
               size="sm"
               className="rounded-r-md rounded-l-none"
-              onClick={() => handleViewChange('timeGridDay')}
+              onClick={() => {
+                setCurrentView('timeGridDay');
+                const calendarApi = calendarRef.current?.getApi();
+                if (calendarApi) {
+                  calendarApi.changeView('timeGridDay');
+                  setCalendarTitle(calendarApi.view.title);
+                  
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('view', 'timeGridDay');
+                  window.history.replaceState({}, '', url.toString());
+                }
+              }}
             >
               Day
             </Button>
@@ -271,7 +366,6 @@ export const AppointmentCalendar = ({
       <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-gray-100 w-full">
         <style>
           {`
-            /* Calendar base styling */
             .fc {
               --fc-border-color: #edf2f7;
               --fc-today-bg-color: #f7fafc;
@@ -283,12 +377,10 @@ export const AppointmentCalendar = ({
               width: 100% !important;
             }
             
-            /* Make all borders lighter */
             .fc th, .fc td {
               border-color: #edf2f7 !important;
             }
             
-            /* Header row styling */
             .fc .fc-col-header {
               background-color: #ffffff;
             }
@@ -302,13 +394,11 @@ export const AppointmentCalendar = ({
               border-color: #edf2f7 !important;
             }
             
-            /* Time slots - REDUCE HEIGHT */
             .fc .fc-timegrid-slot {
               height: 1.5em !important;
               border-bottom: 1px solid #f1f5f9;
             }
             
-            /* Time axis labels */
             .fc .fc-timegrid-axis {
               padding: 0.1rem 0.5rem;
               width: 40px !important;
@@ -320,8 +410,7 @@ export const AppointmentCalendar = ({
               color: #64748b;
             }
             
-            /* Events styling */
-            .fc-event {
+            .fc .fc-event {
               border-radius: 4px;
               border: none !important;
               padding: 2px 4px;
@@ -343,33 +432,28 @@ export const AppointmentCalendar = ({
               display: block;
             }
             
-            /* Remove the default toolbar */
             .fc-header-toolbar {
               display: none !important;
             }
-
-            /* Hide scrollbars but allow scrolling */
+            
             .fc-scroller {
               scrollbar-width: none;
               -ms-overflow-style: none;
               overflow-y: auto;
             }
-
+            
             .fc-scroller::-webkit-scrollbar {
               display: none;
             }
             
-            /* Day header styling */
             .fc-timegrid-day-frame, .fc-daygrid-day-frame {
               min-width: 100% !important;
             }
             
-            /* Fix for grid cells */
             .fc-scrollgrid {
               width: 100% !important; 
             }
             
-            /* Ensure all tables inside the calendar have full width */
             .fc-scrollgrid-section,
             .fc-scrollgrid table,
             .fc-scrollgrid-sync-table,
@@ -381,30 +465,25 @@ export const AppointmentCalendar = ({
               width: 100% !important;
             }
             
-            /* Fix the cell widths */
             .fc-col-header-cell,
             .fc-timegrid-col,
             .fc-daygrid-day {
-              width: 14.285% !important; /* For 7 days of the week */
+              width: 14.285% !important;
             }
             
-            /* Ensure proper width for the time axis column */
             .fc .fc-timegrid-axis-frame {
               min-width: 50px !important;
             }
             
-            /* Prevent horizontal scrolling on the entire calendar */
             .fc-view-harness {
               width: 100% !important;
               overflow-x: hidden !important;
             }
             
-            /* Day view specific styling */
             .fc-timeGridDay-view .fc-timegrid-col {
               width: 100% !important;
             }
             
-            /* Fix for day view */
             .fc-timeGridDay-view .fc-timegrid-cols,
             .fc-timeGridDay-view .fc-timegrid-col,
             .fc-timeGridDay-view .fc-scrollgrid-sync-table {
@@ -412,7 +491,6 @@ export const AppointmentCalendar = ({
               min-width: 100% !important;
             }
             
-            /* Day header text */
             .fc-col-header-cell-cushion {
               display: inline-block !important;
               padding: 8px;
@@ -420,12 +498,10 @@ export const AppointmentCalendar = ({
               color: #1f2937;
             }
             
-            /* Fix for month view - hide unnecessary day numbers in header */
             .fc-dayGridMonth-view .fc-col-header-cell-cushion {
               visibility: visible;
             }
             
-            /* Highlight current day in week view with blue */
             .fc-timeGridWeek-view .fc-day-today {
               background-color: rgba(14, 165, 233, 0.05) !important;
             }
@@ -435,17 +511,25 @@ export const AppointmentCalendar = ({
               font-weight: 600;
             }
             
-            /* For day view, hide the duplicate date header */
             .fc-timeGridDay-view .fc-col-header {
               display: none !important;
             }
             
-            /* Full width for day view content */
             .fc-timeGridDay-view .fc-timegrid-axis,
             .fc-timeGridDay-view .fc-timegrid-slots,
             .fc-timeGridDay-view .fc-timegrid-slot,
             .fc-timeGridDay-view .fc-timegrid-slot-lane {
               width: 100% !important;
+            }
+            
+            .fc-non-business {
+              background: repeating-linear-gradient(
+                45deg,
+                rgba(0, 0, 0, 0.03),
+                rgba(0, 0, 0, 0.03) 10px,
+                rgba(0, 0, 0, 0.05) 10px,
+                rgba(0, 0, 0, 0.05) 20px
+              ) !important;
             }
           `}
         </style>
@@ -458,16 +542,19 @@ export const AppointmentCalendar = ({
           height="auto"
           events={calendarEvents}
           selectable={true}
-          select={onDateSelect}
+          select={handleDateSelect}
           eventClick={handleEventClick}
-          slotMinTime="08:00:00"
-          slotMaxTime="18:00:00"
+          slotMinTime="06:00:00"
+          slotMaxTime="22:00:00"
           allDaySlot={false}
           slotDuration="00:30:00"
           editable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
           dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
+          businessHours={businessHoursConfig || true}
+          selectConstraint="businessHours"
+          eventConstraint="businessHours"
           datesSet={(dateInfo) => {
             setCalendarTitle(dateInfo.view.title);
             setCurrentView(dateInfo.view.type as CalendarViewType);

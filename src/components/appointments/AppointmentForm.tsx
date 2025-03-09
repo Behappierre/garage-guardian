@@ -9,6 +9,7 @@ import { ExternalLink } from "lucide-react";
 import type { AppointmentWithRelations, AppointmentStatus, BayType } from "@/types/appointment";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/auth/useAuth";
+import { useOpeningTimes, isWithinBusinessHours } from "@/hooks/use-opening-times";
 
 interface AppointmentFormProps {
   initialData: AppointmentWithRelations | null;
@@ -202,6 +203,8 @@ export const AppointmentForm = ({
   const [isLoadingTimeSlot, setIsLoadingTimeSlot] = useState(false);
   const defaultStartTime = roundToNearestHour(selectedDate || new Date());
   const [duration, setDuration] = useState("60"); // Default 1 hour duration
+  
+  const { data: openingTimes } = useOpeningTimes();
 
   const [formData, setFormData] = useState<AppointmentFormData>({
     client_id: initialData?.client_id || preselectedClientId || null,
@@ -287,8 +290,7 @@ export const AppointmentForm = ({
       startCheckingFrom.setSeconds(0);
       startCheckingFrom.setMilliseconds(0);
       
-      const businessHourStart = 8; // 8 AM
-      const businessHourEnd = 18; // 6 PM
+      const businessHours = openingTimes ? openingTimes : []; 
       
       const bookedSlots = existingAppointments.map(appointment => ({
         start: new Date(appointment.start_time),
@@ -301,21 +303,21 @@ export const AppointmentForm = ({
       let daysToCheck = 14;
       
       while (daysToCheck > 0) {
-        const currentHour = currentSlot.getHours();
-        
-        if (currentHour >= businessHourStart && currentHour < businessHourEnd) {
+        if (businessHours.length > 0 && isWithinBusinessHours(currentSlot, businessHours)) {
           const slotEnd = new Date(currentSlot.getTime() + durationMs);
           
-          const isBooked = bookedSlots.some(bookedSlot => {
-            return (
-              (currentSlot >= bookedSlot.start && currentSlot < bookedSlot.end) ||
-              (slotEnd > bookedSlot.start && slotEnd <= bookedSlot.end) ||
-              (currentSlot <= bookedSlot.start && slotEnd >= bookedSlot.end)
-            );
-          });
-          
-          if (!isBooked) {
-            return currentSlot;
+          if (isWithinBusinessHours(slotEnd, businessHours)) {
+            const isBooked = bookedSlots.some(bookedSlot => {
+              return (
+                (currentSlot >= bookedSlot.start && currentSlot < bookedSlot.end) ||
+                (slotEnd > bookedSlot.start && slotEnd <= bookedSlot.end) ||
+                (currentSlot <= bookedSlot.start && slotEnd >= bookedSlot.end)
+              );
+            });
+            
+            if (!isBooked) {
+              return currentSlot;
+            }
           }
         }
         
@@ -341,7 +343,7 @@ export const AppointmentForm = ({
         end_time: formatDateTimeForInput(new Date(nextAvailableSlot.getTime() + parseInt(duration) * 60 * 1000))
       }));
     }
-  }, [existingAppointments, initialData]);
+  }, [existingAppointments, initialData, openingTimes]);
 
   useEffect(() => {
     const startDate = new Date(formData.start_time);
@@ -470,6 +472,23 @@ export const AppointmentForm = ({
     setIsSubmitting(true);
 
     try {
+      if (openingTimes && openingTimes.length > 0) {
+        const startDate = new Date(formData.start_time);
+        const endDate = new Date(formData.end_time);
+        
+        if (!isWithinBusinessHours(startDate, openingTimes)) {
+          toast.error("Appointment start time is outside business hours");
+          setIsSubmitting(false);
+          return;
+        }
+        
+        if (!isWithinBusinessHours(endDate, openingTimes)) {
+          toast.error("Appointment end time is outside business hours");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       if (initialData) {
         await updateAppointmentMutation.mutateAsync({ ...formData, id: initialData.id });
       } else {
@@ -613,3 +632,4 @@ export const AppointmentForm = ({
     </form>
   );
 };
+
