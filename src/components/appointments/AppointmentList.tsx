@@ -41,6 +41,14 @@ export const AppointmentList = ({
   // Add ref for today's section
   const todaySectionRef = useRef<HTMLDivElement>(null);
   
+  if (isLoading) {
+    return <div className="p-6 text-center">Loading appointments...</div>;
+  }
+
+  if (!appointments || appointments.length === 0) {
+    return <div className="p-6 text-center">No appointments found</div>;
+  }
+
   // Filter appointments
   let filteredAppointments = appointments.filter(appointment => {
     // Filter by client name
@@ -94,24 +102,11 @@ export const AppointmentList = ({
       return { dateKey, date: new Date(dateKey) };
     });
     
-    // First add today if it exists
-    if (appointmentsByDate[todayStr]) {
-      sortedDateKeys.push(todayStr);
-    }
+    // Sort all dates in chronological order (oldest to newest)
+    dateKeysWithDates.sort((a, b) => a.date.getTime() - b.date.getTime());
     
-    // Add past dates in descending order (most recent first)
-    const pastDates = dateKeysWithDates
-      .filter(item => isBefore(item.date, today) && !isEqual(item.date, today))
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
-    
-    // Add future dates in ascending order (earliest first)
-    const futureDates = dateKeysWithDates
-      .filter(item => isAfter(item.date, today))
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-    
-    // Combine in correct order: past dates (descending), today, future dates (ascending)
-    sortedDateKeys.unshift(...pastDates.map(item => item.dateKey));
-    sortedDateKeys.push(...futureDates.map(item => item.dateKey));
+    // Convert back to array of date keys
+    sortedDateKeys.push(...dateKeysWithDates.map(item => item.dateKey));
   } else {
     // If sorting by client name or another field, use the default date order
     sortedDateKeys.push(...Object.keys(appointmentsByDate).sort());
@@ -135,14 +130,6 @@ export const AppointmentList = ({
 
     return () => clearTimeout(scrollTimeout);
   }, [appointments, nameFilter, registrationFilter, statusFilter, bayFilter]); // Re-run when filters change
-
-  if (isLoading) {
-    return <div className="p-6 text-center">Loading appointments...</div>;
-  }
-
-  if (!appointments || appointments.length === 0) {
-    return <div className="p-6 text-center">No appointments found</div>;
-  }
 
   return (
     <ScrollArea className="h-[calc(100vh-240px)]">
