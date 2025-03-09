@@ -104,14 +104,16 @@ export const OpeningTimes = () => {
         if (error) throw error;
         return data;
       } else {
-        // Insert new record
+        // Insert new record - ensure all required fields are present
         const { data, error } = await supabase
           .from("opening_times")
-          .insert([{ 
-            garage_id: garageId, 
-            day_of_week, 
-            ...updateData 
-          }])
+          .insert({
+            garage_id: garageId,
+            day_of_week: day_of_week,
+            start_time: openingTime.start_time || "09:00:00", // Provide default if not specified
+            end_time: openingTime.end_time || "17:00:00", // Provide default if not specified
+            is_closed: openingTime.is_closed !== undefined ? openingTime.is_closed : false
+          })
           .select()
           .single();
 
