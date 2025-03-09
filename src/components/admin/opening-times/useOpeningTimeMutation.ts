@@ -17,7 +17,7 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
-        .eq("garage_id", garageId)
+        .eq("opening_times.garage_id", garageId)
         .eq("day_of_week", day_of_week)
         .maybeSingle();
 
