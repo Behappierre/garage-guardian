@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,7 +26,7 @@ interface AppointmentFiltersProps {
   onDateRangeTypeChange: (type: DateRangeFilter, customStart?: Date, customEnd?: Date) => void;
   onSortChange: (field: AppointmentSortField) => void;
   onResetFilters: () => void;
-  onScrollToToday: () => void; // New prop for handling Today button click
+  onScrollToToday: () => void;
 }
 
 export const AppointmentFilters = ({
@@ -47,16 +46,15 @@ export const AppointmentFilters = ({
   onDateRangeTypeChange,
   onSortChange,
   onResetFilters,
-  onScrollToToday, // New prop
+  onScrollToToday,
 }: AppointmentFiltersProps) => {
   const [showFilters, setShowFilters] = useState(false);
 
-  // Set a data-test-id to help debug the date sorting button
   const renderSortButton = (field: AppointmentSortField, label: string) => {
     const isActive = sortField === field;
     return (
       <Button
-        variant="ghost"
+        variant="ghost" 
         size="sm"
         data-test-id={`sort-button-${field}`}
         onClick={() => {
@@ -81,10 +79,10 @@ export const AppointmentFilters = ({
           {renderSortButton("client_name", "Client Name")}
           
           <Button
-            variant="outline"
+            variant="ghost" 
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-1 ml-2"
+            className="flex items-center gap-2"
           >
             <Filter className="w-4 h-4" />
             <span>Filters</span>
@@ -101,12 +99,11 @@ export const AppointmentFilters = ({
             )}
           </Button>
           
-          {/* Today button */}
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={onScrollToToday}
-            className="flex items-center gap-1"
+            className="flex items-center gap-2"
           >
             <CalendarDays className="w-4 h-4" />
             <span>Today</span>
@@ -114,7 +111,7 @@ export const AppointmentFilters = ({
         </div>
 
         {(nameFilter || registrationFilter || statusFilter !== "all" || bayFilter !== "all" || dateRangeType !== "all") && (
-          <Button variant="ghost" size="sm" onClick={onResetFilters} className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" onClick={onResetFilters} className="flex items-center gap-2 border-dashed">
             <X className="w-4 h-4" />
             <span>Reset All Filters</span>
           </Button>
