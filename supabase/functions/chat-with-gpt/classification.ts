@@ -1,4 +1,3 @@
-
 // Enhanced classification system for the chatbot
 interface IntentPattern {
   intent: string;
@@ -13,12 +12,16 @@ const intentPatterns: IntentPattern[] = [
     intent: 'booking',
     patterns: [
       'book', 'schedule', 'appointment', 'book in', 'slot', 'availability',
-      'when can i', 'time slot', 'reserve', 'set up', 'arrange'
+      'when can i', 'time slot', 'reserve', 'set up', 'arrange',
+      'have we got an appointment for', 'do we have an appointment for',
+      'is there an appointment for', 'when is the appointment for',
+      'check appointment', 'lookup appointment', 'find appointment'
     ],
     extractors: {
       date: /(?:on|for|at)?\s*(?:the)?\s*(\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|tomorrow|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i,
       time: /(?:at)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i,
-      service: /(?:for|to)\s*(oil change|tire rotation|brake service|inspection|maintenance|repair|check|service)/i
+      service: /(?:for|to)\s*(oil change|tire rotation|brake service|inspection|maintenance|repair|check|service)/i,
+      name: /appointment for\s+([A-Za-z\s]+)(?:\?|$|\s|\.)/i
     }
   },
   {

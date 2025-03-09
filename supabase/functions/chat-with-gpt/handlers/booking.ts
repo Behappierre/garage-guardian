@@ -1,3 +1,4 @@
+
 // Handles booking requests and appointment queries
 export async function handleBookingRequest(
   message: string, 
@@ -23,6 +24,12 @@ export async function handleBookingRequest(
     
     const userGarageId = userData?.garage_id;
     console.log('User garage ID for booking:', userGarageId);
+    
+    // Check if this is an appointment lookup query
+    if (checkIfAppointmentLookup(message)) {
+      console.log("Detected appointment lookup query");
+      return handleAppointmentLookup(message, supabase, userGarageId, entities);
+    }
     
     // Find client by name if entity is available
     if (entities?.name) {
@@ -154,6 +161,172 @@ Bay: ${appointmentData.bay}`;
   } catch (error) {
     console.error('Error in booking handler:', error);
     return `I encountered an error while trying to book the appointment: ${error.message}. Please try again or contact support.`;
+  }
+}
+
+// Function to check if a message is an appointment lookup query
+function checkIfAppointmentLookup(message: string): boolean {
+  const lookupPatterns = [
+    /have we got an appointment for/i,
+    /do we have an appointment for/i,
+    /is there an appointment for/i,
+    /when is the appointment for/i,
+    /appointment for [A-Za-z\s]+\?/i
+  ];
+  
+  return lookupPatterns.some(pattern => pattern.test(message));
+}
+
+// Function to handle appointment lookup queries
+async function handleAppointmentLookup(
+  message: string, 
+  supabase: any, 
+  garageId: string | null,
+  entities?: Record<string, string>
+): Promise<string> {
+  try {
+    // Extract client name using regex or from entities
+    let clientName: string | undefined;
+    
+    if (entities?.name) {
+      clientName = entities.name;
+    } else {
+      const namePattern = /appointment for\s+([A-Za-z\s]+)(?:\?|$|\s|\.)/i;
+      const nameMatch = message.match(namePattern);
+      if (nameMatch && nameMatch[1]) {
+        clientName = nameMatch[1].trim();
+      }
+    }
+    
+    if (!clientName) {
+      return "I couldn't identify the client name in your query. Please provide a name like 'Do we have an appointment for John Smith?'";
+    }
+    
+    console.log(`Looking up appointments for client: ${clientName}`);
+    
+    // Split the name and search for first/last name match
+    const nameParts = clientName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    
+    // Search for the client with garage_id filter
+    let clientQuery = supabase
+      .from('clients')
+      .select('id, first_name, last_name')
+      .or(`first_name.ilike.%${firstName}%,last_name.ilike.%${lastName}%`);
+      
+    // Filter by garage if available
+    if (garageId) {
+      clientQuery = clientQuery.eq('garage_id', garageId);
+    }
+    
+    const { data: clients, error: clientError } = await clientQuery;
+    
+    if (clientError) {
+      console.error('Error looking up client:', clientError);
+      return "I'm having trouble accessing the client database. Please try again in a moment.";
+    }
+    
+    if (!clients || clients.length === 0) {
+      return `I couldn't find a client named "${clientName}" in our database. Would you like to add them as a new client?`;
+    }
+    
+    // If multiple matches, use the best match or mention it
+    let clientId: string;
+    let formattedName: string;
+    
+    if (clients.length > 1) {
+      // Find the closest name match
+      const closestMatch = clients.reduce((best, current) => {
+        const fullName = `${current.first_name} ${current.last_name}`.toLowerCase();
+        const currentSimilarity = fullName.includes(clientName.toLowerCase()) ? 
+          fullName.length - clientName.length : 
+          Math.abs(fullName.length - clientName.length);
+        
+        const bestName = `${best.first_name} ${best.last_name}`.toLowerCase();
+        const bestSimilarity = bestName.includes(clientName.toLowerCase()) ? 
+          bestName.length - clientName.length : 
+          Math.abs(bestName.length - clientName.length);
+        
+        return currentSimilarity < bestSimilarity ? current : best;
+      }, clients[0]);
+      
+      clientId = closestMatch.id;
+      formattedName = `${closestMatch.first_name} ${closestMatch.last_name}`;
+      console.log(`Multiple client matches for "${clientName}", using closest match: ${formattedName}`);
+    } else {
+      clientId = clients[0].id;
+      formattedName = `${clients[0].first_name} ${clients[0].last_name}`;
+    }
+    
+    // Now look for appointments for this client
+    const { data: appointments, error: appointmentError } = await supabase
+      .from('appointments')
+      .select(`
+        id, 
+        start_time, 
+        end_time, 
+        service_type,
+        bay,
+        status,
+        vehicle:vehicles(make, model, year),
+        notes
+      `)
+      .eq('client_id', clientId)
+      .gte('start_time', new Date().toISOString()) // Only future appointments
+      .order('start_time', { ascending: true });
+      
+    if (appointmentError) {
+      console.error('Error looking up appointments:', appointmentError);
+      return "I'm having trouble accessing appointment information. Please try again in a moment.";
+    }
+    
+    if (!appointments || appointments.length === 0) {
+      return `No, we don't have any upcoming appointments for ${formattedName}. Would you like to schedule one?`;
+    }
+    
+    // Format appointment details
+    const upcomingAppointment = appointments[0];
+    const appointmentDate = new Date(upcomingAppointment.start_time);
+    const formattedDate = appointmentDate.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    const formattedTime = appointmentDate.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: 'numeric',
+      hour12: true
+    });
+    
+    let response = `Yes, I found an appointment for ${formattedName} on ${formattedDate} at ${formattedTime}`;
+    
+    if (upcomingAppointment.service_type) {
+      response += ` for a ${upcomingAppointment.service_type}`;
+    }
+    
+    if (upcomingAppointment.vehicle) {
+      response += ` for their ${upcomingAppointment.vehicle.year} ${upcomingAppointment.vehicle.make} ${upcomingAppointment.vehicle.model}`;
+    }
+    
+    if (upcomingAppointment.bay) {
+      response += `, in bay ${upcomingAppointment.bay}`;
+    }
+    
+    response += `.`;
+    
+    if (upcomingAppointment.notes) {
+      response += ` Notes: ${upcomingAppointment.notes}`;
+    }
+    
+    if (appointments.length > 1) {
+      response += ` There are ${appointments.length} total upcoming appointments for this client.`;
+    }
+    
+    return response;
+  } catch (err) {
+    console.error('Exception in appointment lookup:', err);
+    return "I'm having trouble processing your request. Please try again with a different query.";
   }
 }
 
