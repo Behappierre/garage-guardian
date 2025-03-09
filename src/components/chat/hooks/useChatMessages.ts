@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -36,7 +36,7 @@ export function useChatMessages() {
     content: "👋 Welcome to GarageWizz AI Assistant! I'm here to help you with scheduling appointments, looking up vehicle information, managing clients, and answering automotive questions. How can I assist you today?"
   };
 
-  const initializeChat = async () => {
+  const initializeChat = useCallback(async () => {
     if (!hasDisplayedWelcome && messages.length === 0) {
       setMessages([welcomeMessage]);
       setHasDisplayedWelcome(true);
@@ -71,7 +71,7 @@ export function useChatMessages() {
         console.error('Error initializing chat context:', err);
       }
     }
-  };
+  }, [user?.id, messages.length, hasDisplayedWelcome]);
 
   const formatMessage = (content: string) => {
     return content
@@ -183,7 +183,7 @@ export function useChatMessages() {
         }
 
         if (!geminiData?.response) {
-          throw new Error('No response received from Gemini assistant');
+          throw new Error('No response received from AI assistant');
         }
 
         // Extract context if present in the response
@@ -222,10 +222,18 @@ export function useChatMessages() {
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      
+      // Use a more descriptive error message based on the error type
+      let errorMessage = "I apologize, but I'm having trouble processing your request at the moment. Please try again later.";
+      
+      if (error instanceof Error && error.message.includes("Failed to fetch")) {
+        errorMessage = "I'm having trouble connecting to the AI service. This could be due to network issues or service unavailability. Please try again in a moment.";
+      }
+      
       toast.error("Failed to get response from AI assistant");
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: "I apologize, but I'm having trouble processing your request at the moment. Please try again later." 
+        content: errorMessage 
       }]);
     } finally {
       setIsLoading(false);

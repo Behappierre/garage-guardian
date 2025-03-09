@@ -34,7 +34,24 @@ export function ChatAgent() {
   const handleSendMessage = (message: string) => {
     if (!message.trim()) return;
     console.log("Sending message:", message);
-    sendMessage(message);
+    
+    // Add retry mechanism for critical errors
+    const maxRetries = 1;
+    let retryCount = 0;
+    
+    const attemptSend = () => {
+      sendMessage(message).catch(error => {
+        console.error("Error in message sending:", error);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`Retrying send (${retryCount}/${maxRetries})...`);
+          // Wait a short time before retrying
+          setTimeout(attemptSend, 1000);
+        }
+      });
+    };
+    
+    attemptSend();
   };
 
   const handleLauncherClick = () => {

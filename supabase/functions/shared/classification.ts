@@ -8,6 +8,12 @@ export interface IntentPattern {
   };
 }
 
+export interface ClassificationResult {
+  intent: string;
+  confidence: number;
+  entities?: Record<string, string>;
+}
+
 export const createIntentPatterns = (extraBookingPatterns?: string[]) => {
   const baseBookingPatterns = [
     'book', 'schedule', 'appointment', 'book in', 'slot', 'availability',
@@ -97,12 +103,6 @@ export const createIntentPatterns = (extraBookingPatterns?: string[]) => {
     }
   ];
 };
-
-export interface ClassificationResult {
-  intent: string;
-  confidence: number;
-  entities?: Record<string, string>;
-}
 
 export function determineQueryIntent(message: string, extraBookingPatterns?: string[]): ClassificationResult {
   const lowerMessage = message.toLowerCase();
