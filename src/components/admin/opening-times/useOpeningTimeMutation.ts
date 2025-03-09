@@ -36,12 +36,14 @@ export const useOpeningTimeMutation = () => {
       
       const { day_of_week, ...updateData } = openingTime;
       
-      // Use explicit table name prefix to avoid ambiguity
+      // Use match() with object syntax to avoid ambiguous column references
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
-        .eq("opening_times.garage_id", garageId)
-        .eq("opening_times.day_of_week", day_of_week)
+        .match({ 
+          garage_id: garageId,
+          day_of_week: day_of_week 
+        })
         .maybeSingle();
 
       if (existingTime) {
