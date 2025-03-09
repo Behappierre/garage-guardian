@@ -42,11 +42,11 @@ export const useOpeningTimes = () => {
       const garageId = roleData.garage_id;
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
-      // Use filter() instead of eq() to avoid the ambiguous column reference
+      // Use explicit table name prefix for the opening_times table to avoid ambiguity
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
-        .filter("garage_id", "eq", garageId)
+        .eq("opening_times.garage_id", garageId)
         .order("day_of_week", { ascending: true });
 
       if (error) {
