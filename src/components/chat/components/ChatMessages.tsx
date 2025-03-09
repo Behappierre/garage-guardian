@@ -1,8 +1,6 @@
 
-// Update the ChatMessages component to support displaying conversation context indicators
 import { useEffect, useRef } from "react";
 import { ChatMessage } from "./ChatMessage";
-import { Loader2 } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -39,50 +37,49 @@ export function ChatMessages({ messages, isLoading, conversationContext }: ChatM
     scrollToBottom();
   }, [messages]);
 
-  // Function to render a subtle context indicator if there's active context
-  const renderContextIndicator = () => {
-    if (!conversationContext || Object.keys(conversationContext).length === 0) {
-      return null;
-    }
-    
-    const { recentTopics, currentFlow } = conversationContext;
-    
-    if (currentFlow) {
-      return (
-        <div className="px-4 py-1 text-xs text-gray-500 bg-gray-100 rounded-full inline-block mb-2">
-          <span>Current flow: {currentFlow.type} ({currentFlow.step})</span>
-        </div>
-      );
-    }
-    
-    if (recentTopics && recentTopics.length > 0) {
-      return (
-        <div className="px-4 py-1 text-xs text-gray-500 bg-gray-100 rounded-full inline-block mb-2">
-          <span>Recent topics: {recentTopics.slice(0, 2).join(', ')}</span>
-        </div>
-      );
-    }
-    
-    return null;
-  };
+  const hasContext = conversationContext && 
+    (conversationContext.recentTopics?.length > 0 || 
+     conversationContext.currentFlow || 
+     Object.keys(conversationContext.entities || {}).length > 0);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {messages.map((message, index) => (
-        <ChatMessage key={index} message={message} />
-      ))}
-      
-      {isLoading && (
-        <div className="flex items-start mb-4 animate-fade-in">
-          <div className="bg-primary/10 rounded-lg px-3 py-2 mr-auto ml-0 max-w-[80%]">
-            <Loader2 className="h-4 w-4 animate-spin" />
-          </div>
+    <div className="flex-1 overflow-y-auto p-4">
+      {/* Active context indicator */}
+      {hasContext && (
+        <div className="bg-muted/50 border border-border rounded-md p-3 mb-4 text-xs">
+          <p className="font-semibold mb-1">Active Context</p>
+          {conversationContext.recentTopics?.length > 0 && (
+            <p className="text-muted-foreground">Topics: {conversationContext.recentTopics.join(', ')}</p>
+          )}
+          {conversationContext.currentFlow && (
+            <p className="text-muted-foreground">Flow: {conversationContext.currentFlow.type} ({conversationContext.currentFlow.step})</p>
+          )}
+          {conversationContext.entities?.clients?.length > 0 && (
+            <p className="text-muted-foreground">Client: {conversationContext.entities.clients[0].name}</p>
+          )}
+          {conversationContext.entities?.vehicles?.length > 0 && (
+            <p className="text-muted-foreground">Vehicle: {conversationContext.entities.vehicles[0].description}</p>
+          )}
         </div>
       )}
       
-      {messages.length > 1 && renderContextIndicator()}
-      
-      <div ref={messagesEndRef} />
+      {/* Messages */}
+      <div className="space-y-4">
+        {messages.map((message, index) => (
+          <ChatMessage key={index} message={message} />
+        ))}
+
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-muted rounded-lg px-4 py-2 flex items-center space-x-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
     </div>
   );
 }

@@ -1,5 +1,8 @@
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0'
+/**
+ * Functions for enhanced relationship mining across database tables
+ * Provides a richer context for queries by traversing relationships
+ */
 
 export async function getClientFullHistory(clientId: string, supabase: any) {
   try {
@@ -7,13 +10,8 @@ export async function getClientFullHistory(clientId: string, supabase: any) {
       .from('clients')
       .select(`
         *,
-        vehicles(
-          *
-        ),
-        appointments:job_tickets(
-          *,
-          vehicle:vehicles(*)
-        )
+        vehicles(*),
+        appointments(*)
       `)
       .eq('id', clientId)
       .single();
@@ -30,17 +28,37 @@ export async function getClientFullHistory(clientId: string, supabase: any) {
   }
 }
 
+export async function getClientAppointments(clientId: string, supabase: any) {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        *,
+        vehicle:vehicles(*)
+      `)
+      .eq('client_id', clientId)
+      .gte('start_time', new Date().toISOString())
+      .order('start_time', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching client appointments:', error);
+      return null;
+    }
+    
+    return data || [];
+  } catch (err) {
+    console.error('Exception in getClientAppointments:', err);
+    return null;
+  }
+}
+
 export async function getVehicleServiceHistory(vehicleId: string, supabase: any) {
   try {
     const { data, error } = await supabase
       .from('vehicles')
       .select(`
         *,
-        job_tickets(
-          *,
-          assigned_technician:profiles(*),
-          time_entries(*)
-        ),
+        job_tickets(*),
         client:clients(*)
       `)
       .eq('id', vehicleId)
@@ -64,17 +82,13 @@ export async function findSimilarVehicles(make: string, model: string, supabase:
       .from('vehicles')
       .select(`
         *,
-        job_tickets(
-          description,
-          status,
-          created_at
-        )
+        job_tickets(*)
       `)
       .eq('make', make)
       .eq('model', model)
-      .limit(10);
+      .limit(5);
     
-    // Apply garage filter if provided
+    // If garage ID is provided, filter by garage
     if (garageId) {
       query = query.eq('garage_id', garageId);
     }
@@ -86,89 +100,46 @@ export async function findSimilarVehicles(make: string, model: string, supabase:
       return [];
     }
     
-    return data;
+    return data || [];
   } catch (err) {
     console.error('Exception in findSimilarVehicles:', err);
     return [];
   }
 }
 
-// Enhanced utility for getting common issues for a specific vehicle make/model
-export async function getCommonIssuesForModel(make: string, model: string, supabase: any) {
+export async function getRelatedServiceHistory(vehicleId: string, serviceType: string, supabase: any) {
   try {
-    const { data, error } = await supabase
-      .from('job_tickets')
-      .select(`
-        description,
-        status,
-        vehicle:vehicles!inner(
-          make,
-          model
-        )
-      `)
-      .eq('vehicles.make', make)
-      .eq('vehicles.model', model)
-      .limit(20);
-    
-    if (error) {
-      console.error('Error fetching common issues:', error);
+    const { data: vehicle, error: vehicleError } = await supabase
+      .from('vehicles')
+      .select('make, model')
+      .eq('id', vehicleId)
+      .single();
+      
+    if (vehicleError || !vehicle) {
+      console.error('Error fetching vehicle:', vehicleError);
       return [];
     }
     
-    // Process the data to extract common issues
-    const issues = data || [];
-    const issueCount: Record<string, number> = {};
-    
-    // Count occurrences of similar issues by looking for keyword patterns
-    issues.forEach(ticket => {
-      const description = ticket.description.toLowerCase();
-      const keywords = ['brake', 'engine', 'transmission', 'electrical', 'oil', 'cooling', 'suspension'];
-      
-      keywords.forEach(keyword => {
-        if (description.includes(keyword)) {
-          issueCount[keyword] = (issueCount[keyword] || 0) + 1;
-        }
-      });
-    });
-    
-    // Format the results
-    const commonIssues = Object.entries(issueCount)
-      .sort((a, b) => b[1] - a[1])
-      .map(([issue, count]) => ({ issue, count }));
-      
-    return {
-      make,
-      model,
-      sampleSize: issues.length,
-      commonIssues
-    };
-  } catch (err) {
-    console.error('Exception in getCommonIssuesForModel:', err);
-    return { make, model, sampleSize: 0, commonIssues: [] };
-  }
-}
-
-// Get client appointments with full context
-export async function getClientAppointments(clientId: string, supabase: any) {
-  try {
+    // Find similar service records for similar vehicles
     const { data, error } = await supabase
-      .from('appointments')
+      .from('job_tickets')
       .select(`
         *,
-        vehicle:vehicles(*),
-        job_ticket:job_tickets(*)
+        vehicle:vehicles(*)
       `)
-      .eq('client_id', clientId)
-      .order('start_time', { ascending: false });
+      .eq('vehicles.make', vehicle.make)
+      .eq('vehicles.model', vehicle.model)
+      .ilike('description', `%${serviceType}%`)
+      .limit(5);
     
     if (error) {
-      console.error('Error fetching client appointments:', error);
+      console.error('Error fetching related service history:', error);
       return [];
     }
     
     return data || [];
   } catch (err) {
-    console.error('Exception in getClientAppointments:', err);
+    console.error('Exception in getRelatedServiceHistory:', err);
     return [];
   }
 }
