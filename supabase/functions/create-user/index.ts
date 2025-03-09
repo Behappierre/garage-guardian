@@ -76,7 +76,7 @@ serve(async (req: Request) => {
 
     console.log(`User ${isExisting ? 'already exists' : 'created'} with ID: ${userData.user.id}, now assigning role...`);
 
-    // Double-check that the profile exists and create it if not
+    // Triple-check that the profile exists and create it if not
     const { data: profileExists } = await supabaseClient
       .from('profiles')
       .select('id')
