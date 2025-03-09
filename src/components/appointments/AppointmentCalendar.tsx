@@ -165,21 +165,6 @@ export const AppointmentCalendar = ({
     onDateSelect(arg);
   };
 
-  const calendarEvents = filterAppointmentsByBay(appointments)
-    ?.filter(appointment => appointment.status !== 'cancelled')
-    .map(appointment => ({
-      id: appointment.id,
-      title: getEventTitle(appointment),
-      start: appointment.start_time,
-      end: appointment.end_time,
-      backgroundColor: getBayColor(appointment.bay),
-      borderColor: getBayColor(appointment.bay),
-      textColor: '#FFFFFF',
-      extendedProps: appointment,
-      editable: true,
-      durationEditable: true,
-    })) || [];
-
   const handleEventClick = (clickInfo: EventClickArg) => {
     onEventClick(clickInfo.event.extendedProps as AppointmentWithBay);
   };
@@ -241,6 +226,21 @@ export const AppointmentCalendar = ({
     };
   }).filter(Boolean);
 
+  const calendarEvents = filterAppointmentsByBay(appointments)
+    ?.filter(appointment => appointment.status !== 'cancelled')
+    .map(appointment => ({
+      id: appointment.id,
+      title: getEventTitle(appointment),
+      start: appointment.start_time,
+      end: appointment.end_time,
+      backgroundColor: getBayColor(appointment.bay),
+      borderColor: getBayColor(appointment.bay),
+      textColor: '#FFFFFF',
+      extendedProps: appointment,
+      editable: true,
+      durationEditable: true,
+    })) || [];
+
   return (
     <div className="space-y-2 w-full">
       <div className="fc-toolbar-container flex items-center justify-between mb-4">
@@ -249,13 +249,7 @@ export const AppointmentCalendar = ({
             variant="outline"
             size="sm"
             className="rounded-l-md rounded-r-none"
-            onClick={() => {
-              const calendarApi = calendarRef.current?.getApi();
-              if (calendarApi) {
-                calendarApi.prev();
-                setCalendarTitle(calendarApi.view.title);
-              }
-            }}
+            onClick={handlePrev}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -263,13 +257,7 @@ export const AppointmentCalendar = ({
             variant="outline"
             size="sm"
             className="rounded-l-none rounded-r-md"
-            onClick={() => {
-              const calendarApi = calendarRef.current?.getApi();
-              if (calendarApi) {
-                calendarApi.next();
-                setCalendarTitle(calendarApi.view.title);
-              }
-            }}
+            onClick={handleNext}
           >
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -277,13 +265,7 @@ export const AppointmentCalendar = ({
             size="sm"
             variant="secondary"
             className="ml-2"
-            onClick={() => {
-              const calendarApi = calendarRef.current?.getApi();
-              if (calendarApi) {
-                calendarApi.today();
-                setCalendarTitle(calendarApi.view.title);
-              }
-            }}
+            onClick={handleToday}
           >
             Today
           </Button>
@@ -306,18 +288,7 @@ export const AppointmentCalendar = ({
               variant={currentView === 'dayGridMonth' ? 'default' : 'outline'}
               size="sm"
               className="rounded-l-md rounded-r-none"
-              onClick={() => {
-                setCurrentView('dayGridMonth');
-                const calendarApi = calendarRef.current?.getApi();
-                if (calendarApi) {
-                  calendarApi.changeView('dayGridMonth');
-                  setCalendarTitle(calendarApi.view.title);
-                  
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('view', 'dayGridMonth');
-                  window.history.replaceState({}, '', url.toString());
-                }
-              }}
+              onClick={() => handleViewChange('dayGridMonth')}
             >
               Month
             </Button>
@@ -325,18 +296,7 @@ export const AppointmentCalendar = ({
               variant={currentView === 'timeGridWeek' ? 'default' : 'outline'}
               size="sm"
               className="rounded-none border-x-0"
-              onClick={() => {
-                setCurrentView('timeGridWeek');
-                const calendarApi = calendarRef.current?.getApi();
-                if (calendarApi) {
-                  calendarApi.changeView('timeGridWeek');
-                  setCalendarTitle(calendarApi.view.title);
-                  
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('view', 'timeGridWeek');
-                  window.history.replaceState({}, '', url.toString());
-                }
-              }}
+              onClick={() => handleViewChange('timeGridWeek')}
             >
               Week
             </Button>
@@ -344,18 +304,7 @@ export const AppointmentCalendar = ({
               variant={currentView === 'timeGridDay' ? 'default' : 'outline'}
               size="sm"
               className="rounded-r-md rounded-l-none"
-              onClick={() => {
-                setCurrentView('timeGridDay');
-                const calendarApi = calendarRef.current?.getApi();
-                if (calendarApi) {
-                  calendarApi.changeView('timeGridDay');
-                  setCalendarTitle(calendarApi.view.title);
-                  
-                  const url = new URL(window.location.href);
-                  url.searchParams.set('view', 'timeGridDay');
-                  window.history.replaceState({}, '', url.toString());
-                }
-              }}
+              onClick={() => handleViewChange('timeGridDay')}
             >
               Day
             </Button>
@@ -544,8 +493,8 @@ export const AppointmentCalendar = ({
           selectable={true}
           select={handleDateSelect}
           eventClick={handleEventClick}
-          slotMinTime="06:00:00"
-          slotMaxTime="22:00:00"
+          slotMinTime="07:30:00"
+          slotMaxTime="18:00:00"
           allDaySlot={false}
           slotDuration="00:30:00"
           editable={true}
