@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,21 +55,28 @@ export const useTicketMutations = (onClose: () => void) => {
         
         ticketId = initialTicketId;
       } else {
-        // Use the create_job_ticket function to handle the ticket_number generation
-        const { data: ticket, error: ticketError } = await supabase
-          .rpc('create_job_ticket', {
-            p_description: formData.description,
-            p_status: formData.status,
-            p_priority: formData.priority,
-            p_assigned_technician_id: formData.assigned_technician_id,
-            p_client_id: formData.client_id,
-            p_vehicle_id: formData.vehicle_id,
-            p_garage_id: garageId,
-            p_ticket_type: formData.ticket_type
-          });
+        // For new tickets, use the direct insertion method since the function hasn't been updated yet
+        const { data, error } = await supabase
+          .from('job_tickets')
+          .insert({
+            description: formData.description,
+            status: formData.status,
+            priority: formData.priority,
+            assigned_technician_id: formData.assigned_technician_id,
+            client_id: formData.client_id,
+            vehicle_id: formData.vehicle_id,
+            garage_id: garageId,
+            ticket_type: formData.ticket_type
+          })
+          .select('id')
+          .single();
 
-        if (ticketError) throw ticketError;
-        ticketId = ticket;
+        if (error) {
+          console.error("Error creating job ticket:", error);
+          throw error;
+        }
+        
+        ticketId = data.id;
       }
 
       if (selectedAppointmentId) {
