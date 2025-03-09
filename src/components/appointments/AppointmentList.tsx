@@ -72,13 +72,6 @@ export const AppointmentList = ({
     return matchesName && matchesRegistration && matchesStatus && matchesBay && matchesDateRange;
   });
   
-  // Helper function to check if a date is the same day
-  function isSameDay(date1: Date, date2: Date) {
-    return date1.getDate() === date2.getDate() &&
-      date1.getMonth() === date2.getMonth() &&
-      date1.getFullYear() === date2.getFullYear();
-  }
-  
   // Group appointments by date for better readability
   const appointmentsByDate: Record<string, AppointmentWithRelations[]> = {};
   const today = startOfDay(new Date());
@@ -93,47 +86,37 @@ export const AppointmentList = ({
     appointmentsByDate[dateKey].push(appointment);
   });
   
-  // Create a more structured date classification for sorting
-  const dateKeyClassification = Object.keys(appointmentsByDate).reduce((acc, dateKey) => {
+  // Enhanced date classification for sorting
+  const dateGroups: { [key: string]: { type: string, date: Date, key: string }[] } = {
+    today: [],
+    future: [],
+    past: []
+  };
+  
+  // Classify each date in the correct group
+  Object.keys(appointmentsByDate).forEach(dateKey => {
     const dateObj = new Date(dateKey);
     const todayStr = format(today, 'yyyy-MM-dd');
     
     if (dateKey === todayStr) {
-      acc[dateKey] = { type: 'today', date: dateObj };
+      dateGroups.today.push({ type: 'today', date: dateObj, key: dateKey });
     } else if (isAfter(dateObj, today)) {
-      acc[dateKey] = { type: 'future', date: dateObj };
+      dateGroups.future.push({ type: 'future', date: dateObj, key: dateKey });
     } else {
-      acc[dateKey] = { type: 'past', date: dateObj };
+      dateGroups.past.push({ type: 'past', date: dateObj, key: dateKey });
     }
-    
-    return acc;
-  }, {} as Record<string, { type: 'today' | 'future' | 'past', date: Date }>);
-  
-  // Sort date keys with more explicit rules
-  const sortedDateKeys = Object.keys(appointmentsByDate).sort((a, b) => {
-    const classA = dateKeyClassification[a];
-    const classB = dateKeyClassification[b];
-    
-    // First sort by classification type: today -> future -> past
-    if (classA.type !== classB.type) {
-      if (classA.type === 'today') return -1;
-      if (classB.type === 'today') return 1;
-      if (classA.type === 'future' && classB.type === 'past') return -1;
-      if (classA.type === 'past' && classB.type === 'future') return 1;
-    }
-    
-    // Then sort within each classification
-    if (classA.type === 'future') {
-      // Future dates: chronological ascending (nearest future first)
-      return classA.date.getTime() - classB.date.getTime();
-    } else if (classA.type === 'past') {
-      // Past dates: reverse chronological (most recent past first)
-      return classB.date.getTime() - classA.date.getTime();
-    }
-    
-    // For 'today', there should only be one entry
-    return 0;
   });
+  
+  // Sort each group individually
+  dateGroups.future.sort((a, b) => a.date.getTime() - b.date.getTime()); // Ascending (nearest future first)
+  dateGroups.past.sort((a, b) => b.date.getTime() - a.date.getTime()); // Descending (most recent past first)
+  
+  // Combine all groups in the right order: today, future, past
+  const sortedDateKeys = [
+    ...dateGroups.today.map(item => item.key),
+    ...dateGroups.future.map(item => item.key),
+    ...dateGroups.past.map(item => item.key)
+  ];
 
   return (
     <ScrollArea className="h-[calc(100vh-240px)]">

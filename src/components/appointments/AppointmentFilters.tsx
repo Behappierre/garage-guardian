@@ -87,6 +87,7 @@ export const AppointmentFilters = ({
             size="sm"
             onClick={() => onSortChange("start_time")}
             className="gap-2"
+            data-test-id="date-sort-button"
           >
             Date {getSortIcon("start_time")}
           </Button>

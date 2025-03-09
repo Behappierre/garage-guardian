@@ -33,6 +33,7 @@ export const useAppointmentFilters = () => {
 
   // Set date range based on type
   const setDateRange = (type: DateRangeFilter, customStart?: Date, customEnd?: Date) => {
+    console.log(`Setting date range type to: ${type}`);
     setDateRangeType(type);
     
     const today = new Date();
@@ -70,11 +71,15 @@ export const useAppointmentFilters = () => {
 
   // Toggle sort order or change sort field
   const toggleSort = (field: AppointmentSortField) => {
+    console.log(`Toggle sort called with field: ${field}, current field: ${sortField}, current order: ${sortOrder}`);
     if (sortField === field) {
       // Toggle order if same field
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      const newOrder = sortOrder === "asc" ? "desc" : "asc";
+      console.log(`Toggling order to: ${newOrder}`);
+      setSortOrder(newOrder);
     } else {
       // Change field and reset order to ascending
+      console.log(`Changing sort field to: ${field}`);
       setSortField(field);
       setSortOrder("asc");
     }

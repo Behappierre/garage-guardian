@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Calendar as CalendarIcon, List } from "lucide-react";
@@ -26,7 +25,6 @@ const Appointments = () => {
   const isDarkMode = theme === "dark";
   const { garageId } = useAuth();
 
-  // Get appointments with filtering and sorting capabilities
   const { 
     data: appointments, 
     isLoading, 
@@ -49,7 +47,6 @@ const Appointments = () => {
     resetAllFilters
   } = useAppointments();
 
-  // Parse URL parameters on component mount and when URL changes
   useEffect(() => {
     console.log("Appointments loaded:", appointments?.length);
     console.log("Loading state:", isLoading);
@@ -67,7 +64,6 @@ const Appointments = () => {
       setCalendarViewType(viewParam);
     }
     
-    // Always show calendar when date is specified
     if (dateParam) {
       setViewMode("calendar");
     }
@@ -101,11 +97,13 @@ const Appointments = () => {
   const handleViewModeChange = (mode: "calendar" | "list") => {
     setViewMode(mode);
     
-    // When switching to list view, if dateRangeType is 'all', no filter is applied
-    // This will allow seeing all appointments with today's date first
     if (mode === "list" && dateRangeType === "all") {
-      // We intentionally leave 'all' dateRangeType so all dates are visible but sorted with today at the top
     }
+  };
+
+  const handleSortFieldToggle = (field: AppointmentSortField) => {
+    console.log(`Toggling sort on field: ${field}, current field: ${sortField}, current order: ${sortOrder}`);
+    toggleSort(field);
   };
 
   if (error) {
@@ -210,7 +208,7 @@ const Appointments = () => {
               onBayFilterChange={setBayFilter}
               onDateRangeChange={handleDateRangeChange}
               onDateRangeTypeChange={setDateRange}
-              onSortChange={toggleSort}
+              onSortChange={handleSortFieldToggle}
               onResetFilters={resetAllFilters}
             />
           )}
@@ -270,3 +268,4 @@ const Appointments = () => {
 };
 
 export default Appointments;
+
