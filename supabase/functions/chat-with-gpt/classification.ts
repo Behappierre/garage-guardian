@@ -148,3 +148,10 @@ export function determineQueryIntent(message: string): ClassificationResult {
     entities: results[0].entities
   };
 }
+
+// Maintain compatibility with older code
+export function determineQueryType(message: string): string {
+  const result = determineQueryIntent(message);
+  console.log('Query classification:', result);
+  return result.intent;
+}

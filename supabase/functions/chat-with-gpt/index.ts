@@ -8,6 +8,8 @@ import { handleAutomotiveQuestion } from "./handlers/automotive.ts";
 import { handleBookingRequest, handleAppointmentQuery } from "./handlers/booking.ts";
 import { handleJobSheetQuery } from "./handlers/jobSheet.ts";
 import { corsHeaders } from "./utils/cors.ts";
+import { updateChatMemory, getConversationContext } from "./chatMemory.ts";
+import { createDataService } from "./data-service.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -45,6 +47,13 @@ serve(async (req) => {
     const userGarageId = userData?.garage_id;
     console.log('User garage ID:', userGarageId);
     
+    // Initialize data service
+    const dataService = createDataService(userGarageId);
+    
+    // Get conversation context for more accurate responses
+    const conversationContext = await getConversationContext(user_id, supabase);
+    console.log('Conversation context:', conversationContext);
+    
     // Use enhanced classification to determine intent and extract entities
     const classification = determineQueryIntent(message);
     console.log('Message classification:', classification);
@@ -68,6 +77,11 @@ serve(async (req) => {
         console.log("Detected job sheet intent");
         response = await handleJobSheetQuery(message, supabase, userGarageId, classification.entities);
         break;
+      
+      case 'automotive':
+        console.log("Detected automotive question");
+        response = await handleAutomotiveQuestion(message, openAIApiKey);
+        break;
         
       default:
         console.log("Using default OpenAI response");
@@ -76,7 +90,7 @@ serve(async (req) => {
           apiKey: openAIApiKey,
         });
 
-        // Create context for OpenAI
+        // Create context for OpenAI including conversation history
         let context = `
           You are a helpful automotive service assistant for the garage management system.
           
@@ -84,6 +98,8 @@ serve(async (req) => {
           1. Automotive questions and service inquiries
           2. Creating bookings for clients
           3. Providing information about upcoming appointments
+          
+          ${conversationContext ? `Context from previous conversation: ${conversationContext}` : ''}
           
           For bookings, tell users you can create bookings directly.
           For appointment queries, tell users you can check the schedule.
@@ -106,16 +122,30 @@ serve(async (req) => {
         response = openaiResponse.choices[0].message.content;
     }
 
-    // Store the conversation
+    // Store the conversation with updated memory
     try {
-      await storeConversation(user_id, message, response, supabase);
+      await updateChatMemory(
+        user_id, 
+        message, 
+        response, 
+        classification.intent,
+        classification.entities,
+        supabase
+      );
     } catch (storeError) {
       console.error('Error storing conversation:', storeError);
       // Continue even if storing conversation fails
     }
 
     return new Response(
-      JSON.stringify({ response }),
+      JSON.stringify({ 
+        response,
+        metadata: {
+          query_type: classification.intent,
+          confidence: classification.confidence,
+          entities: classification.entities,
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -155,28 +185,4 @@ function checkIfAppointmentQuery(message: string): boolean {
   ];
   
   return queryPatterns.some(pattern => pattern.test(message));
-}
-
-// Helper function to store conversation in the database
-async function storeConversation(userId: string, message: string, response: string, supabase: any) {
-  try {
-    const res = await supabase
-      .from('chat_messages')
-      .insert({
-        user_id: userId,
-        message,
-        response,
-        metadata: { 
-          source: "gpt-function",
-          query_type: determineQueryIntent(message).intent,
-          entities: determineQueryIntent(message).entities || {}
-        }
-      });
-      
-    if (res.error) {
-      console.error('Error storing chat message:', res.error);
-    }
-  } catch (error) {
-    console.error('Error in storeConversation:', error);
-  }
 }
