@@ -1,4 +1,3 @@
-
 import { corsHeaders } from './utils.ts';
 
 export const validateRequest = async (req: Request) => {
@@ -265,27 +264,26 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
       }
     }
     
-    // For userType owner, add to garage_members ONLY if garageId is provided
-    // We'll handle the initial membership entry differently
-    if (userType === 'owner' && garageId) {
-      console.log(`Adding owner to garage_members for garage: ${garageId}`);
+    // CORRECTION: For owner type, ALWAYS add to garage_members regardless of garageId
+    if (userType === 'owner') {
+      console.log(`Adding owner to garage_members with or without garage: ${garageId || 'null'}`);
       
-      // First check if entry already exists to prevent duplicates
+      // First check if user already has any membership record to prevent duplicates
       const { data: existingMembership } = await supabase
         .from('garage_members')
         .select('id')
         .eq('user_id', userId)
-        .eq('garage_id', garageId)
+        .eq('role', 'owner')
         .maybeSingle();
         
       if (existingMembership) {
-        console.log('User already has membership for this garage');
+        console.log('User already has an owner membership record');
       } else {
         const { error: membershipError } = await supabase
           .from('garage_members')
           .insert({
             user_id: userId,
-            garage_id: garageId,
+            garage_id: garageId,  // This can be null initially
             role: 'owner'
           });
           
@@ -293,7 +291,7 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
           console.error('Error adding owner to garage_members:', membershipError);
           // Continue anyway, not critical
         } else {
-          console.log('Owner added to garage_members successfully');
+          console.log('Owner added to garage_members successfully with garage_id:', garageId || 'null');
         }
       }
     }
