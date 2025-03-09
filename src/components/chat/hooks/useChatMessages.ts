@@ -60,8 +60,11 @@ export function useChatMessages() {
         if (data && data.length > 0) {
           // Get latest context from the most recent message
           const latestMessage = data[0];
-          if (latestMessage.metadata?.context) {
-            setConversationContext(latestMessage.metadata.context);
+          if (latestMessage.metadata && typeof latestMessage.metadata === 'object') {
+            const metadata = latestMessage.metadata as any;
+            if (metadata.context) {
+              setConversationContext(metadata.context);
+            }
           }
         }
       } catch (err) {
@@ -168,8 +171,11 @@ export function useChatMessages() {
         }
 
         // Extract context if present in the response
-        if (geminiData.metadata?.context) {
-          setConversationContext(geminiData.metadata.context);
+        if (geminiData.metadata && typeof geminiData.metadata === 'object') {
+          const metadata = geminiData.metadata as any;
+          if (metadata.context) {
+            setConversationContext(metadata.context);
+          }
         }
         
         // Extract metadata if present in the response
