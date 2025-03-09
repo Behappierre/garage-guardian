@@ -1,6 +1,10 @@
 
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Maximize2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DescriptionFieldProps {
   description: string;
@@ -11,16 +15,39 @@ export const DescriptionField = ({
   description,
   onDescriptionChange,
 }: DescriptionFieldProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <div className="space-y-2">
       <Label htmlFor="description">Description</Label>
-      <Textarea
-        id="description"
-        value={description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
-        placeholder="Enter job description and details"
-        className="min-h-[120px] resize-none"
-      />
+      <div className="relative">
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="Enter job description and details"
+          className={`resize-none ${isExpanded ? "min-h-[300px]" : "min-h-[120px]"}`}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="absolute bottom-2 right-2 h-6 w-6 p-0"
+          onClick={() => setIsExpanded(!isExpanded)}
+          title={isExpanded ? "Collapse" : "Expand"}
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      {/* Display a scrollable version of the text when there's content and the field is expanded */}
+      {isExpanded && description.trim().length > 0 && (
+        <ScrollArea className="h-[200px] w-full rounded border p-4 mt-2">
+          <div className="text-sm text-left whitespace-pre-wrap">
+            {description}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 };

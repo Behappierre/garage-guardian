@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { JobTicketForm } from "@/components/tickets/JobTicketForm";
 import type { JobTicket } from "@/types/job-ticket";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface JobTicketFormDialogProps {
   showTicketForm: boolean;
@@ -26,7 +27,7 @@ export const JobTicketFormDialog = ({
       open={showTicketForm} 
       onOpenChange={onOpenChange}
     >
-      <DialogContent className="sm:max-w-[600px] p-6" closeButton={true}>
+      <DialogContent className="sm:max-w-[600px] p-6 max-h-[90vh]" closeButton={true}>
         <DialogHeader className="pb-4">
           <DialogTitle>
             {isLoading ? "Loading Job Ticket..." : selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
@@ -41,11 +42,13 @@ export const JobTicketFormDialog = ({
             <Skeleton className="h-32 w-full" />
           </div>
         ) : (
-          <JobTicketForm
-            initialData={selectedTicket}
-            onClose={onClose}
-            linkedAppointmentId={linkedAppointmentId}
-          />
+          <ScrollArea className="pr-4 max-h-[calc(90vh-120px)]">
+            <JobTicketForm
+              initialData={selectedTicket}
+              onClose={onClose}
+              linkedAppointmentId={linkedAppointmentId}
+            />
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>
