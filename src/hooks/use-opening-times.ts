@@ -45,11 +45,11 @@ export const useOpeningTimes = () => {
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
       // Fetch opening times using the garage_id from user_roles
-      // Use explicit table name in the condition to avoid ambiguity
+      // Use regular .eq() without table prefixing
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
-        .eq("opening_times.garage_id", garageId)
+        .eq("garage_id", garageId)
         .order("day_of_week", { ascending: true });
 
       if (error) {
