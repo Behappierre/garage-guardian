@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Maximize2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface DescriptionFieldProps {
   description: string;
@@ -39,18 +38,6 @@ export const DescriptionField = ({
           <Maximize2 className="h-4 w-4" />
         </Button>
       </div>
-      
-      {/* Only show the scrollable preview when expanded and there's content */}
-      {isExpanded && description.trim().length > 0 && (
-        <div className="mt-2 border rounded p-2">
-          <Label className="text-xs text-muted-foreground">Preview</Label>
-          <ScrollArea className="h-[200px] w-full p-2">
-            <div className="text-sm text-left whitespace-pre-wrap">
-              {description}
-            </div>
-          </ScrollArea>
-        </div>
-      )}
     </div>
   );
 };

@@ -22,6 +22,22 @@ export const JobTicketFormDialog = ({
   isLoading = false,
   linkedAppointmentId = null,
 }: JobTicketFormDialogProps) => {
+  // Function to format the ticket reference number
+  const formatTicketReference = (id: string) => {
+    // Format the ID as JT-YYMMDD-XXXX
+    // This is a placeholder implementation - adjust according to your actual ID format
+    const currentDate = new Date();
+    const year = currentDate.getFullYear().toString().slice(2);
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = currentDate.getDate().toString().padStart(2, '0');
+    const datePrefix = `${year}${month}${day}`;
+    
+    // Extract the last 4 characters of the ID or pad with zeros
+    const suffix = id.slice(-4).padStart(4, '0');
+    
+    return `JT-${datePrefix}-${suffix}`;
+  };
+
   return (
     <Dialog 
       open={showTicketForm} 
@@ -36,7 +52,7 @@ export const JobTicketFormDialog = ({
               <>
                 Edit Job Ticket
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  JT-{selectedTicket.id}
+                  {formatTicketReference(selectedTicket.id)}
                 </span>
               </>
             ) : (
