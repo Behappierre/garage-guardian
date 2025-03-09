@@ -30,7 +30,7 @@ export const TechnicianSelector = ({
   const { garageId } = useAuth();
   
   return (
-    <div>
+    <div className="w-full">
       <Label>Assigned Technician</Label>
       <Select
         value={technicianId || ""}

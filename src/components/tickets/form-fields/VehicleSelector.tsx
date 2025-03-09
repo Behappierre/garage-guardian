@@ -31,7 +31,7 @@ export const VehicleSelector = ({
   const { garageId } = useAuth();
   
   return (
-    <div>
+    <div className="w-full">
       <Label>Vehicle</Label>
       <Select
         value={vehicleId || ""}
