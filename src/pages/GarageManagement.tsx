@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GarageManager } from "@/components/garage/GarageManager";
@@ -27,34 +27,36 @@ const GarageManagement = () => {
           return;
         }
 
-        // Check if user has administrator role in user_roles
+        // Check if user has administrator role in user_roles - Get all matching roles
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', userData.user.id)
-          .maybeSingle();
+          .eq('user_id', userData.user.id);
         
         if (roleError) {
-          console.error("Error checking admin status:", roleError);
+          console.error("Error checking admin role:", roleError);
           toast.error("Error verifying your permissions");
           navigate("/auth?type=owner");
           return;
         }
 
-        // Check if user is an owner in garage_members
+        // Check if user is an owner in garage_members - Get all matching roles
         const { data: ownerData, error: ownerError } = await supabase
           .from('garage_members')
           .select('role')
           .eq('user_id', userData.user.id)
-          .eq('role', 'owner')
-          .maybeSingle();
+          .eq('role', 'owner');
           
         if (ownerError) {
           console.error("Error checking owner status:", ownerError);
         }
 
+        // Check if user has admin role in any of the results
+        const hasAdminRole = roleData?.some(role => role.role === 'administrator');
+        const isOwner = ownerData && ownerData.length > 0;
+
         // If user is neither an administrator in user_roles nor an owner in garage_members, redirect
-        if ((!roleData || roleData.role !== 'administrator') && (!ownerData || ownerData.role !== 'owner')) {
+        if (!hasAdminRole && !isOwner) {
           console.log("User is not an administrator or owner, redirecting to staff login");
           toast.error("Only administrators and owners can access garage management");
           
@@ -65,8 +67,8 @@ const GarageManagement = () => {
         }
 
         console.log("Access granted to garage management:", {
-          isAdminInUserRoles: roleData?.role === 'administrator',
-          isOwnerInGarageMembers: ownerData?.role === 'owner'
+          isAdminInUserRoles: hasAdminRole,
+          isOwnerInGarageMembers: isOwner
         });
 
         // User is either an administrator or owner, allow access to garage management

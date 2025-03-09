@@ -53,7 +53,7 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
     if (userType === "owner") {
       navigate("/auth?type=staff");
     } else {
-      navigate("/");
+      navigate("/auth?type=owner");
     }
   };
 
@@ -68,7 +68,11 @@ export const AuthFormContainer = ({ userType }: AuthFormContainerProps) => {
   }, [location]);
 
   if (showGarageForm && newUserId) {
-    return <GarageFormContainer userId={newUserId} userType={userType} onComplete={() => navigate('/dashboard')} />;
+    return <GarageFormContainer 
+             userId={newUserId} 
+             userType={userType} 
+             onComplete={() => navigate('/garage-management')} 
+           />;
   }
 
   return (

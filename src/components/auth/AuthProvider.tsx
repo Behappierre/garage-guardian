@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
   const [garageId, setGarageId] = useState<string | null>(null);
   const [fetchingGarage, setFetchingGarage] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Fetch and set the user's garage
   const loadGarageId = async (userId: string) => {
@@ -27,6 +28,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log("Fetched garage ID:", fetchedGarageId);
       
       setGarageId(fetchedGarageId);
+
+      // Also get user's role for routing decisions
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Check if owner in garage_members
+      const { data: ownerData } = await supabase
+        .from('garage_members')
+        .select('role')
+        .eq('user_id', userId)
+        .eq('role', 'owner')
+        .maybeSingle();
+
+      if (ownerData?.role === 'owner') {
+        setUserRole('owner');
+      } else if (roleData?.role) {
+        setUserRole(roleData.role);
+      }
+      
     } catch (error) {
       console.error("Error fetching garage ID:", error);
     } finally {
@@ -68,6 +91,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             await loadGarageId(newSession.user.id);
           } else if (event === 'SIGNED_OUT') {
             setGarageId(null);
+            setUserRole(null);
           }
         }
       );
@@ -84,7 +108,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, garageId, refreshGarageId }}>
+    <AuthContext.Provider value={{ session, user, loading, garageId, userRole, refreshGarageId }}>
       {children}
     </AuthContext.Provider>
   );
