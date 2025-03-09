@@ -107,7 +107,7 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
       }
     }
     
-    // For owner type, ALWAYS add to garage_members regardless of garageId
+    // For owner type, handle garage_members table with care for null values
     if (userType === 'owner') {
       console.log(`Adding owner to garage_members with or without garage: ${garageId || 'null'}`);
       
@@ -118,23 +118,42 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
         .eq('user_id', userId)
         .eq('role', 'owner')
         .maybeSingle();
-        
+      
       if (existingMembership) {
         console.log('User already has an owner membership record');
+        
+        // If a garage_id is provided now, update the existing record
+        if (garageId) {
+          const { error: updateMembershipError } = await supabase
+            .from('garage_members')
+            .update({ garage_id: garageId })
+            .eq('id', existingMembership.id);
+            
+          if (updateMembershipError) {
+            console.error('Error updating existing garage membership:', updateMembershipError);
+          } else {
+            console.log(`Updated existing membership with garage_id: ${garageId}`);
+          }
+        }
       } else {
-        const { error: membershipError } = await supabase
-          .from('garage_members')
-          .insert({
-            user_id: userId,
-            garage_id: garageId,  // This can be null initially
-            role: 'owner'
-          });
-          
-        if (membershipError) {
-          console.error('Error adding owner to garage_members:', membershipError);
-          // Continue anyway, not critical
+        // Only insert into garage_members if we have a valid garageId
+        if (garageId) {
+          const { error: membershipError } = await supabase
+            .from('garage_members')
+            .insert({
+              user_id: userId,
+              garage_id: garageId,
+              role: 'owner'
+            });
+            
+          if (membershipError) {
+            console.error('Error adding owner to garage_members:', membershipError);
+            // Continue anyway, not critical
+          } else {
+            console.log('Owner added to garage_members successfully with garage_id:', garageId);
+          }
         } else {
-          console.log('Owner added to garage_members successfully with garage_id:', garageId || 'null');
+          console.log('Skipping garage_members insert for owner due to null garageId');
         }
       }
     }

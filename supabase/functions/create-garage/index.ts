@@ -153,106 +153,125 @@ serve(async (req: Request) => {
     const garageId = garageData[0].id;
     console.log(`Created garage with ID: ${garageId}`);
     
-    // Step 2: Check if the user already has a membership, if not, add them as an owner
-    const { data: existingMembership, error: membershipCheckError } = await supabase
-      .from('garage_members')
-      .select('id, garage_id')
-      .eq('user_id', userId)
-      .eq('role', 'owner')
-      .maybeSingle();
+    try {
+      // Step 2: Add the user as an owner in garage_members
+      console.log(`Adding user ${userId} as owner in garage_members for garage ${garageId}`);
       
-    if (membershipCheckError) {
-      console.error("Error checking existing membership:", membershipCheckError);
-    }
-    
-    if (!existingMembership) {
-      // No existing membership found, create a new one
-      console.log(`No existing membership found, creating one for user ${userId} and garage ${garageId}`);
-      const { error: memberError } = await supabase
+      // First verify if the user is already in the garage_members table
+      const { data: existingMembership, error: membershipCheckError } = await supabase
         .from('garage_members')
-        .insert([
-          {
-            user_id: userId,
-            garage_id: garageId,
-            role: 'owner'
-          }
-        ]);
-      
-      if (memberError) {
-        console.error("Error adding user as garage member:", memberError);
-        // Don't fail the request, but log it
-      } else {
-        console.log(`Added user ${userId} as owner in garage_members`);
-      }
-    } else if (existingMembership.garage_id === null) {
-      // Update the existing membership with null garage_id
-      console.log(`Updating existing membership with null garage_id for user ${userId}`);
-      const { error: updateError } = await supabase
-        .from('garage_members')
-        .update({ garage_id: garageId })
-        .eq('id', existingMembership.id);
+        .select('id')
+        .eq('user_id', userId)
+        .eq('role', 'owner')
+        .maybeSingle();
         
-      if (updateError) {
-        console.error("Error updating garage member:", updateError);
-      } else {
-        console.log(`Updated membership for user ${userId} with garage ${garageId}`);
+      if (membershipCheckError) {
+        console.error("Error checking garage membership:", membershipCheckError);
       }
-    } else {
-      // Create a new membership for this specific garage
-      console.log(`Creating additional membership for user ${userId} and garage ${garageId}`);
-      const { error: memberError } = await supabase
-        .from('garage_members')
-        .insert([
-          {
+      
+      if (existingMembership) {
+        // Update existing membership instead of creating a new one
+        console.log(`User ${userId} already has an owner membership, updating garage_id to ${garageId}`);
+        
+        const { error: updateError } = await supabase
+          .from('garage_members')
+          .update({ garage_id: garageId })
+          .eq('id', existingMembership.id);
+          
+        if (updateError) {
+          console.error("Error updating garage member:", updateError);
+        } else {
+          console.log("Successfully updated garage_members record");
+        }
+      } else {
+        // Create a new membership
+        console.log(`Creating new garage_members record for user ${userId} and garage ${garageId}`);
+        
+        const { error: insertError } = await supabase
+          .from('garage_members')
+          .insert({
             user_id: userId,
             garage_id: garageId,
             role: 'owner'
-          }
-        ]);
-      
-      if (memberError) {
-        console.error("Error adding user as garage member:", memberError);
-      } else {
-        console.log(`Added user ${userId} as owner in garage_members`);
+          });
+          
+        if (insertError) {
+          console.error("Error inserting garage member:", insertError);
+        } else {
+          console.log("Successfully created garage_members record");
+        }
       }
+    } catch (memberError) {
+      console.error("Error handling garage membership:", memberError);
+      // Continue execution - we don't want to fail the entire request due to membership issues
     }
     
-    // Step 3: Update the user's profile with the garage_id
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .update({ garage_id: garageId })
-      .eq('id', userId);
-    
-    if (profileError) {
-      console.error("Error updating user profile:", profileError);
-      // Don't fail the request, but log it
-    } else {
-      console.log(`Updated user profile with garage_id: ${garageId}`);
-    }
-    
-    // Step 4: Add administrator role to the user if not already present
-    const { data: existingRoles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', 'administrator');
+    try {
+      // Step 3: Update user's profile with the garage_id
+      console.log(`Updating profile for user ${userId} with garage_id ${garageId}`);
       
-    if (!existingRoles || existingRoles.length === 0) {
-      const { error: roleError } = await supabase
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ garage_id: garageId })
+        .eq('id', userId);
+      
+      if (profileError) {
+        console.error("Error updating user profile:", profileError);
+      } else {
+        console.log("Successfully updated user profile with new garage_id");
+      }
+    } catch (profileError) {
+      console.error("Error updating profile:", profileError);
+      // Continue execution
+    }
+    
+    try {
+      // Step 4: Update or add administrator role
+      console.log(`Ensuring user ${userId} has administrator role for garage ${garageId}`);
+      
+      // First check if user has an existing role
+      const { data: existingRoles } = await supabase
         .from('user_roles')
-        .insert([
-          {
+        .select('id, garage_id')
+        .eq('user_id', userId)
+        .eq('role', 'administrator')
+        .maybeSingle();
+        
+      if (existingRoles) {
+        // Update existing role with the new garage_id
+        console.log(`User already has admin role, updating garage_id to ${garageId}`);
+        
+        const { error: updateRoleError } = await supabase
+          .from('user_roles')
+          .update({ garage_id: garageId })
+          .eq('id', existingRoles.id);
+          
+        if (updateRoleError) {
+          console.error("Error updating user role:", updateRoleError);
+        } else {
+          console.log("Successfully updated user_roles record");
+        }
+      } else {
+        // Insert new role
+        console.log(`Creating new admin role for user ${userId} and garage ${garageId}`);
+        
+        const { error: insertRoleError } = await supabase
+          .from('user_roles')
+          .insert({
             user_id: userId,
             role: 'administrator',
             garage_id: garageId
-          }
-        ]);
-      
-      if (roleError) {
-        console.error("Error adding administrator role:", roleError);
-      } else {
-        console.log(`Added administrator role to user ${userId}`);
+          });
+          
+        if (insertRoleError) {
+          console.error("Error inserting user role:", insertRoleError);
+        } else {
+          console.log("Successfully created user_roles record");
+        }
       }
+    } catch (roleError) {
+      console.error("Error handling user roles:", roleError);
+      // Continue execution
     }
     
     return new Response(

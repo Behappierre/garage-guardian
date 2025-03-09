@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 interface GarageFormProps {
   userId: string;
@@ -27,7 +28,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors } } = useForm<GarageFormValues>();
-  const { toast } = useToast();
+  const { toast: toastNotification } = useToast();
   const navigate = useNavigate();
 
   const onSubmit = async (data: GarageFormValues) => {
@@ -80,8 +81,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
       
       console.log("Submitting garage with slug:", slug);
       
-      // This approach uses two steps to avoid RLS issues:
-      // 1. Insert the garage as service_role to bypass RLS
+      // Call the edge function to create the garage
       const { data: garageData, error: garageError } = await supabase.functions.invoke('create-garage', {
         body: {
           name: data.name,
@@ -93,9 +93,17 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         }
       });
       
-      if (garageError || !garageData) {
-        console.error("Error creating garage:", garageError || "No data returned");
-        throw new Error(garageError?.message || "Failed to create garage");
+      if (garageError) {
+        console.error("Error from create-garage function:", garageError);
+        throw new Error(garageError.message || "Failed to create garage");
+      }
+      
+      if (!garageData) {
+        throw new Error("No data returned from create-garage function");
+      }
+      
+      if (garageData.status === 'error') {
+        throw new Error(garageData.error || "Failed to create garage");
       }
       
       console.log("Created garage:", garageData);
@@ -104,10 +112,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
         throw new Error("No garage ID returned");
       }
       
-      toast({
-        title: "Success!",
-        description: "Your garage has been created successfully.",
-      });
+      toast.success("Your garage has been created successfully");
       
       // Force refresh auth session to update user claims
       try {
@@ -151,11 +156,7 @@ export const GarageForm = ({ userId, onComplete }: GarageFormProps) => {
     } catch (error: any) {
       console.error("Error creating garage:", error.message);
       setError(error.message);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to create garage: ${error.message}`,
-      });
+      toast.error(`Failed to create garage: ${error.message}`);
     } finally {
       setLoading(false);
     }
