@@ -66,7 +66,7 @@ export const useSignUp = () => {
             console.warn("Auto sign-in failed after registration:", signInError);
             // Don't throw, allow the function to complete even if auto-login fails
           } else {
-            console.log("Auto sign-in successful after registration");
+            console.log("Auto sign-in successful after registration, user id:", signInData?.user?.id);
           }
         } catch (signInError) {
           console.warn("Error during auto sign-in after registration:", signInError);

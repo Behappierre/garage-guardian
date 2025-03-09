@@ -198,6 +198,21 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
   try {
     console.log(`Assigning role ${role} to user ${userId} for garage ${garageId || 'null'}`);
     
+    // Verify userId exists and is valid before assigning roles
+    const { data: userExists, error: userCheckError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userCheckError || !userExists || !userExists.user) {
+      console.error('Error verifying user existence:', userCheckError || 'User not found');
+      return {
+        result: { 
+          userId, 
+          status: 'error', 
+          message: 'Failed to verify user existence' 
+        },
+        error: userCheckError || new Error('User not found')
+      };
+    }
+    
     // Check if user already has this role
     const { data: existingRoles } = await supabase
       .from('user_roles')

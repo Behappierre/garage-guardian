@@ -60,6 +60,23 @@ serve(async (req: Request) => {
       );
     }
 
+    // Verify the userId exists in auth.users to prevent invalid references
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError || !userData || !userData.user) {
+      console.error("Invalid user ID provided:", userError || "User not found");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid user ID - unable to create garage',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        }
+      );
+    }
+
     // Generate a unique slug by adding a random suffix if needed
     const createUniqueSlug = async (baseSlug: string): Promise<string> => {
       // Check if the slug already exists
