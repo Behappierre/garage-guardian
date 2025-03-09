@@ -93,6 +93,15 @@ export function useChatMessages() {
     return bookingTerms.some(term => message.toLowerCase().includes(term));
   };
 
+  const checkIfAppointmentQuery = (message: string): boolean => {
+    const queryTerms = [
+      'appointment', 'schedule', 'booking', 'have we got', 
+      'do we have', 'show me', 'what are', 'list',
+      'today', 'tomorrow', 'next week'
+    ];
+    return queryTerms.some(term => message.toLowerCase().includes(term));
+  };
+
   const sendMessage = async (message: string) => {
     if (!message.trim() || isLoading) return;
 
@@ -110,12 +119,13 @@ export function useChatMessages() {
       }
 
       const isLikelyBookingRequest = checkIfBookingRequest(message);
+      const isLikelyAppointmentQuery = checkIfAppointmentQuery(message);
 
       try {
         console.log('Attempting to invoke GPT Edge Function with:', {
           message,
           userId: user.id,
-          isLikelyBooking: isLikelyBookingRequest
+          isLikelyBooking: isLikelyBookingRequest || isLikelyAppointmentQuery
         });
         
         const { data: gptData, error: gptError } = await supabase.functions.invoke('chat-with-gpt', {
@@ -145,6 +155,12 @@ export function useChatMessages() {
         if (gptData.response.toLowerCase().includes('booking is confirmed') || 
             gptData.response.toLowerCase().includes('appointment created')) {
           console.log("Booking confirmed, refreshing appointments");
+          refreshAppointments();
+        }
+
+        // Also refresh appointments if the query was about appointments
+        if (isLikelyAppointmentQuery) {
+          console.log("Appointment query detected, refreshing appointments to ensure latest data");
           refreshAppointments();
         }
 
@@ -195,6 +211,12 @@ export function useChatMessages() {
         if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
             geminiData.response.toLowerCase().includes('appointment created')) {
           console.log("Booking confirmed, refreshing appointments");
+          refreshAppointments();
+        }
+        
+        // Also refresh appointments if the query was about appointments
+        if (isLikelyAppointmentQuery) {
+          console.log("Appointment query detected, refreshing appointments to ensure latest data");
           refreshAppointments();
         }
       }

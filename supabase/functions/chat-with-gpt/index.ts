@@ -259,6 +259,9 @@ async function handleAppointmentQuery(message: string, supabase: any, garageId: 
   }
   
   try {
+    console.log(`Querying appointments from ${timeRange.startTime.toISOString()} to ${timeRange.endTime.toISOString()}`);
+    console.log(`Using garage_id filter: ${garageId}`);
+    
     // Query appointments in the specified time range - with garage_id filter added
     const query = supabase
       .from('appointments')
@@ -282,8 +285,10 @@ async function handleAppointmentQuery(message: string, supabase: any, garageId: 
       
     if (appointmentsError) {
       console.error("Error fetching appointments:", appointmentsError);
-      throw appointmentsError;
+      return "I'm having trouble accessing the appointment database right now. Please try again in a moment.";
     }
+    
+    console.log(`Found ${appointments?.length || 0} appointments for query:`, message);
     
     if (!appointments || appointments.length === 0) {
       return `No appointments found for ${timeRange.description}.`;
@@ -314,7 +319,7 @@ async function handleAppointmentQuery(message: string, supabase: any, garageId: 
     
   } catch (error) {
     console.error("Error in handleAppointmentQuery:", error);
-    throw error;
+    return "I encountered an error while checking the appointment schedule. Please try again.";
   }
 }
 
@@ -411,7 +416,10 @@ function checkForQueryIntent(message: string): boolean {
     /list\s+(?:the\s+)?(?:bookings|appointments)/i,
     /(?:bookings|appointments)(?:\s+do\s+we\s+have)?(?:\s+for)?/i,
     /schedule(?:\s+for)?/i,
-    /upcoming(?:\s+appointments)?/i
+    /upcoming(?:\s+appointments)?/i,
+    /have\s+(?:we|you)\s+got\s+any\s+appointment/i,
+    /do\s+(?:we|you)\s+have\s+any\s+appointment/i,
+    /are\s+there\s+any\s+appointment/i
   ];
   
   return queryPatterns.some(pattern => pattern.test(message));
