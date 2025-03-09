@@ -103,6 +103,7 @@ export const useAuthSubmit = (userType: UserType) => {
 
                 if (userType === "owner") {
                   console.log("Processing owner sign-in...");
+                  // Always redirect owners to garage management instead of dashboard
                   await handleOwnerSignIn(signInData.user.id);
                   navigate("/garage-management");
                   return;
@@ -121,26 +122,10 @@ export const useAuthSubmit = (userType: UserType) => {
                     navigate("/dashboard");
                     return;
                   } else {
-                    const { data: ownedGarages } = await supabase
-                      .from('garages')
-                      .select('id')
-                      .eq('owner_id', signInData.user.id)
-                      .limit(1);
-                      
-                    if (ownedGarages && ownedGarages.length > 0) {
-                      console.log("Administrator owns garages, updating profile:", ownedGarages[0].id);
-                      await supabase
-                        .from('profiles')
-                        .update({ garage_id: ownedGarages[0].id })
-                        .eq('id', signInData.user.id);
-                        
-                      navigate("/dashboard");
-                      return;
-                    } else {
-                      console.log("Administrator has no garage_id and owns no garages");
-                      navigate("/garage-management?source=staff");
-                      return;
-                    }
+                    // For staff login where user is admin with no garage selected,
+                    // go to garage selection
+                    navigate("/garage-management?source=staff");
+                    return;
                   }
                 }
                 

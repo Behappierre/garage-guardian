@@ -1,66 +1,53 @@
 
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GarageForm } from "./GarageForm";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface GarageFormContainerProps {
   userId: string;
   userType: "owner" | "staff";
-  onComplete?: (garageId: string) => void;
+  onComplete?: () => void;
 }
 
-export const GarageFormContainer = ({ 
-  userId, 
-  userType,
-  onComplete 
-}: GarageFormContainerProps) => {
+export const GarageFormContainer = ({ userId, userType, onComplete }: GarageFormContainerProps) => {
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  
-  // Define a safe callback wrapper to ensure onComplete is a function before calling it
-  const handleComplete = async (garageId: string) => {
-    if (typeof onComplete === 'function') {
-      onComplete(garageId);
-    } else {
-      // Default behavior if onComplete is not provided
-      toast.success("Garage created successfully!");
-      
-      try {
-        // Verify the user's profile exists
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-          
-        if (profileError || !profile) {
-          console.error("Profile may not exist, creating it");
-          // Try to create profile if missing
-          const { error: createError } = await supabase
-            .from('profiles')
-            .insert({ id: userId, garage_id: garageId });
-            
-          if (createError) {
-            console.error("Failed to create profile:", createError);
-          }
-        }
-        
-        // Force refresh session
-        await supabase.auth.refreshSession();
-        
-        // Route based on user type
-        if (userType === "owner") {
-          navigate('/garage-management');
-        } else {
-          navigate('/dashboard');
-        }
-      } catch (error) {
-        console.error("Error in completion handler:", error);
-        // Fallback navigation even if there's an error
-        navigate(userType === "owner" ? '/garage-management' : '/dashboard');
+
+  const handleGarageCreated = async (garageId: string) => {
+    console.log(`Garage created with ID ${garageId} for user ${userId}`);
+    
+    try {
+      // For owner accounts, always navigate to garage management
+      if (userType === "owner") {
+        navigate("/garage-management");
+      } else if (onComplete) {
+        onComplete();
       }
+    } catch (error: any) {
+      console.error("Error after garage creation:", error);
+      setError(error.message || "An error occurred after creating your garage");
     }
   };
 
-  return <GarageForm userId={userId} onComplete={handleComplete} />;
+  return (
+    <div className="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full mx-auto my-8">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold">Create Your Garage</h2>
+        <p className="text-gray-600 mt-1">
+          Set up your garage details to get started
+        </p>
+      </div>
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <GarageForm userId={userId} onComplete={handleGarageCreated} />
+    </div>
+  );
 };
