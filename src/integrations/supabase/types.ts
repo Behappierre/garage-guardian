@@ -833,11 +833,42 @@ export type Database = {
         }
         Returns: Json
       }
+      find_opening_time: {
+        Args: {
+          p_garage_id: string
+          p_day_of_week: number
+        }
+        Returns: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          garage_id: string
+          id: string
+          is_closed: boolean
+          start_time: string
+          updated_at: string
+        }[]
+      }
       get_garage_currency: {
         Args: {
           p_garage_id: string
         }
         Returns: string
+      }
+      get_opening_times_for_garage: {
+        Args: {
+          p_garage_id: string
+        }
+        Returns: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          garage_id: string
+          id: string
+          is_closed: boolean
+          start_time: string
+          updated_at: string
+        }[]
       }
       get_user_garage_id: {
         Args: Record<PropertyKey, never>
