@@ -1,0 +1,2 @@
+
+export { OpeningTimes } from './OpeningTimes';

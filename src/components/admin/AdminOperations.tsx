@@ -1,9 +1,8 @@
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OpeningTimes } from "@/components/admin/OpeningTimes";
+import { OpeningTimes } from "@/components/admin/opening-times";
 
 export const AdminOperations = () => {
   return (
