@@ -1,6 +1,7 @@
 
 import { format } from "date-fns";
 import { isWithinInterval, startOfDay, isAfter, isBefore, isEqual } from "date-fns";
+import { useEffect, useRef } from "react";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -37,15 +38,9 @@ export const AppointmentList = ({
   sortOrder
 }: AppointmentListProps) => {
   const navigate = useNavigate();
-
-  if (isLoading) {
-    return <div className="p-6 text-center">Loading appointments...</div>;
-  }
-
-  if (!appointments || appointments.length === 0) {
-    return <div className="p-6 text-center">No appointments found</div>;
-  }
-
+  // Add ref for today's section
+  const todaySectionRef = useRef<HTMLDivElement>(null);
+  
   // Filter appointments
   let filteredAppointments = appointments.filter(appointment => {
     // Filter by client name
@@ -125,11 +120,40 @@ export const AppointmentList = ({
   console.log("Sorted date keys:", sortedDateKeys);
   console.log("Sort field:", sortField, "Sort order:", sortOrder);
 
+  // Add useEffect to scroll to today's section when component mounts
+  useEffect(() => {
+    // Short timeout to ensure DOM is ready
+    const scrollTimeout = setTimeout(() => {
+      if (todaySectionRef.current) {
+        // Scroll today's section into view with smooth behavior
+        todaySectionRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center' // Center the element in the viewport
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(scrollTimeout);
+  }, [appointments, nameFilter, registrationFilter, statusFilter, bayFilter]); // Re-run when filters change
+
+  if (isLoading) {
+    return <div className="p-6 text-center">Loading appointments...</div>;
+  }
+
+  if (!appointments || appointments.length === 0) {
+    return <div className="p-6 text-center">No appointments found</div>;
+  }
+
   return (
     <ScrollArea className="h-[calc(100vh-240px)]">
       <div className="space-y-6 px-4 pb-8">
         {sortedDateKeys.map(dateKey => (
-          <div key={dateKey} className="space-y-4">
+          <div 
+            key={dateKey} 
+            className="space-y-4"
+            // Add ref to today's section
+            ref={dateKey === todayStr ? todaySectionRef : null}
+          >
             <h3 className="sticky top-0 z-10 py-2 font-semibold text-lg bg-background border-b">
               {format(new Date(dateKey), 'EEEE, MMMM d, yyyy')}
               {dateKey === format(today, 'yyyy-MM-dd') && (
