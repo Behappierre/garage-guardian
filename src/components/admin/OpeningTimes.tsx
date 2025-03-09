@@ -204,7 +204,7 @@ export const OpeningTimes = () => {
                       onValueChange={(value) => handleTimeChange(day, 'start_time', value)}
                       disabled={savingDay === day.day_of_week}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="Start Time" />
                       </SelectTrigger>
                       <SelectContent>
@@ -223,7 +223,7 @@ export const OpeningTimes = () => {
                       onValueChange={(value) => handleTimeChange(day, 'end_time', value)}
                       disabled={savingDay === day.day_of_week}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder="End Time" />
                       </SelectTrigger>
                       <SelectContent>
