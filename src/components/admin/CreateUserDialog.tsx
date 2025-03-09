@@ -60,6 +60,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
             lastName,
             role,
             garageId,
+            userType: 'staff' // For clarity in the edge function
           },
         });
 

@@ -42,7 +42,7 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
             id: userId,
             first_name: firstName,
             last_name: lastName,
-            garage_id: garageId
+            garage_id: garageId // Ensure garage_id is added to profile
           });
           
         if (createProfileError) {
