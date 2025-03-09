@@ -113,9 +113,7 @@ serve(async (req: Request) => {
     );
     
     if (assignRoleError) {
-      console.warn('Role assignment ha
-
-d issues but user was created:', result);
+      console.warn('Role assignment had issues but user was created:', result);
       return new Response(
         JSON.stringify(result),
         { 
