@@ -12,6 +12,14 @@ interface Message {
     intent?: string;
     confidence?: number;
     entities?: Record<string, string>;
+    context?: {
+      recentTopics?: string[];
+      lastQueryType?: string;
+      currentFlow?: {
+        type: string;
+        step: string;
+      };
+    };
   };
 }
 
@@ -21,16 +29,44 @@ export function useChatMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasDisplayedWelcome, setHasDisplayedWelcome] = useState(false);
+  const [conversationContext, setConversationContext] = useState<Record<string, any>>({});
 
   const welcomeMessage = {
     role: "assistant" as const,
     content: "👋 Welcome to GarageWizz AI Assistant! I'm here to help you with scheduling appointments, looking up vehicle information, managing clients, and answering automotive questions. How can I assist you today?"
   };
 
-  const initializeChat = () => {
+  const initializeChat = async () => {
     if (!hasDisplayedWelcome && messages.length === 0) {
       setMessages([welcomeMessage]);
       setHasDisplayedWelcome(true);
+    }
+    
+    // If user is logged in, fetch recent conversation history
+    if (user?.id && messages.length <= 1) {
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+          
+        if (error) {
+          console.error('Error fetching chat history:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          // Get latest context from the most recent message
+          const latestMessage = data[0];
+          if (latestMessage.metadata?.context) {
+            setConversationContext(latestMessage.metadata.context);
+          }
+        }
+      } catch (err) {
+        console.error('Error initializing chat context:', err);
+      }
     }
   };
 
@@ -131,17 +167,23 @@ export function useChatMessages() {
           throw new Error('No response received from Gemini assistant');
         }
 
+        // Extract context if present in the response
+        if (geminiData.metadata?.context) {
+          setConversationContext(geminiData.metadata.context);
+        }
+        
         // Extract metadata if present in the response
-        const metadata = geminiData.metadata || {};
+        const metadata = {
+          intent: geminiData.metadata?.query_type,
+          confidence: geminiData.metadata?.confidence,
+          entities: geminiData.metadata?.entities,
+          context: geminiData.metadata?.context
+        };
         
         setMessages(prev => [...prev, { 
           role: "assistant", 
           content: formatMessage(geminiData.response),
-          metadata: {
-            intent: metadata.query_type,
-            confidence: metadata.confidence,
-            entities: metadata.entities
-          }
+          metadata
         }]);
 
         if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
@@ -165,6 +207,7 @@ export function useChatMessages() {
   const clearMessages = () => {
     setMessages([]);
     setHasDisplayedWelcome(false);
+    setConversationContext({});
   };
 
   return {
@@ -172,6 +215,7 @@ export function useChatMessages() {
     isLoading,
     sendMessage,
     clearMessages,
-    initializeChat
+    initializeChat,
+    conversationContext
   };
 }

@@ -13,7 +13,7 @@ import { toast } from "sonner";
 export function ChatAgent() {
   const [isWide, setIsWide] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const { messages, isLoading, sendMessage, clearMessages, initializeChat } = useChatMessages();
+  const { messages, isLoading, sendMessage, clearMessages, initializeChat, conversationContext } = useChatMessages();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -66,6 +66,7 @@ export function ChatAgent() {
             <ChatMessages 
               messages={messages} 
               isLoading={isLoading} 
+              conversationContext={conversationContext}
             />
             <ChatInput 
               onSubmit={handleSendMessage}
