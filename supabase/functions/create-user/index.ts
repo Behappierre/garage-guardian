@@ -96,6 +96,7 @@ serve(async (req: Request) => {
         
       if (createProfileError) {
         console.error('Error creating profile after user creation:', createProfileError);
+        // We'll log the error but continue with the process
       } else {
         console.log('Created profile for user after checking:', userData.user.id);
       }

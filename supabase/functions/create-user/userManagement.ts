@@ -1,3 +1,4 @@
+
 import { corsHeaders } from './utils.ts';
 
 export const validateRequest = async (req: Request) => {
@@ -119,7 +120,13 @@ export const createUserAccount = async (supabase: any, email: string, password: 
     console.log('User created successfully:', userData.user.id);
     
     // CRITICAL: Create profile for the new user with multiple attempts if needed
-    await ensureProfileExists(supabase, userData.user.id, firstName, lastName);
+    const profileResult = await ensureProfileExists(supabase, userData.user.id, firstName, lastName);
+    console.log('Profile creation result:', profileResult ? 'Success' : 'Failed');
+    
+    if (!profileResult) {
+      console.error('CRITICAL: Failed to create profile after multiple attempts');
+      // Even though profile creation failed, we'll return the user and let the client handle it
+    }
     
     return {
       userData,
@@ -148,15 +155,19 @@ export const createUserAccount = async (supabase: any, email: string, password: 
 // New helper function to ensure a profile exists with retry logic
 async function ensureProfileExists(supabase: any, userId: string, firstName: string, lastName: string) {
   // First check if profile already exists
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile, error: checkError } = await supabase
     .from('profiles')
     .select('id')
     .eq('id', userId)
     .single();
     
+  if (checkError) {
+    console.log('Error checking for existing profile:', checkError.message);
+  }
+    
   if (existingProfile) {
     console.log('Profile already exists for user:', userId);
-    return;
+    return true;
   }
   
   console.log('Creating profile for user:', userId);
@@ -179,18 +190,22 @@ async function ensureProfileExists(supabase: any, userId: string, firstName: str
           await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms between attempts
         } else {
           console.error('All profile creation attempts failed for user:', userId);
+          return false;
         }
       } else {
         console.log('Profile created successfully for user:', userId);
-        return; // Success, exit the function
+        return true; // Success, exit the function
       }
     } catch (error) {
       console.error(`Unexpected error in profile creation attempt ${attempt}:`, error);
       if (attempt >= 3) {
         console.error('All profile creation attempts failed with exceptions');
+        return false;
       }
     }
   }
+  
+  return false;
 }
 
 export const assignUserRole = async (supabase: any, userId: string, role: string, garageId: string | null, userType: string) => {
@@ -210,6 +225,36 @@ export const assignUserRole = async (supabase: any, userId: string, role: string
         },
         error: userCheckError || new Error('User not found')
       };
+    }
+    
+    // Double-check profile existence again in this function
+    const { data: profileExists } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
+      
+    if (!profileExists) {
+      console.log('Profile not found, creating it now');
+      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      
+      if (userData && userData.user) {
+        const firstName = userData.user.user_metadata?.first_name || '';
+        const lastName = userData.user.user_metadata?.last_name || '';
+        
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            first_name: firstName,
+            last_name: lastName,
+            garage_id: garageId
+          });
+          
+        if (createProfileError) {
+          console.error('Error creating profile during role assignment:', createProfileError);
+        }
+      }
     }
     
     // Check if user already has this role
