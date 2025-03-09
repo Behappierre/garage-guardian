@@ -27,8 +27,8 @@ export const JobTicketFormDialog = ({
       open={showTicketForm} 
       onOpenChange={onOpenChange}
     >
-      <DialogContent className="sm:max-w-[600px] p-6 max-h-[90vh] overflow-hidden" closeButton={true}>
-        <DialogHeader className="pb-4">
+      <DialogContent className="sm:max-w-[600px] p-0 max-h-[90vh] overflow-hidden" closeButton={true}>
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>
             {isLoading ? (
               "Loading Job Ticket..."
@@ -46,15 +46,15 @@ export const JobTicketFormDialog = ({
         </DialogHeader>
         
         {isLoading ? (
-          <div className="space-y-4 p-2">
+          <div className="space-y-4 px-6 pb-6">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-32 w-full" />
           </div>
         ) : (
-          <ScrollArea className="pr-4 max-h-[calc(90vh-120px)]">
-            <div className="pb-6">
+          <ScrollArea className="px-6 pb-6 max-h-[calc(90vh-120px)]">
+            <div className="pr-3">
               <JobTicketForm
                 initialData={selectedTicket}
                 onClose={onClose}
