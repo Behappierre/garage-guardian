@@ -20,20 +20,29 @@ export function ChatAgent() {
     if (isOpen) {
       initializeChat();
     }
-  }, [isOpen]);
+  }, [isOpen, initializeChat]);
+
+  // Make sure we're visible on all pages
+  useEffect(() => {
+    console.log("ChatAgent mounted, user status:", user ? "logged in" : "not logged in");
+  }, [user]);
 
   const toggleWidth = () => {
     setIsWide(prev => !prev);
   };
 
   const handleSendMessage = (message: string) => {
+    if (!message.trim()) return;
+    console.log("Sending message:", message);
     sendMessage(message);
   };
 
   const handleLauncherClick = () => {
     if (user) {
+      console.log("Opening chat dialog");
       setIsOpen(true);
     } else {
+      console.log("User not logged in, showing toast");
       toast.info("Please sign in to chat with the AI assistant", {
         duration: 3000,
       });
@@ -50,7 +59,7 @@ export function ChatAgent() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent 
           className={cn(
-            "max-h-[90vh] p-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-300",
+            "max-h-[90vh] p-0 overflow-hidden animate-in fade-in-50 zoom-in-95 duration-300 z-50",
             isWide ? "sm:max-w-[800px]" : "sm:max-w-[400px] md:sm:max-w-[540px]"
           )}
           closeButton={false}

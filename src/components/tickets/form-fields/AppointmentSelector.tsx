@@ -65,7 +65,7 @@ export const AppointmentSelector = ({
             }
           />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[100]">
           <ScrollArea className="h-[200px]">
             <SelectItem value="no-selection">No appointment selected</SelectItem>
             
@@ -88,4 +88,4 @@ export const AppointmentSelector = ({
       </Select>
     </div>
   );
-};
+}

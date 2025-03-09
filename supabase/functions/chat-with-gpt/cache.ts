@@ -19,9 +19,11 @@ export class DatabaseCache {
 
     // Return cached value if it exists and hasn't expired
     if (cachedItem && now - cachedItem.timestamp < ttl) {
+      console.log(`Cache hit for key: ${key}`);
       return cachedItem.data as T;
     }
 
+    console.log(`Cache miss for key: ${key}, fetching fresh data`);
     // Fetch fresh data
     const data = await fetchFn();
     
@@ -35,6 +37,7 @@ export class DatabaseCache {
    * Manually invalidate a cache entry
    */
   invalidate(key: string): void {
+    console.log(`Invalidating cache for key: ${key}`);
     this.cache.delete(key);
   }
 
@@ -42,6 +45,7 @@ export class DatabaseCache {
    * Invalidate all cache entries that start with the given prefix
    */
   invalidateByPrefix(prefix: string): void {
+    console.log(`Invalidating cache for prefix: ${prefix}`);
     for (const key of this.cache.keys()) {
       if (key.startsWith(prefix)) {
         this.cache.delete(key);
@@ -53,6 +57,7 @@ export class DatabaseCache {
    * Clear the entire cache
    */
   clear(): void {
+    console.log('Clearing entire cache');
     this.cache.clear();
   }
 }

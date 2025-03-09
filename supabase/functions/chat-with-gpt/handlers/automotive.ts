@@ -24,7 +24,9 @@ export async function handleAutomotiveQuestion(message: string, openAIApiKey: st
                     2. Explain possible causes of problems in order of likelihood
                     3. Give practical diagnostics that can be done at a garage
                     4. Recommend appropriate maintenance schedules
-                    5. Cite industry standard practices where appropriate`
+                    5. Cite industry standard practices where appropriate
+                    
+                    Be helpful, friendly, and professional in your responses.`
         },
         { role: "user", content: message }
       ],
@@ -32,6 +34,7 @@ export async function handleAutomotiveQuestion(message: string, openAIApiKey: st
       max_tokens: 500,
     });
 
+    console.log('Automotive response generated successfully');
     return response.choices[0].message.content;
   } catch (error) {
     console.error('Error in automotive handler:', error);

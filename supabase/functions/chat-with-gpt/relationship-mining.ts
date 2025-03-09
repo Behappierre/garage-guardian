@@ -6,6 +6,7 @@
 
 export async function getClientFullHistory(clientId: string, supabase: any) {
   try {
+    console.log(`Fetching full history for client: ${clientId}`);
     const { data, error } = await supabase
       .from('clients')
       .select(`
@@ -21,6 +22,7 @@ export async function getClientFullHistory(clientId: string, supabase: any) {
       return null;
     }
     
+    console.log(`Successfully retrieved history for client: ${clientId}`);
     return data;
   } catch (err) {
     console.error('Exception in getClientFullHistory:', err);
@@ -30,6 +32,7 @@ export async function getClientFullHistory(clientId: string, supabase: any) {
 
 export async function getClientAppointments(clientId: string, supabase: any) {
   try {
+    console.log(`Fetching appointments for client: ${clientId}`);
     const { data, error } = await supabase
       .from('appointments')
       .select(`
@@ -45,6 +48,7 @@ export async function getClientAppointments(clientId: string, supabase: any) {
       return null;
     }
     
+    console.log(`Retrieved ${data?.length || 0} appointments for client: ${clientId}`);
     return data || [];
   } catch (err) {
     console.error('Exception in getClientAppointments:', err);
@@ -54,6 +58,7 @@ export async function getClientAppointments(clientId: string, supabase: any) {
 
 export async function getVehicleServiceHistory(vehicleId: string, supabase: any) {
   try {
+    console.log(`Fetching service history for vehicle: ${vehicleId}`);
     const { data, error } = await supabase
       .from('vehicles')
       .select(`
@@ -69,6 +74,7 @@ export async function getVehicleServiceHistory(vehicleId: string, supabase: any)
       return null;
     }
     
+    console.log(`Successfully retrieved history for vehicle: ${vehicleId}`);
     return data;
   } catch (err) {
     console.error('Exception in getVehicleServiceHistory:', err);
@@ -78,6 +84,7 @@ export async function getVehicleServiceHistory(vehicleId: string, supabase: any)
 
 export async function findSimilarVehicles(make: string, model: string, supabase: any, garageId?: string) {
   try {
+    console.log(`Finding similar vehicles: ${make} ${model}, garage: ${garageId || 'any'}`);
     let query = supabase
       .from('vehicles')
       .select(`
@@ -100,6 +107,7 @@ export async function findSimilarVehicles(make: string, model: string, supabase:
       return [];
     }
     
+    console.log(`Found ${data?.length || 0} similar vehicles`);
     return data || [];
   } catch (err) {
     console.error('Exception in findSimilarVehicles:', err);
@@ -109,6 +117,7 @@ export async function findSimilarVehicles(make: string, model: string, supabase:
 
 export async function getRelatedServiceHistory(vehicleId: string, serviceType: string, supabase: any) {
   try {
+    console.log(`Getting related service history for vehicle ${vehicleId}, service type: ${serviceType}`);
     const { data: vehicle, error: vehicleError } = await supabase
       .from('vehicles')
       .select('make, model')
@@ -137,6 +146,7 @@ export async function getRelatedServiceHistory(vehicleId: string, serviceType: s
       return [];
     }
     
+    console.log(`Found ${data?.length || 0} related service records`);
     return data || [];
   } catch (err) {
     console.error('Exception in getRelatedServiceHistory:', err);
@@ -146,6 +156,7 @@ export async function getRelatedServiceHistory(vehicleId: string, serviceType: s
 
 export async function getJobTicketsByType(ticketType: string, supabase: any, garageId?: string) {
   try {
+    console.log(`Getting job tickets by type: ${ticketType}, garage: ${garageId || 'any'}`);
     let query = supabase
       .from('job_tickets')
       .select(`
@@ -168,6 +179,7 @@ export async function getJobTicketsByType(ticketType: string, supabase: any, gar
       return [];
     }
     
+    console.log(`Found ${data?.length || 0} tickets of type ${ticketType}`);
     return data || [];
   } catch (err) {
     console.error(`Exception in getJobTicketsByType for ${ticketType}:`, err);

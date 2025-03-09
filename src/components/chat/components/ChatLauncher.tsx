@@ -13,7 +13,7 @@ export function ChatLauncher({ onClick, isDisabled = false }: ChatLauncherProps)
     <Button
       size="icon"
       className={cn(
-        "fixed bottom-4 right-4 h-32 w-32 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 p-0 overflow-hidden",
+        "fixed bottom-4 right-4 h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 animate-in fade-in-50 zoom-in-95 p-0 overflow-hidden z-50",
         isDisabled && "opacity-80 cursor-pointer"
       )}
       onClick={onClick}
@@ -28,7 +28,7 @@ export function ChatLauncher({ onClick, isDisabled = false }: ChatLauncherProps)
       
       {isDisabled && (
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20">
-          <LockIcon className="text-white h-10 w-10" />
+          <LockIcon className="text-white h-8 w-8" />
         </div>
       )}
     </Button>
