@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -23,25 +22,6 @@ export async function verifyUserRole(userId: string) {
     if (!roleData || roleData.length === 0) {
       console.log("No user roles found");
       return { hasError: true, role: null };
-    }
-    
-    // Also check for owner role in garage_members
-    const { data: ownerData, error: ownerError } = await supabase
-      .from('garage_members')
-      .select('role, garage_id')
-      .eq('user_id', userId)
-      .eq('role', 'owner')
-      .maybeSingle();
-      
-    if (ownerError) {
-      console.error("Error checking owner status:", ownerError);
-    }
-    
-    // If user is an owner in garage_members, override role to administrator
-    if (ownerData?.role === 'owner') {
-      console.log("User is an owner in garage_members");
-      console.log("User role: administrator", "Garage ID:", ownerData.garage_id);
-      return { hasError: false, role: 'administrator' };
     }
     
     // Prioritize administrator role if it exists
@@ -78,20 +58,7 @@ export async function verifyUserRole(userId: string) {
  * Verifies a user's access to garage management
  */
 export async function verifyGarageManagementAccess(userId: string, role: string | null) {
-  // Owner check from garage_members
-  const { data: ownerCheck } = await supabase
-    .from('garage_members')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('role', 'owner')
-    .maybeSingle();
-    
-  // If user is an owner in garage_members, allow access regardless of role
-  if (ownerCheck) {
-    return true;
-  }
-  
-  // Otherwise, only allow administrators from user_roles
+  // Only allow administrators to access garage management
   return role === 'administrator';
 }
 
