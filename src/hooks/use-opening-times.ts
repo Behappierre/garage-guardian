@@ -15,7 +15,7 @@ export type OpeningTime = {
 export const useOpeningTimes = () => {
   const { garageId } = useAuth();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["opening-times", garageId],
     queryFn: async () => {
       if (!garageId) return [];
@@ -47,6 +47,11 @@ export const useOpeningTimes = () => {
     },
     enabled: !!garageId,
   });
+
+  return {
+    ...query,
+    garageId
+  };
 };
 
 // Helper function to convert time string (HH:MM:SS) to hour number

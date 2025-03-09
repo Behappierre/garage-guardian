@@ -1,8 +1,5 @@
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/auth/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -10,43 +7,12 @@ import { DAYS_OF_WEEK } from "./constants";
 import { OpeningTimeRow } from "./OpeningTimeRow";
 import { OpeningTime } from "./types";
 import { useOpeningTimeMutation } from "./useOpeningTimeMutation";
+import { useOpeningTimes } from "@/hooks/use-opening-times";
 
 export const OpeningTimes = () => {
-  const { garageId } = useAuth();
+  const { data: openingTimes, isLoading } = useOpeningTimes();
   const [savingDay, setSavingDay] = useState<number | null>(null);
-
-  const { data: openingTimes, isLoading } = useQuery({
-    queryKey: ["opening-times", garageId],
-    queryFn: async () => {
-      if (!garageId) return [];
-
-      const { data, error } = await supabase
-        .from("opening_times")
-        .select("*")
-        .eq("garage_id", garageId)
-        .order("day_of_week");
-
-      if (error) {
-        toast.error("Failed to load opening times");
-        throw error;
-      }
-
-      // Make sure we have all 7 days, if not return defaults
-      if (!data || data.length < 7) {
-        return DAYS_OF_WEEK.map(day => ({
-          id: `temp-${day.value}`,
-          garage_id: garageId,
-          day_of_week: day.value,
-          start_time: "09:00:00",
-          end_time: "17:00:00",
-          is_closed: day.value === 0 || day.value === 6, // Weekends closed by default
-        }));
-      }
-
-      return data as OpeningTime[];
-    },
-    enabled: !!garageId,
-  });
+  const { garageId } = useOpeningTimes();
 
   const updateOpeningTimeMutation = useOpeningTimeMutation(garageId);
 

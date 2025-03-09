@@ -22,7 +22,7 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
         .maybeSingle();
 
       if (existingTime) {
-        // Update existing record
+        // Update existing record - explicitly specify the table name for any ambiguous column
         const { data, error } = await supabase
           .from("opening_times")
           .update({ ...updateData })
