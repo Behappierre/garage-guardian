@@ -1,92 +1,87 @@
 
-import { HOURS } from "./constants";
-import { OpeningTime } from "./types";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { OpeningTime } from "./types";
+import { HOURS } from "./constants";
+import { Skeleton } from "@/components/ui/skeleton";
 
-type OpeningTimeRowProps = {
+interface OpeningTimeRowProps {
   day: OpeningTime;
   dayLabel: string;
   savingDay: number | null;
   onToggleDay: (day: OpeningTime) => void;
   onTimeChange: (day: OpeningTime, field: 'start_time' | 'end_time', value: string) => void;
-};
+}
 
-export const OpeningTimeRow = ({
+export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
   day,
   dayLabel,
   savingDay,
   onToggleDay,
-  onTimeChange
-}: OpeningTimeRowProps) => {
+  onTimeChange,
+}) => {
+  const isLoading = savingDay === day.day_of_week;
+
   return (
-    <div className="grid grid-cols-12 items-center gap-4 py-4 border-b border-gray-100 last:border-0">
-      <div className="col-span-3">
-        <div className="font-medium">{dayLabel}</div>
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+      <div className="flex items-center gap-3">
+        <div className="w-28 font-medium">{dayLabel}</div>
+        {isLoading ? (
+          <Skeleton className="h-5 w-16" />
+        ) : (
+          <Switch
+            checked={!day.is_closed}
+            onCheckedChange={() => onToggleDay(day)}
+          />
+        )}
       </div>
-      
-      <div className="col-span-3 flex items-center space-x-2">
-        <Switch
-          id={`day-${day.day_of_week}-toggle`}
-          checked={!day.is_closed}
-          onCheckedChange={() => onToggleDay(day)}
-          disabled={savingDay === day.day_of_week}
-        />
-        <Label htmlFor={`day-${day.day_of_week}-toggle`}>
-          {day.is_closed ? "Closed" : "Open"}
-        </Label>
-      </div>
-      
+
       {!day.is_closed && (
-        <>
-          <div className="col-span-3">
-            <Select
-              value={day.start_time}
-              onValueChange={(value) => onTimeChange(day, 'start_time', value)}
-              disabled={savingDay === day.day_of_week}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Start Time" />
-              </SelectTrigger>
-              <SelectContent>
-                {HOURS.map((hour) => (
-                  <SelectItem key={`start-${day.day_of_week}-${hour.value}`} value={hour.value}>
-                    {hour.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="col-span-3">
-            <Select
-              value={day.end_time}
-              onValueChange={(value) => onTimeChange(day, 'end_time', value)}
-              disabled={savingDay === day.day_of_week}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="End Time" />
-              </SelectTrigger>
-              <SelectContent>
-                {HOURS.map((hour) => (
-                  <SelectItem 
-                    key={`end-${day.day_of_week}-${hour.value}`} 
-                    value={hour.value}
-                    disabled={hour.value <= day.start_time}
-                  >
-                    {hour.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </>
-      )}
-      
-      {day.is_closed && (
-        <div className="col-span-6 text-gray-500 italic">
-          Closed All Day
+        <div className="flex items-center gap-2">
+          {isLoading ? (
+            <>
+              <Skeleton className="h-9 w-24" />
+              <span className="text-gray-500">to</span>
+              <Skeleton className="h-9 w-24" />
+            </>
+          ) : (
+            <>
+              <Select
+                value={day.start_time}
+                onValueChange={(value) => onTimeChange(day, 'start_time', value)}
+              >
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="Start time" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOURS.map((hour) => (
+                    <SelectItem key={`start-${hour.value}`} value={hour.value}>
+                      {hour.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <span className="text-gray-500">to</span>
+
+              <Select
+                value={day.end_time}
+                onValueChange={(value) => onTimeChange(day, 'end_time', value)}
+              >
+                <SelectTrigger className="w-[130px]">
+                  <SelectValue placeholder="End time" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOURS.map((hour) => (
+                    <SelectItem key={`end-${hour.value}`} value={hour.value}>
+                      {hour.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          )}
         </div>
       )}
     </div>
