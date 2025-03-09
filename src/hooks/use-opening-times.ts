@@ -42,10 +42,11 @@ export const useOpeningTimes = () => {
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
       // Fetch opening times using the garage_id from user_roles
+      // Fix: Use "opening_times.garage_id" instead of just "garage_id" to avoid ambiguity
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
-        .eq("garage_id", garageId)
+        .eq("opening_times.garage_id", garageId)
         .order("day_of_week", { ascending: true });
 
       if (error) {
