@@ -30,7 +30,18 @@ export const JobTicketFormDialog = ({
       <DialogContent className="sm:max-w-[600px] p-6 max-h-[90vh]" closeButton={true}>
         <DialogHeader className="pb-4">
           <DialogTitle>
-            {isLoading ? "Loading Job Ticket..." : selectedTicket ? "Edit Job Ticket" : "Create New Job Ticket"}
+            {isLoading ? (
+              "Loading Job Ticket..."
+            ) : selectedTicket ? (
+              <>
+                Edit Job Ticket
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  JT-{selectedTicket.id}
+                </span>
+              </>
+            ) : (
+              "Create New Job Ticket"
+            )}
           </DialogTitle>
         </DialogHeader>
         

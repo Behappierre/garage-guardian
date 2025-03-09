@@ -40,13 +40,16 @@ export const DescriptionField = ({
         </Button>
       </div>
       
-      {/* Display a scrollable version of the text when there's content and the field is expanded */}
+      {/* Only show the scrollable preview when expanded and there's content */}
       {isExpanded && description.trim().length > 0 && (
-        <ScrollArea className="h-[200px] w-full rounded border p-4 mt-2">
-          <div className="text-sm text-left whitespace-pre-wrap">
-            {description}
-          </div>
-        </ScrollArea>
+        <div className="mt-2 border rounded p-2">
+          <Label className="text-xs text-muted-foreground">Preview</Label>
+          <ScrollArea className="h-[200px] w-full p-2">
+            <div className="text-sm text-left whitespace-pre-wrap">
+              {description}
+            </div>
+          </ScrollArea>
+        </div>
       )}
     </div>
   );
