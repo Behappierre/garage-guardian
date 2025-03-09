@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
-import { determineQueryType } from './classification.ts';
+import { determineQueryType, determineQueryIntent, ClassificationResult } from './classification.ts';
 import { handleBookingRequest } from './handlers/booking.ts';
 import { handleClientRequest } from './handlers/client.ts';
 import { handleVehicleRequest } from './handlers/vehicle.ts';
@@ -47,27 +47,27 @@ serve(async (req) => {
       }
     }
 
-    // Determine the type of query
-    const queryType = await determineQueryType(message);
-    console.log('Determined query type:', queryType);
+    // Use enhanced classification to determine intent and extract entities
+    const classification = determineQueryIntent(message);
+    console.log('Message classification:', classification);
 
     // Handle the query based on its type
     let response;
-    switch (queryType) {
+    switch (classification.intent) {
       case 'booking':
-        response = await handleBookingRequest(message, supabaseClient, user_id);
+        response = await handleBookingRequest(message, supabaseClient, user_id, classification.entities);
         break;
       case 'client':
-        response = await handleClientRequest(message, supabaseClient, garageId);
+        response = await handleClientRequest(message, supabaseClient, garageId, classification.entities);
         break;
       case 'vehicle':
-        response = await handleVehicleRequest(message, supabaseClient, garageId);
+        response = await handleVehicleRequest(message, supabaseClient, garageId, classification.entities);
         break;
       case 'safety':
-        response = await handleSafetyRequest(message);
+        response = await handleSafetyRequest(message, classification.entities);
         break;
       case 'jobSheet':
-        response = await handleJobSheetRequest(message, supabaseClient, garageId);
+        response = await handleJobSheetRequest(message, supabaseClient, garageId, classification.entities);
         break;
       default:
         response = await handleAutomotiveRequest(message);
@@ -85,7 +85,12 @@ serve(async (req) => {
         user_id,
         message,
         response,
-        metadata: { query_type: queryType, garage_id: garageId }
+        metadata: { 
+          query_type: classification.intent, 
+          garage_id: garageId,
+          confidence: classification.confidence,
+          entities: classification.entities
+        }
       });
 
     if (chatError) {

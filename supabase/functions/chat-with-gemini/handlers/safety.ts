@@ -1,7 +1,9 @@
-
 import { safetyProtocols } from "../data/safetyProtocols.ts";
 
-export async function handleSafetyProtocol(message: string): Promise<string> {
+export async function handleSafetyProtocol(
+  message: string,
+  entities?: Record<string, string>
+): Promise<string> {
   const lowerMessage = message.toLowerCase();
   
   // Check for specific safety protocols first
@@ -14,4 +16,9 @@ export async function handleSafetyProtocol(message: string): Promise<string> {
   // If no specific protocol matches, return general safety guidelines
   return "Here are our general safety protocols:\n" + 
     safetyProtocols.general.map(protocol => `- ${protocol}`).join('\n');
+  
+  // If we have extracted entities from our classifier, use them
+  if (entities) {
+    console.log('Using extracted safety entities:', entities);
+  }
 }

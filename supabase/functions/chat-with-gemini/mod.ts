@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { corsHeaders } from "./utils/cors.ts"
 import { initSupabase } from "./db.ts"
-import { determineQueryType } from "./classification.ts"
+import { determineQueryType, determineQueryIntent, ClassificationResult } from "./classification.ts"
 import { handleCarSpecificQuestion } from "./handlers/automotive.ts"
 import { handleSafetyProtocol } from "./handlers/safety.ts"
 import { handleBookingQuery } from "./handlers/booking.ts"
@@ -20,12 +20,13 @@ serve(async (req) => {
     const { message, user_id } = await req.json();
     const supabase = initSupabase();
 
-    // Determine the type of query
-    const queryType = await determineQueryType(message);
+    // Get classification result with intent and extracted entities
+    const classification = determineQueryIntent(message);
+    console.log('Message classification:', classification);
     
     // Route to appropriate handler based on query type
     let response;
-    switch (queryType) {
+    switch (classification.intent) {
       case 'automotive':
         response = await handleCarSpecificQuestion(message);
         break;
@@ -33,16 +34,16 @@ serve(async (req) => {
         response = await handleSafetyProtocol(message);
         break;
       case 'booking':
-        response = await handleBookingQuery(message, user_id, supabase);
+        response = await handleBookingQuery(message, user_id, supabase, classification.entities);
         break;
       case 'client':
-        response = await handleClientManagement(message, supabase);
+        response = await handleClientManagement(message, supabase, classification.entities);
         break;
       case 'vehicle':
-        response = await handleVehicleLookup(message, supabase);
+        response = await handleVehicleLookup(message, supabase, classification.entities);
         break;
       case 'jobSheet':
-        response = await handleJobSheetQuery(message, supabase);
+        response = await handleJobSheetQuery(message, supabase, classification.entities);
         break;
       default:
         response = "I'm not sure how to help with that. Could you please rephrase your question?";

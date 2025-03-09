@@ -1,14 +1,17 @@
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
-export async function handleClientRequest(message: string, supabaseClient: any) {
+export async function handleClientManagement(
+  message: string, 
+  supabase: any, 
+  entities?: Record<string, string>
+) {
   console.log('Processing client request:', message);
   
   try {
     // Get the user's garage ID from the request context if available
-    const garageId = supabaseClient.auth.garageId;
+    const garageId = supabase.auth.garageId;
     
-    let clientsQuery = supabaseClient.from('clients').select('*');
+    let clientsQuery = supabase.from('clients').select('*');
     
     // Filter by garage ID if available
     if (garageId) {

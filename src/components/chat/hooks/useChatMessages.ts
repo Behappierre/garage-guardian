@@ -8,6 +8,11 @@ import { useAppointments } from "@/hooks/use-appointments";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  metadata?: {
+    intent?: string;
+    confidence?: number;
+    entities?: Record<string, string>;
+  };
 }
 
 export function useChatMessages() {
@@ -126,9 +131,17 @@ export function useChatMessages() {
           throw new Error('No response received from Gemini assistant');
         }
 
+        // Extract metadata if present in the response
+        const metadata = geminiData.metadata || {};
+        
         setMessages(prev => [...prev, { 
           role: "assistant", 
-          content: formatMessage(geminiData.response)
+          content: formatMessage(geminiData.response),
+          metadata: {
+            intent: metadata.query_type,
+            confidence: metadata.confidence,
+            entities: metadata.entities
+          }
         }]);
 
         if (geminiData.response.toLowerCase().includes('booking is confirmed') || 
