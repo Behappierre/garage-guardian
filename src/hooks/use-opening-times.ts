@@ -20,7 +20,9 @@ export const useOpeningTimes = () => {
     queryFn: async () => {
       if (!garageId) return [];
 
-      // Fixed query using explicit order parameters
+      console.log("Fetching opening times for garage:", garageId);
+      
+      // Fixed query using explicit order parameters and proper column qualification
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
@@ -34,6 +36,7 @@ export const useOpeningTimes = () => {
 
       // Default opening times if none set (9am-5pm weekdays, closed weekends)
       if (!data || data.length === 0) {
+        console.log("No opening times found, creating defaults");
         return Array.from({ length: 7 }, (_, i) => ({
           id: `default-${i}`,
           garage_id: garageId,

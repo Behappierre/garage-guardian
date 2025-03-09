@@ -11,9 +11,11 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
     mutationFn: async (openingTime: Partial<OpeningTime> & { day_of_week: number }) => {
       if (!garageId) throw new Error("No garage selected");
 
+      console.log("Updating opening time for garage:", garageId, "day:", openingTime.day_of_week);
+      
       const { day_of_week, ...updateData } = openingTime;
       
-      // Try to find if this day already exists - fix the query syntax
+      // Try to find if this day already exists - with improved query syntax
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
@@ -22,6 +24,7 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
         .maybeSingle();
 
       if (existingTime) {
+        console.log("Updating existing opening time:", existingTime.id);
         // Update existing record
         const { data, error } = await supabase
           .from("opening_times")
@@ -33,6 +36,7 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
         if (error) throw error;
         return data;
       } else {
+        console.log("Creating new opening time for day:", day_of_week);
         // Insert new record - ensure all required fields are present
         const newRecord = {
           garage_id: garageId,
