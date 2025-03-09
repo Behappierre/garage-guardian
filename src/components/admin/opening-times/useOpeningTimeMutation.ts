@@ -14,8 +14,6 @@ export const useOpeningTimeMutation = () => {
       if (!user?.id) throw new Error("User not authenticated");
 
       // First, get the garage_id from user_roles table
-      // Use .limit(1).single() consistently to get the first record
-      // even if there are multiple matches
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("garage_id")
@@ -38,13 +36,12 @@ export const useOpeningTimeMutation = () => {
       
       const { day_of_week, ...updateData } = openingTime;
       
-      // Try to find if this day already exists
-      // Make sure to use the correct query structure without table prefixing
+      // Try to find if this day already exists - use filter instead of eq
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
-        .eq("garage_id", garageId)
-        .eq("day_of_week", day_of_week)
+        .filter("garage_id", "eq", garageId)
+        .filter("day_of_week", "eq", day_of_week)
         .maybeSingle();
 
       if (existingTime) {
@@ -57,7 +54,10 @@ export const useOpeningTimeMutation = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating opening time:", error);
+          throw error;
+        }
         return data;
       } else {
         console.log("Creating new opening time for day:", day_of_week);
@@ -76,11 +76,15 @@ export const useOpeningTimeMutation = () => {
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error inserting opening time:", error);
+          throw error;
+        }
         return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Properly invalidate the query with consistent key
       queryClient.invalidateQueries({ queryKey: ["opening-times", user?.id] });
       toast.success("Opening times updated successfully");
     },

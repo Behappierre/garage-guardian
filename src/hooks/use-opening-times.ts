@@ -21,8 +21,6 @@ export const useOpeningTimes = () => {
       if (!user?.id) return [];
 
       // First, get the garage_id from user_roles table
-      // Use .limit(1).single() to consistently get the first record
-      // even if there are multiple matches
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("garage_id")
@@ -44,12 +42,11 @@ export const useOpeningTimes = () => {
       const garageId = roleData.garage_id;
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
-      // Fetch opening times using the garage_id from user_roles
-      // Make sure to use the correct query structure
+      // Use filter() instead of eq() to avoid the ambiguous column reference
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
-        .eq("garage_id", garageId)
+        .filter("garage_id", "eq", garageId)
         .order("day_of_week", { ascending: true });
 
       if (error) {
@@ -75,7 +72,7 @@ export const useOpeningTimes = () => {
     enabled: !!user?.id,
   });
 
-  // Return garageId from the query data, or try to get it from the query itself
+  // Return garageId from the query data, or null if not available
   const garageId = query.data?.[0]?.garage_id || null;
   
   return {
