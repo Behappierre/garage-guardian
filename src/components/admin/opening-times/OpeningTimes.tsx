@@ -14,7 +14,7 @@ export const OpeningTimes = () => {
   const [savingDay, setSavingDay] = useState<number | null>(null);
   const { garageId } = useOpeningTimes();
 
-  const updateOpeningTimeMutation = useOpeningTimeMutation(garageId);
+  const updateOpeningTimeMutation = useOpeningTimeMutation();
 
   const handleToggleDay = (day: OpeningTime) => {
     setSavingDay(day.day_of_week);
