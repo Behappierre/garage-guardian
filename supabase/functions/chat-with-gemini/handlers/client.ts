@@ -1,5 +1,6 @@
 
 import { createDataService } from "../data-service.ts";
+import { getClientFullHistory, getClientAppointments } from "./relationship-mining.ts";
 
 export async function handleClientManagement(
   message: string, 
@@ -40,32 +41,84 @@ export async function handleClientManagement(
           if (clients.length === 1) {
             const client = clients[0];
             
-            // Get client's vehicles
-            const vehicles = await dataService.getVehicles({ clientId: client.id });
-            if (vehicles.length > 0) {
-              response += `\nVehicles owned by ${client.first_name}:\n`;
-              vehicles.forEach((vehicle, idx) => {
-                response += `${idx + 1}. ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-                if (vehicle.license_plate) {
-                  response += ` (Registration: ${vehicle.license_plate})`;
-                }
-                response += '\n';
-              });
-            }
+            // Use relationship mining to get full client history
+            const fullHistory = await getClientFullHistory(client.id, supabase);
             
-            // Get client's appointments
-            const appointments = await dataService.getAppointments({ 
-              clientId: client.id,
-              startDate: new Date() // Only future appointments
-            });
-            
-            if (appointments.length > 0) {
-              response += `\nUpcoming appointments for ${client.first_name}:\n`;
-              appointments.forEach((appointment, idx) => {
-                const date = new Date(appointment.start_time);
-                response += `${idx + 1}. ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-                response += ` - ${appointment.service_type}\n`;
+            if (fullHistory) {
+              // Get client's vehicles
+              const vehicles = fullHistory.vehicles || await dataService.getVehicles({ clientId: client.id });
+              if (vehicles.length > 0) {
+                response += `\nVehicles owned by ${client.first_name}:\n`;
+                vehicles.forEach((vehicle, idx) => {
+                  response += `${idx + 1}. ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+                  if (vehicle.license_plate) {
+                    response += ` (Registration: ${vehicle.license_plate})`;
+                  }
+                  response += '\n';
+                });
+              }
+              
+              // Get client's appointments using enhanced function
+              const appointments = fullHistory.appointments || 
+                await getClientAppointments(client.id, supabase) ||
+                await dataService.getAppointments({ clientId: client.id, startDate: new Date() });
+              
+              if (appointments.length > 0) {
+                response += `\nUpcoming appointments for ${client.first_name}:\n`;
+                appointments.forEach((appointment, idx) => {
+                  const date = new Date(appointment.start_time);
+                  response += `${idx + 1}. ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                  response += ` - ${appointment.service_type}\n`;
+                });
+              } else {
+                response += `\n${client.first_name} has no upcoming appointments scheduled.`;
+              }
+              
+              // Include any job tickets/service history
+              const jobTickets = await supabase
+                .from('job_tickets')
+                .select('*')
+                .eq('client_id', client.id)
+                .order('created_at', { ascending: false })
+                .limit(3);
+                
+              if (jobTickets.data && jobTickets.data.length > 0) {
+                response += `\nRecent service history:\n`;
+                jobTickets.data.forEach((ticket, idx) => {
+                  response += `${idx + 1}. ${new Date(ticket.created_at).toLocaleDateString()} - `;
+                  response += `Ticket #${ticket.ticket_number}: ${ticket.status}\n`;
+                  response += `   ${ticket.description.substring(0, 100)}${ticket.description.length > 100 ? '...' : ''}\n`;
+                });
+              }
+            } else {
+              // Fallback to original functionality if relationship mining fails
+              // Get client's vehicles
+              const vehicles = await dataService.getVehicles({ clientId: client.id });
+              if (vehicles.length > 0) {
+                response += `\nVehicles owned by ${client.first_name}:\n`;
+                vehicles.forEach((vehicle, idx) => {
+                  response += `${idx + 1}. ${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+                  if (vehicle.license_plate) {
+                    response += ` (Registration: ${vehicle.license_plate})`;
+                  }
+                  response += '\n';
+                });
+              }
+              
+              // Get client's appointments
+              const appointments = await dataService.getAppointments({ 
+                clientId: client.id,
+                startDate: new Date() // Only future appointments
               });
+              
+              if (appointments.length > 0) {
+                response += `\nUpcoming appointments for ${client.first_name}:\n`;
+                appointments.forEach((appointment, idx) => {
+                  const date = new Date(appointment.start_time);
+                  response += `${idx + 1}. ${date.toLocaleDateString()} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                  response += ` - ${appointment.service_type}\n`;
+                });
+              }
             }
           }
           
