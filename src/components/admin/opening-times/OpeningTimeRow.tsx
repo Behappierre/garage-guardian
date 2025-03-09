@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -22,6 +21,15 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
   onTimeChange,
 }) => {
   const isLoading = savingDay === day.day_of_week;
+  
+  const formatTimeValue = (timeValue: string) => {
+    if (timeValue.split(':').length === 3) return timeValue;
+    return `${timeValue}:00`;
+  };
+
+  const displayTimeValue = (timeValue: string) => {
+    return timeValue.substring(0, 5);
+  };
 
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
@@ -34,6 +42,7 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
             <Switch
               checked={!day.is_closed}
               onCheckedChange={() => onToggleDay(day)}
+              disabled={isLoading}
             />
             <span className="text-sm text-gray-500">
               {day.is_closed ? "Closed" : "Open"}
@@ -53,15 +62,16 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
           ) : (
             <>
               <Select
-                value={day.start_time}
-                onValueChange={(value) => onTimeChange(day, 'start_time', value)}
+                value={displayTimeValue(day.start_time)}
+                onValueChange={(value) => onTimeChange(day, 'start_time', formatTimeValue(value))}
+                disabled={isLoading}
               >
                 <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Start time" />
                 </SelectTrigger>
                 <SelectContent>
                   {HOURS.map((hour) => (
-                    <SelectItem key={`start-${hour.value}`} value={hour.value}>
+                    <SelectItem key={`start-${hour.value}`} value={displayTimeValue(hour.value)}>
                       {hour.label}
                     </SelectItem>
                   ))}
@@ -71,8 +81,9 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
               <span className="text-gray-500">to</span>
 
               <Select
-                value={day.end_time}
-                onValueChange={(value) => onTimeChange(day, 'end_time', value)}
+                value={displayTimeValue(day.end_time)}
+                onValueChange={(value) => onTimeChange(day, 'end_time', formatTimeValue(value))}
+                disabled={isLoading}
               >
                 <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="End time" />
@@ -81,8 +92,8 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
                   {HOURS.map((hour) => (
                     <SelectItem 
                       key={`end-${hour.value}`} 
-                      value={hour.value}
-                      disabled={hour.value <= day.start_time}
+                      value={displayTimeValue(hour.value)}
+                      disabled={displayTimeValue(hour.value) <= displayTimeValue(day.start_time)}
                     >
                       {hour.label}
                     </SelectItem>
