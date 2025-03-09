@@ -13,7 +13,7 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
 
       const { day_of_week, ...updateData } = openingTime;
       
-      // Try to find if this day already exists
+      // Try to find if this day already exists - fix the query syntax
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")

@@ -20,12 +20,12 @@ export const useOpeningTimes = () => {
     queryFn: async () => {
       if (!garageId) return [];
 
-      // Fix the query by using the correct approach for PostgreSQL
+      // Fixed query using explicit order parameters
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
         .eq("garage_id", garageId)
-        .order("day_of_week");
+        .order("day_of_week", { ascending: true });
 
       if (error) {
         console.error("Error loading opening times:", error);
