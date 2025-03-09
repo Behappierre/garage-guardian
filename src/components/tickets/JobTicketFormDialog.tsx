@@ -54,7 +54,7 @@ export const JobTicketFormDialog = ({
           </div>
         ) : (
           <ScrollArea className="px-6 pb-6 max-h-[calc(90vh-120px)]">
-            <div className="pr-3">
+            <div className="pr-4 pl-0">
               <JobTicketForm
                 initialData={selectedTicket}
                 onClose={onClose}
