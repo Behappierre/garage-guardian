@@ -21,11 +21,14 @@ export const useOpeningTimes = () => {
       if (!user?.id) return [];
 
       // First, get the garage_id from user_roles table
+      // Use .limit(1).single() instead of .maybeSingle() to get the first record
+      // even if there are multiple matches
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("garage_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (roleError) {
         console.error("Error fetching user role:", roleError);
@@ -42,11 +45,11 @@ export const useOpeningTimes = () => {
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
       // Fetch opening times using the garage_id from user_roles
-      // Fix: Use Supabase's filtered select to avoid ambiguity
+      // Use explicit table name in the condition to avoid ambiguity
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
-        .filter("garage_id", "eq", garageId)
+        .eq("opening_times.garage_id", garageId)
         .order("day_of_week", { ascending: true });
 
       if (error) {

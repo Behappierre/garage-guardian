@@ -14,11 +14,14 @@ export const useOpeningTimeMutation = () => {
       if (!user?.id) throw new Error("User not authenticated");
 
       // First, get the garage_id from user_roles table
+      // Use .limit(1).single() instead of .maybeSingle() to get the first record
+      // even if there are multiple matches
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("garage_id")
         .eq("user_id", user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (roleError) {
         console.error("Error fetching user role:", roleError);
@@ -36,12 +39,12 @@ export const useOpeningTimeMutation = () => {
       const { day_of_week, ...updateData } = openingTime;
       
       // Try to find if this day already exists
-      // Fix: Use filter instead of eq to avoid ambiguity
+      // Use explicit table reference to avoid ambiguity
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
-        .filter("garage_id", "eq", garageId)
-        .filter("day_of_week", "eq", day_of_week)
+        .eq("opening_times.garage_id", garageId)
+        .eq("opening_times.day_of_week", day_of_week)
         .maybeSingle();
 
       if (existingTime) {
