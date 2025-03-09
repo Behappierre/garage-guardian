@@ -17,12 +17,12 @@ export const useOpeningTimeMutation = (garageId: string | null) => {
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
-        .eq("opening_times.garage_id", garageId)
+        .eq("garage_id", garageId)
         .eq("day_of_week", day_of_week)
         .maybeSingle();
 
       if (existingTime) {
-        // Update existing record - explicitly specify the table name for any ambiguous column
+        // Update existing record
         const { data, error } = await supabase
           .from("opening_times")
           .update({ ...updateData })

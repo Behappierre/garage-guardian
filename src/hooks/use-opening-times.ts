@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/auth/useAuth";
@@ -20,12 +19,11 @@ export const useOpeningTimes = () => {
     queryFn: async () => {
       if (!garageId) return [];
 
-      // Fix the ambiguous column reference by specifying the table name in the where clause
-      // but not in the select clause to avoid type issues
+      // Fix the query by using the correct table reference
       const { data, error } = await supabase
         .from("opening_times")
         .select("id, garage_id, day_of_week, start_time, end_time, is_closed")
-        .eq("opening_times.garage_id", garageId)
+        .eq("garage_id", garageId)
         .order("day_of_week");
 
       if (error) {
