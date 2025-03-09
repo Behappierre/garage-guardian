@@ -71,7 +71,7 @@ export const useTicketData = (
         if (sortField === "client_name") {
           const aName = `${a.client?.first_name} ${a.client?.last_name}`.toLowerCase();
           const bName = `${b.client?.first_name} ${b.client?.last_name}`.toLowerCase();
-          return sortDirection === "asc" 
+          return sortOrder === "asc" 
             ? aName.localeCompare(bName)
             : bName.localeCompare(aName);
         } else {
