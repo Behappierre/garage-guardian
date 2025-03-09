@@ -21,7 +21,7 @@ export const useOpeningTimes = () => {
       if (!user?.id) return [];
 
       // First, get the garage_id from user_roles table
-      // Use .limit(1).single() instead of .maybeSingle() to get the first record
+      // Use .limit(1).single() to consistently get the first record
       // even if there are multiple matches
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
@@ -45,7 +45,7 @@ export const useOpeningTimes = () => {
       console.log("Fetching opening times using garage_id from user_roles:", garageId);
       
       // Fetch opening times using the garage_id from user_roles
-      // Use regular .eq() without table prefixing
+      // Make sure to use the correct query structure
       const { data, error } = await supabase
         .from("opening_times")
         .select("*")
