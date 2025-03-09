@@ -20,10 +20,11 @@ export const useOpeningTimes = () => {
     queryFn: async () => {
       if (!garageId) return [];
 
-      // Fix the ambiguous column reference by specifying the table name
+      // Fix the ambiguous column reference by specifying the table name in the where clause
+      // but not in the select clause to avoid type issues
       const { data, error } = await supabase
         .from("opening_times")
-        .select("id, opening_times.garage_id, day_of_week, start_time, end_time, is_closed")
+        .select("id, garage_id, day_of_week, start_time, end_time, is_closed")
         .eq("opening_times.garage_id", garageId)
         .order("day_of_week");
 
