@@ -30,10 +30,15 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
         {isLoading ? (
           <Skeleton className="h-5 w-16" />
         ) : (
-          <Switch
-            checked={!day.is_closed}
-            onCheckedChange={() => onToggleDay(day)}
-          />
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={!day.is_closed}
+              onCheckedChange={() => onToggleDay(day)}
+            />
+            <span className="text-sm text-gray-500">
+              {day.is_closed ? "Closed" : "Open"}
+            </span>
+          </div>
         )}
       </div>
 
@@ -74,7 +79,11 @@ export const OpeningTimeRow: React.FC<OpeningTimeRowProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   {HOURS.map((hour) => (
-                    <SelectItem key={`end-${hour.value}`} value={hour.value}>
+                    <SelectItem 
+                      key={`end-${hour.value}`} 
+                      value={hour.value}
+                      disabled={hour.value <= day.start_time}
+                    >
                       {hour.label}
                     </SelectItem>
                   ))}
