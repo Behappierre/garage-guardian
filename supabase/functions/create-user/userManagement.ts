@@ -76,6 +76,10 @@ export const createUserAccount = async (supabase: any, email: string, password: 
     // If user exists, return user
     if (existingUsers && existingUsers.users && existingUsers.users.length > 0) {
       console.log('User already exists:', existingUsers.users[0].id);
+      
+      // Ensure profile exists for existing user
+      await ensureProfileExists(supabase, existingUsers.users[0].id, firstName, lastName);
+      
       return {
         userData: { user: existingUsers.users[0] },
         error: null,
@@ -115,21 +119,8 @@ export const createUserAccount = async (supabase: any, email: string, password: 
     
     console.log('User created successfully:', userData.user.id);
     
-    // CRITICAL: Create profile for the new user explicitly
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: userData.user.id,
-        first_name: firstName,
-        last_name: lastName
-      });
-      
-    if (profileError) {
-      console.error('Error creating profile during user creation:', profileError);
-      // Continue with the flow, we'll try to recover later
-    } else {
-      console.log('Profile created successfully for user:', userData.user.id);
-    }
+    // CRITICAL: Create profile for the new user with multiple attempts if needed
+    await ensureProfileExists(supabase, userData.user.id, firstName, lastName);
     
     return {
       userData,
@@ -155,32 +146,92 @@ export const createUserAccount = async (supabase: any, email: string, password: 
   }
 };
 
+// New helper function to ensure a profile exists with retry logic
+async function ensureProfileExists(supabase: any, userId: string, firstName: string, lastName: string) {
+  // First check if profile already exists
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', userId)
+    .single();
+    
+  if (existingProfile) {
+    console.log('Profile already exists for user:', userId);
+    return;
+  }
+  
+  console.log('Creating profile for user:', userId);
+  
+  // Try up to 3 times to create the profile
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          first_name: firstName,
+          last_name: lastName
+        });
+        
+      if (profileError) {
+        console.error(`Profile creation attempt ${attempt} failed:`, profileError);
+        if (attempt < 3) {
+          console.log(`Waiting before retry ${attempt+1}...`);
+          await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms between attempts
+        } else {
+          console.error('All profile creation attempts failed for user:', userId);
+        }
+      } else {
+        console.log('Profile created successfully for user:', userId);
+        return; // Success, exit the function
+      }
+    } catch (error) {
+      console.error(`Unexpected error in profile creation attempt ${attempt}:`, error);
+      if (attempt >= 3) {
+        console.error('All profile creation attempts failed with exceptions');
+      }
+    }
+  }
+}
+
 export const assignUserRole = async (supabase: any, userId: string, role: string, garageId: string | null, userType: string) => {
   try {
     console.log(`Assigning role ${role} to user ${userId} for garage ${garageId || 'null'}`);
     
-    // Insert role record
-    const { error: roleError } = await supabase
+    // Check if user already has this role
+    const { data: existingRoles } = await supabase
       .from('user_roles')
-      .insert({
-        user_id: userId,
-        role: role,
-        garage_id: garageId
-      });
+      .select('id')
+      .eq('user_id', userId)
+      .eq('role', role)
+      .maybeSingle();
       
-    if (roleError) {
-      console.error('Error assigning role:', roleError);
-      return {
-        result: { 
-          userId, 
-          status: 'warning', 
-          message: 'User created but role assignment failed' 
-        },
-        error: roleError
-      };
+    if (existingRoles) {
+      console.log('User already has this role assigned');
+    } else {
+      // Insert role record
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: role,
+          garage_id: garageId
+        });
+        
+      if (roleError) {
+        console.error('Error assigning role:', roleError);
+        return {
+          result: { 
+            userId, 
+            status: 'warning', 
+            message: 'User created but role assignment failed' 
+          },
+          error: roleError
+        };
+      }
+      
+      console.log('Role assigned successfully');
     }
-    
-    console.log('Role assigned successfully');
     
     // For staff users, update profile with garage_id
     if (userType === 'staff' && garageId) {

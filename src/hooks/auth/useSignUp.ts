@@ -52,7 +52,27 @@ export const useSignUp = () => {
       
       console.log("User creation or update completed successfully:", data);
       
-      // Don't sign in automatically here - defer to the calling component
+      // Perform a local sign-in after successful registration
+      // This ensures we have a valid session for the new user
+      if (!data.isExisting) {
+        console.log("Attempting automatic sign-in after registration");
+        try {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+          
+          if (signInError) {
+            console.warn("Auto sign-in failed after registration:", signInError);
+            // Don't throw, allow the function to complete even if auto-login fails
+          } else {
+            console.log("Auto sign-in successful after registration");
+          }
+        } catch (signInError) {
+          console.warn("Error during auto sign-in after registration:", signInError);
+          // Don't throw, we still want to return the user ID
+        }
+      }
       
       // Return the user ID whether newly created or existing
       return { id: data.userId }; 

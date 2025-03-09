@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import { corsHeaders } from './utils.ts';
@@ -59,6 +60,20 @@ serve(async (req: Request) => {
       return createUserError;
     }
 
+    if (!userData || !userData.user || !userData.user.id) {
+      console.error('User data is incomplete after creation:', userData);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create or retrieve user account properly',
+          status: 'error'
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        }
+      );
+    }
+
     console.log(`User ${isExisting ? 'already exists' : 'created'} with ID: ${userData.user.id}, now assigning role...`);
 
     // Double-check that the profile exists and create it if not
@@ -69,7 +84,7 @@ serve(async (req: Request) => {
       .single();
       
     if (!profileExists) {
-      console.log('Profile not found, creating it now');
+      console.log('Profile not found after user creation, creating it now');
       const { error: createProfileError } = await supabaseClient
         .from('profiles')
         .insert({
@@ -84,6 +99,8 @@ serve(async (req: Request) => {
       } else {
         console.log('Created profile for user after checking:', userData.user.id);
       }
+    } else {
+      console.log('Profile already exists for user:', userData.user.id);
     }
 
     // Assign role to user (garageId may be null for owners/administrators)
@@ -96,7 +113,9 @@ serve(async (req: Request) => {
     );
     
     if (assignRoleError) {
-      console.warn('Role assignment had issues but user was created:', result);
+      console.warn('Role assignment ha
+
+d issues but user was created:', result);
       return new Response(
         JSON.stringify(result),
         { 
@@ -111,7 +130,8 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         ...result,
-        isExisting
+        isExisting,
+        userId: userData.user.id
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
