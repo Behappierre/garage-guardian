@@ -4,7 +4,6 @@ import { JobTicketFormProps } from "@/types/job-ticket";
 import { useJobTicketForm } from "@/hooks/use-job-ticket-form";
 import { JobTicketFormFields } from "./JobTicketFormFields";
 import { TimeEntriesList } from "./TimeEntriesList";
-import { Wand2 } from "lucide-react";
 
 export const JobTicketForm = (props: JobTicketFormProps) => {
   const {
@@ -35,6 +34,7 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
           selectedAppointmentId={selectedAppointmentId}
           setSelectedAppointmentId={setSelectedAppointmentId}
           technicians={technicians}
+          onEnhanceDescription={onEnhanceDescription}
         />
 
         {props.initialData && (
@@ -46,12 +46,6 @@ export const JobTicketForm = (props: JobTicketFormProps) => {
       </div>
 
       <div className="flex justify-end gap-2 pt-4 border-t mt-4">
-        {onEnhanceDescription && (
-          <Button type="button" variant="outline" size="sm" onClick={onEnhanceDescription}>
-            <Wand2 className="h-4 w-4 mr-1" />
-            <span>Enhance</span>
-          </Button>
-        )}
         <Button type="button" variant="outline" onClick={props.onClose}>
           Cancel
         </Button>

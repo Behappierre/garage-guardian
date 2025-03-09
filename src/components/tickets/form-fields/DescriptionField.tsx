@@ -3,22 +3,32 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Maximize2 } from "lucide-react";
+import { Maximize2, Wand2 } from "lucide-react";
 
 interface DescriptionFieldProps {
   description: string;
   onDescriptionChange: (description: string) => void;
+  onEnhanceDescription?: () => void;
 }
 
 export const DescriptionField = ({
   description,
   onDescriptionChange,
+  onEnhanceDescription,
 }: DescriptionFieldProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className="space-y-2 w-full">
-      <Label htmlFor="description">Description</Label>
+      <div className="flex items-center justify-between">
+        <Label htmlFor="description">Description</Label>
+        {onEnhanceDescription && (
+          <Button type="button" variant="outline" size="sm" onClick={onEnhanceDescription} className="h-8 px-2">
+            <Wand2 className="h-4 w-4 mr-1" />
+            <span>Enhance</span>
+          </Button>
+        )}
+      </div>
       <div className="relative w-full">
         <Textarea
           id="description"

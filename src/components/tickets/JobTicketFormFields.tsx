@@ -20,6 +20,7 @@ interface JobTicketFormFieldsProps {
   setSelectedAppointmentId: (id: string | null) => void;
   technicians?: { id: string; first_name: string; last_name: string }[];
   isLoadingAppointments?: boolean;
+  onEnhanceDescription?: () => void;
 }
 
 export const JobTicketFormFields = ({
@@ -32,6 +33,7 @@ export const JobTicketFormFields = ({
   setSelectedAppointmentId,
   technicians,
   isLoadingAppointments,
+  onEnhanceDescription,
 }: JobTicketFormFieldsProps) => {
   return (
     <div className="grid gap-4">
@@ -121,6 +123,7 @@ export const JobTicketFormFields = ({
             description: description,
           })
         }
+        onEnhanceDescription={onEnhanceDescription}
       />
     </div>
   );
