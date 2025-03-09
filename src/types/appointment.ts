@@ -9,6 +9,9 @@ export type DBJobTicket = Database["public"]["Tables"]["job_tickets"]["Row"] & {
 
 export type AppointmentStatus = "scheduled" | "confirmed" | "cancelled" | "completed";
 export type BayType = "bay1" | "bay2" | "mot" | null;
+export type AppointmentSortField = "start_time" | "client_name";
+export type SortOrder = "asc" | "desc";
+export type DateRangeFilter = "all" | "today" | "tomorrow" | "thisWeek" | "thisMonth" | "custom";
 
 export interface AppointmentWithRelations extends Omit<DBAppointment, 'bay'> {
   client: DBClient;

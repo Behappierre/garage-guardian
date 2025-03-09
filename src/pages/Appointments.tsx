@@ -73,13 +73,6 @@ const Appointments = () => {
     }
   }, [searchParams, appointments, isLoading, error, garageId]);
 
-  // Set default date filter to today when switching to list view
-  useEffect(() => {
-    if (viewMode === "list" && dateRangeType === "all") {
-      setDateRange("today");
-    }
-  }, [viewMode, dateRangeType, setDateRange]);
-
   const handleDateSelect = (arg: { start: Date; end: Date }) => {
     setSelectedDate(arg.start);
     setShowAppointmentForm(true);
@@ -107,9 +100,11 @@ const Appointments = () => {
 
   const handleViewModeChange = (mode: "calendar" | "list") => {
     setViewMode(mode);
-    // When switching to list view, set dateRange to today if it's currently 'all'
+    
+    // When switching to list view, if dateRangeType is 'all', no filter is applied
+    // This will allow seeing all appointments with today's date first
     if (mode === "list" && dateRangeType === "all") {
-      setDateRange("today");
+      // We intentionally leave 'all' dateRangeType so all dates are visible but sorted with today at the top
     }
   };
 
@@ -146,7 +141,7 @@ const Appointments = () => {
       </PageHeader>
 
       <div className="px-8 pb-8 w-full">
-        <div className="mb-6">
+        <div className="mb-6 sticky top-0 z-20 bg-background">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div className="flex items-center">
               <div className={`rounded-md p-0.5 flex ${isDarkMode ? "bg-gray-800" : "bg-gray-100"}`}>

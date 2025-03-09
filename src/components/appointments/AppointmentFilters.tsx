@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DateRange, DateRangePicker } from "@/components/ui/date-range-picker";
-import type { AppointmentSortField, SortOrder, DateRangeFilter } from "@/hooks/appointments/use-appointment-filters";
+import { AppointmentSortField, SortOrder, DateRangeFilter } from "@/types/appointment";
 
 interface AppointmentFiltersProps {
   nameFilter: string;
@@ -79,7 +79,7 @@ export const AppointmentFilters = ({
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-background pb-4 pt-2 shadow-sm">
+    <div className="sticky top-0 z-30 bg-background pb-4 pt-2 shadow-sm">
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-2">
           <Button

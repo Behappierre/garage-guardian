@@ -1,10 +1,10 @@
 
 import { format } from "date-fns";
-import { isWithinInterval, addDays, startOfDay, isAfter, isBefore } from "date-fns";
+import { isWithinInterval, addDays, startOfDay, isAfter, isBefore, isEqual } from "date-fns";
 import type { AppointmentWithRelations } from "@/types/appointment";
 import { ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import type { AppointmentSortField, SortOrder } from "@/hooks/appointments/use-appointment-filters";
+import { AppointmentSortField, SortOrder } from "@/types/appointment";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface AppointmentListProps {
@@ -72,8 +72,7 @@ export const AppointmentList = ({
     return matchesName && matchesRegistration && matchesStatus && matchesBay && matchesDateRange;
   });
   
-  // Sort appointments first by date (past or future), then by the selected sort field
-  // This ensures today's appointments appear first, then future ones, then past ones
+  // Sort appointments first by date (today, future, past)
   const today = startOfDay(new Date());
   filteredAppointments.sort((a, b) => {
     const aDate = new Date(a.start_time);
@@ -103,12 +102,6 @@ export const AppointmentList = ({
       return sortOrder === "asc" ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
     }
   });
-
-  const handleTicketClick = (ticketId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Navigate to the job tickets page with the ticket ID
-    navigate(`/dashboard/job-tickets?id=${ticketId}`);
-  };
 
   // Helper function to check if a date is the same day
   function isSameDay(date1: Date, date2: Date) {
@@ -172,7 +165,7 @@ export const AppointmentList = ({
                     className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer dark:bg-gray-800"
                   >
                     <div className="flex justify-between items-start">
-                      <div className="space-y-2 text-left">
+                      <div className="space-y-2 text-left w-full">
                         <div>
                           <h3 className="font-medium">
                             {appointment.client?.first_name || ''} {appointment.client?.last_name || ''}
@@ -209,7 +202,7 @@ export const AppointmentList = ({
                               ticket && ticket.id ? (
                                 <button
                                   key={ticket.id}
-                                  onClick={(e) => handleTicketClick(ticket.id, e)}
+                                  onClick={(e) => onTicketClick(ticket.id, e)}
                                   className="inline-flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded dark:bg-gray-700 dark:hover:bg-gray-600"
                                 >
                                   {ticket.ticket_number || 'No Ticket #'}

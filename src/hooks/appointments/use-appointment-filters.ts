@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import {
   startOfDay,
@@ -22,9 +23,9 @@ export const useAppointmentFilters = () => {
   const [bayFilter, setBayFilter] = useState<string | "all">("all");
   
   // Date range filtering
-  const [dateRangeType, setDateRangeType] = useState<DateRangeFilter>("today"); // Default to today
-  const [startDate, setStartDate] = useState<Date | null>(new Date()); // Default to today
-  const [endDate, setEndDate] = useState<Date | null>(new Date()); // Default to today
+  const [dateRangeType, setDateRangeType] = useState<DateRangeFilter>("all"); // Default to 'all' instead of 'today'
+  const [startDate, setStartDate] = useState<Date | null>(null); // Initialize to null
+  const [endDate, setEndDate] = useState<Date | null>(null); // Initialize to null
   
   // Sorting
   const [sortField, setSortField] = useState<AppointmentSortField>("start_time");
@@ -84,16 +85,14 @@ export const useAppointmentFilters = () => {
     setRegistrationFilter("");
     setStatusFilter("all");
     setBayFilter("all");
-    setDateRange("today"); // Reset to today instead of "all"
+    setDateRange("all"); // Reset to all instead of today
     setSortField("start_time");
     setSortOrder("asc");
   };
 
-  // Initialize with today's date range on mount
+  // Initialize with no date filter on mount
   useEffect(() => {
-    if (dateRangeType === "all") {
-      setDateRange("today");
-    }
+    // Do not set any default date filter
   }, []);
 
   return {
