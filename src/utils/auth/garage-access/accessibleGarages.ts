@@ -105,57 +105,11 @@ export async function getAccessibleGarages(userId: string): Promise<Garage[]> {
     const garages: Garage[] = Array.from(allGarages.values());
     console.log(`Accessible garages found: ${garages.length}`);
     
-    // Check if we need to use default garage
-    if (garages.length === 0) {
-      const defaultGarage = await handleEmptyGaragesList(userId);
-      if (defaultGarage) {
-        return [defaultGarage];
-      }
-    }
-    
+    // We're removing the default garage fallback
+    // This will show an empty state instead of adding users to a default garage
     return garages;
   } catch (error) {
     console.error("Error in getAccessibleGarages:", error);
     return [];
-  }
-}
-
-/**
- * Handles the case when a user has no garages accessible
- * by adding them to a default garage
- */
-async function handleEmptyGaragesList(userId: string): Promise<Garage | null> {
-  const knownGarageId = "64960ccf-e353-4b4f-b951-ff687f35c78c";
-  console.log(`No garages found, using default garage ID: ${knownGarageId}`);
-  
-  try {
-    // Add user as member of this garage
-    await supabase
-      .from('garage_members')
-      .upsert([{
-        user_id: userId,
-        garage_id: knownGarageId,
-        role: 'owner'
-      }], {
-        onConflict: 'user_id, garage_id'
-      });
-      
-    // Get garage details
-    const { data: defaultGarage } = await supabase
-      .from('garages')
-      .select('id, name, slug, address, email, phone, created_at, owner_id')
-      .eq('id', knownGarageId)
-      .single();
-      
-    if (defaultGarage) {
-      return {
-        ...defaultGarage,
-        relationship_type: 'owner'
-      };
-    }
-    return null;
-  } catch (error) {
-    console.error("Error setting up default garage:", error);
-    return null;
   }
 }
