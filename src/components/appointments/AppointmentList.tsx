@@ -93,40 +93,46 @@ export const AppointmentList = ({
     appointmentsByDate[dateKey].push(appointment);
   });
   
-  // Sort date keys correctly (today first, then future dates in ascending order, then past dates in descending order)
-  const sortedDateKeys = Object.keys(appointmentsByDate).sort((a, b) => {
-    const dateA = new Date(a);
-    const dateB = new Date(b);
+  // Create a more structured date classification for sorting
+  const dateKeyClassification = Object.keys(appointmentsByDate).reduce((acc, dateKey) => {
+    const dateObj = new Date(dateKey);
     const todayStr = format(today, 'yyyy-MM-dd');
     
-    // Today always comes first
-    if (a === todayStr) return -1;
-    if (b === todayStr) return 1;
-    
-    // Future dates (after today)
-    const aIsFuture = isAfter(dateA, today);
-    const bIsFuture = isAfter(dateB, today);
-    
-    // Past dates (before today)
-    const aIsPast = isBefore(dateA, today);
-    const bIsPast = isBefore(dateB, today);
-    
-    // If both are future dates, show nearest future date first
-    if (aIsFuture && bIsFuture) {
-      return dateA.getTime() - dateB.getTime(); // Ascending
+    if (dateKey === todayStr) {
+      acc[dateKey] = { type: 'today', date: dateObj };
+    } else if (isAfter(dateObj, today)) {
+      acc[dateKey] = { type: 'future', date: dateObj };
+    } else {
+      acc[dateKey] = { type: 'past', date: dateObj };
     }
     
-    // If both are past dates, show most recent past date first
-    if (aIsPast && bIsPast) {
-      return dateB.getTime() - dateA.getTime(); // Descending
+    return acc;
+  }, {} as Record<string, { type: 'today' | 'future' | 'past', date: Date }>);
+  
+  // Sort date keys with more explicit rules
+  const sortedDateKeys = Object.keys(appointmentsByDate).sort((a, b) => {
+    const classA = dateKeyClassification[a];
+    const classB = dateKeyClassification[b];
+    
+    // First sort by classification type: today -> future -> past
+    if (classA.type !== classB.type) {
+      if (classA.type === 'today') return -1;
+      if (classB.type === 'today') return 1;
+      if (classA.type === 'future' && classB.type === 'past') return -1;
+      if (classA.type === 'past' && classB.type === 'future') return 1;
     }
     
-    // If one is future and one is past, future comes first
-    if (aIsFuture && bIsPast) return -1;
-    if (bIsFuture && aIsPast) return 1;
+    // Then sort within each classification
+    if (classA.type === 'future') {
+      // Future dates: chronological ascending (nearest future first)
+      return classA.date.getTime() - classB.date.getTime();
+    } else if (classA.type === 'past') {
+      // Past dates: reverse chronological (most recent past first)
+      return classB.date.getTime() - classA.date.getTime();
+    }
     
-    // Default chronological order
-    return dateA.getTime() - dateB.getTime();
+    // For 'today', there should only be one entry
+    return 0;
   });
 
   return (
