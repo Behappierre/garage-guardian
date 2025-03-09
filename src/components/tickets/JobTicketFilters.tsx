@@ -1,7 +1,8 @@
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ToggleLeft, ToggleRight, User } from "lucide-react";
+import { ArrowUpDown, ToggleLeft, ToggleRight, User, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { TicketPriority, TicketStatus } from "@/types/job-ticket";
@@ -23,6 +24,7 @@ interface JobTicketFiltersProps {
   onHideCompletedChange: (value: boolean) => void;
   onTechnicianFilterChange: (value: string | "all") => void;
   onSortChange: (field: "created_at" | "client_name") => void;
+  onResetFilters: () => void;
 }
 
 export const JobTicketFilters = ({
@@ -42,6 +44,7 @@ export const JobTicketFilters = ({
   onHideCompletedChange,
   onTechnicianFilterChange,
   onSortChange,
+  onResetFilters,
 }: JobTicketFiltersProps) => {
   return (
     <div className="mb-8">
@@ -143,6 +146,15 @@ export const JobTicketFilters = ({
           >
             Customer Name
             <ArrowUpDown className={`h-4 w-4 ${sortField === "client_name" ? "text-blue-600" : ""}`} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onResetFilters}
+            className="gap-2 border-dashed"
+          >
+            Reset All Filters
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
         

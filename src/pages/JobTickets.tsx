@@ -40,7 +40,8 @@ const JobTickets = () => {
     toggleSort,
     fetchTicket,
     isLoadingTicket,
-    linkedAppointmentId
+    linkedAppointmentId,
+    resetAllFilters
   } = useJobTickets(ticketId);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ const JobTickets = () => {
           onTechnicianFilterChange={setTechnicianFilter}
           onHideCompletedChange={setHideCompleted}
           onSortChange={toggleSort}
+          onResetFilters={resetAllFilters}
         />
 
         <JobTicketsList

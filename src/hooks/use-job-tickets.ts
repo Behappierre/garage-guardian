@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +23,19 @@ export const useJobTickets = (ticketId: string | null) => {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [isLoadingTicket, setIsLoadingTicket] = useState(false);
   const [linkedAppointmentId, setLinkedAppointmentId] = useState<string | null>(null);
+
+  // Function to reset all filters
+  const resetAllFilters = useCallback(() => {
+    setNameFilter("");
+    setStatusFilter("all");
+    setRegistrationFilter("");
+    setPriorityFilter("all");
+    setTechnicianFilter("all");
+    setHideCompleted(false);
+    setSortField("created_at");
+    setSortOrder("desc");
+    toast.success("All filters have been reset");
+  }, []);
 
   // Fetch all technicians
   const { data: technicians } = useQuery({
@@ -286,6 +298,7 @@ export const useJobTickets = (ticketId: string | null) => {
     fetchTicket,
     isLoadingTicket: isLoadingTicket || isLoadingTicketQuery,
     linkedAppointmentId,
-    setLinkedAppointmentId
+    setLinkedAppointmentId,
+    resetAllFilters
   };
 };
