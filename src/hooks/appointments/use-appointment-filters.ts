@@ -1,41 +1,42 @@
+import { useState, useEffect } from "react";
+import {
+  startOfDay,
+  endOfDay,
+  addDays,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+} from "date-fns";
+import type { AppointmentSortField, SortOrder, DateRangeFilter } from "@/types/appointment";
 
-import { useState, useCallback } from "react";
-import { startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
-import { toast } from "sonner";
-
-export type AppointmentSortField = "start_time" | "client_name";
-export type SortOrder = "asc" | "desc";
-export type DateRangeFilter = "today" | "tomorrow" | "thisWeek" | "thisMonth" | "custom" | "all";
+export interface DateRange {
+  from: Date;
+  to?: Date;
+}
 
 export const useAppointmentFilters = () => {
-  // Filtering state
   const [nameFilter, setNameFilter] = useState("");
   const [registrationFilter, setRegistrationFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<string | "all">("all");
   const [bayFilter, setBayFilter] = useState<string | "all">("all");
   
   // Date range filtering
-  const [dateRangeType, setDateRangeType] = useState<DateRangeFilter>("all");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [dateRangeType, setDateRangeType] = useState<DateRangeFilter>("today"); // Default to today
+  const [startDate, setStartDate] = useState<Date | null>(new Date()); // Default to today
+  const [endDate, setEndDate] = useState<Date | null>(new Date()); // Default to today
   
-  // Sorting state
+  // Sorting
   const [sortField, setSortField] = useState<AppointmentSortField>("start_time");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
-  const toggleSort = (field: AppointmentSortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
-    }
-  };
-
-  const setDateRange = useCallback((rangeType: DateRangeFilter, customStart?: Date, customEnd?: Date) => {
+  // Set date range based on type
+  const setDateRange = (type: DateRangeFilter, customStart?: Date, customEnd?: Date) => {
+    setDateRangeType(type);
+    
     const today = new Date();
     
-    switch (rangeType) {
+    switch (type) {
       case "today":
         setStartDate(startOfDay(today));
         setEndDate(endOfDay(today));
@@ -46,7 +47,7 @@ export const useAppointmentFilters = () => {
         setEndDate(endOfDay(tomorrow));
         break;
       case "thisWeek":
-        setStartDate(startOfWeek(today, { weekStartsOn: 1 })); // Week starts on Monday
+        setStartDate(startOfWeek(today, { weekStartsOn: 1 }));
         setEndDate(endOfWeek(today, { weekStartsOn: 1 }));
         break;
       case "thisMonth":
@@ -63,21 +64,36 @@ export const useAppointmentFilters = () => {
         setEndDate(null);
         break;
     }
-    
-    setDateRangeType(rangeType);
-  }, []);
+  };
 
-  const resetAllFilters = useCallback(() => {
+  // Toggle sort order or change sort field
+  const toggleSort = (field: AppointmentSortField) => {
+    if (sortField === field) {
+      // Toggle order if same field
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      // Change field and reset order to ascending
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
+
+  // Reset all filters to defaults
+  const resetAllFilters = () => {
     setNameFilter("");
     setRegistrationFilter("");
     setStatusFilter("all");
     setBayFilter("all");
-    setDateRangeType("all");
-    setStartDate(null);
-    setEndDate(null);
+    setDateRange("today"); // Reset to today instead of "all"
     setSortField("start_time");
     setSortOrder("asc");
-    toast.success("All filters have been reset");
+  };
+
+  // Initialize with today's date range on mount
+  useEffect(() => {
+    if (dateRangeType === "all") {
+      setDateRange("today");
+    }
   }, []);
 
   return {
@@ -87,7 +103,7 @@ export const useAppointmentFilters = () => {
     setRegistrationFilter,
     statusFilter,
     setStatusFilter,
-    bayFilter,
+    bayFilter, 
     setBayFilter,
     dateRangeType,
     startDate,

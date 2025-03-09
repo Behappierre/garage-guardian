@@ -73,6 +73,13 @@ const Appointments = () => {
     }
   }, [searchParams, appointments, isLoading, error, garageId]);
 
+  // Set default date filter to today when switching to list view
+  useEffect(() => {
+    if (viewMode === "list" && dateRangeType === "all") {
+      setDateRange("today");
+    }
+  }, [viewMode, dateRangeType, setDateRange]);
+
   const handleDateSelect = (arg: { start: Date; end: Date }) => {
     setSelectedDate(arg.start);
     setShowAppointmentForm(true);
@@ -95,6 +102,14 @@ const Appointments = () => {
       setDateRange("custom", customStart, customEnd);
     } else {
       setDateRange("all");
+    }
+  };
+
+  const handleViewModeChange = (mode: "calendar" | "list") => {
+    setViewMode(mode);
+    // When switching to list view, set dateRange to today if it's currently 'all'
+    if (mode === "list" && dateRangeType === "all") {
+      setDateRange("today");
     }
   };
 
@@ -145,7 +160,7 @@ const Appointments = () => {
                         ? "text-gray-300" 
                         : "text-gray-600"
                   }`}
-                  onClick={() => setViewMode("calendar")}
+                  onClick={() => handleViewModeChange("calendar")}
                 >
                   <CalendarIcon className={`h-4 w-4 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`} />
                   <span className="text-sm">Calendar</span>
@@ -160,7 +175,7 @@ const Appointments = () => {
                         ? "text-gray-300" 
                         : "text-gray-600"
                   }`}
-                  onClick={() => setViewMode("list")}
+                  onClick={() => handleViewModeChange("list")}
                 >
                   <List className="h-4 w-4" />
                   <span className="text-sm">List</span>

@@ -79,7 +79,7 @@ export const AppointmentFilters = ({
   };
 
   return (
-    <div className="mb-6">
+    <div className="sticky top-0 z-20 bg-background pb-4 pt-2 shadow-sm">
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-2">
           <Button
