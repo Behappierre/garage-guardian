@@ -36,11 +36,11 @@ export const useOpeningTimeMutation = () => {
       const { day_of_week, ...updateData } = openingTime;
       
       // Try to find if this day already exists
-      // Fix: Use "opening_times.garage_id" instead of just "garage_id" to avoid ambiguity
+      // Fix: Use proper column reference without table prefix in .eq()
       const { data: existingTime } = await supabase
         .from("opening_times")
         .select("id")
-        .eq("opening_times.garage_id", garageId)
+        .eq("garage_id", garageId)
         .eq("day_of_week", day_of_week)
         .maybeSingle();
 
