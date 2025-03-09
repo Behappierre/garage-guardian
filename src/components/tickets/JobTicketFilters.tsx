@@ -2,7 +2,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, ToggleLeft, ToggleRight, User, RefreshCw } from "lucide-react";
+import { ChevronUp, ChevronDown, ArrowUpDown, ToggleLeft, ToggleRight, User, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { TicketPriority, TicketStatus } from "@/types/job-ticket";
@@ -46,6 +46,14 @@ export const JobTicketFilters = ({
   onSortChange,
   onResetFilters,
 }: JobTicketFiltersProps) => {
+  // Get the sort direction icon for a field
+  const getSortIcon = (field: "created_at" | "client_name") => {
+    if (sortField !== field) return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+    return sortOrder === "asc"
+      ? <ChevronUp className="h-4 w-4 text-primary" />
+      : <ChevronDown className="h-4 w-4 text-primary" />;
+  };
+
   return (
     <div className="mb-8">
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-4 rounded-lg shadow-sm mb-6">
@@ -130,22 +138,20 @@ export const JobTicketFilters = ({
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-2">
           <Button
-            variant="outline"
+            variant="ghost" 
             size="sm"
             onClick={() => onSortChange("created_at")}
             className="gap-2"
           >
-            Date Created
-            <ArrowUpDown className={`h-4 w-4 ${sortField === "created_at" ? "text-blue-600" : ""}`} />
+            Date Created {getSortIcon("created_at")}
           </Button>
           <Button
-            variant="outline"
+            variant="ghost" 
             size="sm"
             onClick={() => onSortChange("client_name")}
             className="gap-2"
           >
-            Customer Name
-            <ArrowUpDown className={`h-4 w-4 ${sortField === "client_name" ? "text-blue-600" : ""}`} />
+            Customer Name {getSortIcon("client_name")}
           </Button>
           <Button
             variant="outline"
