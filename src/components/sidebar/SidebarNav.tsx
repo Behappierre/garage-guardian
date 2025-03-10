@@ -17,10 +17,19 @@ export function SidebarNav({ links, collapsed = false, onNavigation }: SidebarNa
   const location = useLocation();
 
   const isActive = (href: string, matches?: string[]) => {
+    // Exact match for dashboard to prevent it from matching all /dashboard routes
+    if (href === "/dashboard" && location.pathname !== "/dashboard") {
+      return false;
+    }
+    
+    // Exact match
     if (location.pathname === href) return true;
+    
+    // Match patterns from the matches array
     if (matches) {
       return matches.some(match => location.pathname.startsWith(match));
     }
+    
     return false;
   };
 

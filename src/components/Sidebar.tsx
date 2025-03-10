@@ -40,7 +40,7 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
       href: "/dashboard",
       label: "Dashboard",
       icon: <Home className="h-5 w-5" />,
-      matches: ["/dashboard"]
+      matches: [] // Empty matches array so it only matches exactly /dashboard
     },
     {
       href: "/dashboard/appointments",
