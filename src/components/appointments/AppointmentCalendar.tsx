@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -479,6 +480,44 @@ export const AppointmentCalendar = ({
                 rgba(0, 0, 0, 0.05) 10px,
                 rgba(0, 0, 0, 0.05) 20px
               ) !important;
+            }
+            
+            /* Hide the small number at the top of the day cell in month view */
+            .fc-daygrid-day-top {
+              display: flex;
+              justify-content: center;
+              padding-top: 4px;
+            }
+            
+            .fc-daygrid-day-number {
+              font-size: 0.9rem;
+              font-weight: 500;
+              color: #374151;
+            }
+            
+            /* This targets and hides the secondary number in month view */
+            .fc-dayGridMonth-view .fc-daygrid-day-top .fc-daygrid-day-number:after {
+              content: none !important;
+            }
+            
+            /* Hide the unwanted date numbers that appear outside the current month */
+            .fc-day-other .fc-daygrid-day-top:before {
+              display: none !important;
+            }
+            
+            /* Make sure only the current month's day numbers show properly */
+            .fc-dayGridMonth-view .fc-daygrid-day:not(.fc-day-other) .fc-daygrid-day-number {
+              display: inline-block;
+            }
+            
+            /* Completely hide the secondary number that appears at the top left */
+            .fc-dayGridMonth-view .fc-daygrid-day-top {
+              position: relative;
+            }
+            
+            .fc-dayGridMonth-view .fc-daygrid-day-top:before,
+            .fc-dayGridMonth-view .fc-daygrid-day-top:after {
+              display: none !important;
             }
           `}
         </style>
