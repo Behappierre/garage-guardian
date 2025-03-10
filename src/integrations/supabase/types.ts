@@ -251,6 +251,30 @@ export type Database = {
           },
         ]
       }
+      conversation_states: {
+        Row: {
+          data: Json | null
+          expires_at: string
+          stage: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          data?: Json | null
+          expires_at: string
+          stage: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          data?: Json | null
+          expires_at?: string
+          stage?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_notifications: {
         Row: {
           appointment_id: string | null

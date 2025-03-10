@@ -8,7 +8,7 @@ import { handleAutomotiveQuestion } from "./handlers/automotive.ts";
 import { handleBookingRequest, handleAppointmentQuery } from "./handlers/booking.ts";
 import { handleJobSheetQuery } from "./handlers/jobSheet.ts";
 import { corsHeaders } from "./utils/cors.ts";
-import { updateChatMemory, getConversationContext } from "./chatMemory.ts";
+import { updateChatMemory, getConversationContext, getConversationState } from "./chatMemory.ts";
 import { createDataService } from "./data-service.ts";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -50,18 +50,36 @@ serve(async (req) => {
     // Initialize data service
     const dataService = createDataService(userGarageId);
     
-    // Get conversation context for more accurate responses
+    // Get conversation context and state for more accurate responses
     const conversationContext = await getConversationContext(user_id, supabase);
-    console.log('Conversation context:', conversationContext);
+    const conversationState = await getConversationState(user_id, supabase);
     
-    // Use enhanced classification to determine intent and extract entities
-    const classification = determineQueryIntent(message);
-    console.log('Message classification:', classification);
+    console.log('Conversation context:', conversationContext);
+    console.log('Conversation state:', conversationState);
+    
+    // If there's an active conversation state, prefer the intent from that flow
+    let intent = 'unknown';
+    let confidence = 0;
+    let entities: Record<string, string> | undefined;
+    
+    if (conversationState && conversationState.stage === 'appointment_modification_confirmation') {
+      // We're in the middle of an appointment modification flow
+      intent = 'appointment_modification';
+      confidence = 1.0; // High confidence since we're continuing a flow
+      console.log('Using intent from active conversation state:', intent);
+    } else {
+      // Use enhanced classification to determine intent and extract entities
+      const classification = determineQueryIntent(message);
+      intent = classification.intent;
+      confidence = classification.confidence;
+      entities = classification.entities;
+      console.log('Message classification:', classification);
+    }
     
     // Route to appropriate handler based on classification
     let response;
     
-    switch (classification.intent) {
+    switch (intent) {
       case 'booking':
         // Check if it's a query about appointments
         if (checkIfAppointmentQuery(message)) {
@@ -69,19 +87,19 @@ serve(async (req) => {
           response = await handleAppointmentQuery(message, supabase, userGarageId);
         } else {
           console.log("Detected booking intent");
-          response = await handleBookingRequest(message, supabase, user_id, classification.entities);
+          response = await handleBookingRequest(message, supabase, user_id, entities);
         }
         break;
         
       case 'appointment_modification':
         // Handle appointment modifications through the booking handler
         console.log("Detected appointment modification intent");
-        response = await handleBookingRequest(message, supabase, user_id, classification.entities);
+        response = await handleBookingRequest(message, supabase, user_id, entities);
         break;
         
       case 'jobSheet':
         console.log("Detected job sheet intent");
-        response = await handleJobSheetQuery(message, supabase, userGarageId, classification.entities);
+        response = await handleJobSheetQuery(message, supabase, userGarageId, entities);
         break;
       
       case 'automotive':
@@ -136,8 +154,8 @@ serve(async (req) => {
         user_id, 
         message, 
         response, 
-        classification.intent,
-        classification.entities,
+        intent,
+        entities,
         supabase
       );
     } catch (storeError) {
@@ -149,10 +167,11 @@ serve(async (req) => {
       JSON.stringify({ 
         response,
         metadata: {
-          query_type: classification.intent,
-          confidence: classification.confidence,
-          entities: classification.entities,
-          context: conversationContext
+          query_type: intent,
+          confidence: confidence,
+          entities: entities,
+          context: conversationContext,
+          state: conversationState ? conversationState.stage : null
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

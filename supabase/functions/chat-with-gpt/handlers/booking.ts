@@ -1,4 +1,6 @@
 // Handles booking requests and appointment queries
+import { getConversationState, saveConversationState, clearConversationState } from "../chatMemory.ts";
+
 export async function handleBookingRequest(
   message: string, 
   supabase: any, 
@@ -23,12 +25,76 @@ export async function handleBookingRequest(
     
     const userGarageId = userData?.garage_id;
     console.log('User garage ID for booking:', userGarageId);
+
+    // Get current conversation state
+    const conversationState = await getConversationState(userId, supabase);
+    const lowerMessage = message.toLowerCase().trim();
+
+    // Check if we're in a confirmation flow
+    if (conversationState && conversationState.stage === 'appointment_modification_confirmation') {
+      console.log("Found active conversation state:", conversationState);
+      
+      // Handle confirmation response
+      const confirmationPatterns = ['yes', 'correct', 'right', 'confirm', 'sure', 'yeah', 'yep', 'ok', 'okay'];
+      const rejectionPatterns = ['no', 'wrong', 'incorrect', 'not right', 'cancel', 'don\'t', 'nevermind'];
+      
+      const isConfirmation = confirmationPatterns.some(pattern => lowerMessage.includes(pattern));
+      const isRejection = rejectionPatterns.some(pattern => lowerMessage.includes(pattern));
+      
+      if (isConfirmation) {
+        console.log("User confirmed the appointment modification");
+        
+        // Get data from the conversation state
+        const { appointmentId, startTime, endTime, originalDate, newDate, newTime, clientName, clientId, vehicleData, serviceType, bay } = conversationState.data;
+        
+        try {
+          // Update the appointment
+          const { data, error } = await supabase
+            .from('appointments')
+            .update({
+              start_time: startTime,
+              end_time: endTime,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', appointmentId)
+            .select();
+            
+          if (error) {
+            console.error("Error updating appointment:", error);
+            await clearConversationState(userId, supabase);
+            return `I'm having trouble updating the appointment. Please try again later or contact support.`;
+          }
+          
+          // Clear the conversation state
+          await clearConversationState(userId, supabase);
+          
+          return `I've rescheduled ${clientName}'s appointment to ${newDate} at ${newTime}. 
+The appointment details remain the same: ${serviceType} for ${vehicleData?.make} ${vehicleData?.model} in bay '${bay}'. 
+Would you like me to notify ${clientName.split(' ')[0]} about this change?`;
+        } catch (err) {
+          console.error("Error during appointment update:", err);
+          await clearConversationState(userId, supabase);
+          return `I encountered an error while updating the appointment. Please try again.`;
+        }
+      } 
+      else if (isRejection) {
+        console.log("User rejected the appointment modification");
+        
+        // Clear the conversation state
+        await clearConversationState(userId, supabase);
+        return "I've cancelled the appointment modification. Is there anything else I can help you with?";
+      }
+      else {
+        // Unrecognized response, ask again
+        return "I didn't understand your response. Please confirm with 'yes' or 'no' if you want to proceed with the appointment change.";
+      }
+    }
     
     // Check if this is an appointment modification request
     const isModificationRequest = message.toLowerCase().match(/(move|reschedule|change|update|modify)/);
     if (isModificationRequest) {
       console.log("Detected appointment modification request");
-      return handleAppointmentModification(message, supabase, userGarageId, entities);
+      return handleAppointmentModification(message, supabase, userGarageId, userId, entities);
     }
     
     // Check if this is an appointment lookup query
@@ -170,11 +236,12 @@ Bay: ${appointmentData.bay}`;
   }
 }
 
-// New function to handle appointment modifications
+// Function to handle appointment modifications with conversation state support
 async function handleAppointmentModification(
   message: string, 
   supabase: any, 
   garageId: string | null,
+  userId: string,
   entities?: Record<string, string>
 ): Promise<string> {
   try {
@@ -345,6 +412,10 @@ async function handleAppointmentModification(
         // Keep the same time, just update the date
         targetDate.setHours(originalAppointmentDate.getHours());
         targetDate.setMinutes(originalAppointmentDate.getMinutes());
+      } else {
+        // Default to keeping the same time
+        targetDate.setHours(originalAppointmentDate.getHours());
+        targetDate.setMinutes(originalAppointmentDate.getMinutes());
       }
     } else {
       // Parse the time if specified
@@ -389,36 +460,29 @@ async function handleAppointmentModification(
     const originalDuration = new Date(appointmentToModify.end_time).getTime() - originalAppointmentDate.getTime();
     const newEndTime = new Date(targetDate.getTime() + originalDuration);
 
-    // Check if the message contains confirmation phrases
-    const isConfirmation = message.toLowerCase().match(/\b(yes|confirm|correct|right|that's right|exactly)\b/);
+    // Store the modification details in conversation state for the confirmation flow
+    await saveConversationState(
+      userId,
+      'appointment_modification_confirmation',
+      {
+        appointmentId: appointmentToModify.id,
+        clientId: client.id,
+        clientName: `${client.first_name} ${client.last_name}`,
+        originalDate,
+        originalTime,
+        newDate,
+        newTime,
+        startTime: targetDate.toISOString(),
+        endTime: newEndTime.toISOString(),
+        vehicleData: appointmentToModify.vehicle,
+        serviceType: appointmentToModify.service_type,
+        bay: appointmentToModify.bay
+      },
+      supabase
+    );
     
-    // Check message content for the context of this request
-    const isPendingConfirmation = message.toLowerCase().match(/\b(should|would|can|could)\s+i\s+(confirm|do this|proceed)\b/);
-    
-    if (isConfirmation || isPendingConfirmation) {
-      // This is a confirmation of a previous modification request, so actually update the appointment
-      const { data, error } = await supabase
-        .from('appointments')
-        .update({
-          start_time: targetDate.toISOString(),
-          end_time: newEndTime.toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', appointmentToModify.id)
-        .select();
-        
-      if (error) {
-        console.error("Error updating appointment:", error);
-        return `I'm having trouble updating the appointment. Please try again later or contact support.`;
-      }
-      
-      return `I've rescheduled ${client.first_name} ${client.last_name}'s appointment to ${newDate} at ${newTime}. 
-The appointment details remain the same: ${appointmentToModify.service_type} for ${appointmentToModify.vehicle?.make} ${appointmentToModify.vehicle?.model} in bay '${appointmentToModify.bay}'. 
-Would you like me to notify ${client.first_name} about this change?`;
-    } else {
-      // Ask for confirmation before modifying
-      return `I'm processing your request to move ${client.first_name} ${client.last_name}'s appointment from ${originalDate} at ${originalTime} to ${newDate} at ${newTime}. Is this correct?`;
-    }
+    // Ask for confirmation before modifying
+    return `I'm processing your request to move ${client.first_name} ${client.last_name}'s appointment from ${originalDate} at ${originalTime} to ${newDate} at ${newTime}. Is this correct?`;
   } catch (err) {
     console.error('Error in appointment modification handler:', err);
     return `I'm having trouble processing your request to modify the appointment. Please try again with different wording or contact support.`;
