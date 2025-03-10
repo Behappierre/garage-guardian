@@ -519,6 +519,23 @@ export const AppointmentCalendar = ({
             .fc-dayGridMonth-view .fc-daygrid-day-top:after {
               display: none !important;
             }
+            
+            /* Show only the day name (Sun, Mon, etc.) in the month view header */
+            .fc-dayGridMonth-view .fc-col-header-cell-cushion {
+              text-transform: none;
+              white-space: nowrap;
+            }
+            
+            /* Hide the date part in the month view column header */
+            .fc-dayGridMonth-view .fc-col-header-cell-cushion:after,
+            .fc-dayGridMonth-view .fc-col-header-cell-cushion:before {
+              content: none !important;
+            }
+            
+            /* Apply a custom format that shows only day names */
+            .fc-dayGridMonth-view .fc-col-header-cell {
+              overflow: hidden;
+            }
           `}
         </style>
         <FullCalendar
@@ -539,7 +556,7 @@ export const AppointmentCalendar = ({
           editable={true}
           eventDrop={handleEventDrop}
           eventResize={handleEventResize}
-          dayHeaderFormat={{ weekday: 'short', month: 'numeric', day: 'numeric', omitCommas: true }}
+          dayHeaderFormat={{ weekday: 'short' }}
           businessHours={businessHoursConfig || true}
           selectConstraint="businessHours"
           eventConstraint="businessHours"
