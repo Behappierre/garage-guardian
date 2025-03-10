@@ -20,6 +20,12 @@ export const createIntentPatterns = (extraBookingPatterns?: string[]) => {
     'when can i', 'time slot', 'reserve', 'set up', 'arrange'
   ];
   
+  // New patterns for appointment modifications
+  const appointmentModificationPatterns = [
+    'move', 'reschedule', 'change', 'update', 'switch', 
+    'postpone', 'adjust', 'shift', 'modify'
+  ];
+  
   // Merge extra booking patterns if provided
   const bookingPatterns = extraBookingPatterns 
     ? [...baseBookingPatterns, ...extraBookingPatterns]
@@ -34,6 +40,15 @@ export const createIntentPatterns = (extraBookingPatterns?: string[]) => {
         time: /(?:at)?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i,
         service: /(?:for|to)\s*(oil change|tire rotation|brake service|inspection|maintenance|repair|check|service)/i,
         name: /appointment for\s+([A-Za-z\s]+)(?:\?|$|\s|\.)/i
+      }
+    },
+    {
+      intent: 'appointment_modification',
+      patterns: appointmentModificationPatterns,
+      extractors: {
+        name: /(?:move|reschedule|change|update)\s+(?:the\s+)?(?:appointment\s+for\s+)?([A-Za-z\s]+?)(?:\s+booking|\s+appointment|\s+to|\s+from|\s+on|\s+at|$)/i,
+        date: /(?:to|on|for)\s+(?:the\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:of\s+)?(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)|tomorrow|next\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))/i,
+        time: /(?:at)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm))/i
       }
     },
     {

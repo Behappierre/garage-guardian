@@ -43,6 +43,11 @@ serve(async (req) => {
       case 'booking':
         response = await handleBookingQuery(message, user_id, supabase, classification.entities);
         break;
+      case 'appointment_modification':
+        // Handle appointment modifications through the booking handler
+        // The booking handler has been updated to detect and process modification requests
+        response = await handleBookingQuery(message, user_id, supabase, classification.entities);
+        break;
       case 'client':
         response = await handleClientManagement(message, supabase, classification.entities);
         break;

@@ -73,6 +73,12 @@ serve(async (req) => {
         }
         break;
         
+      case 'appointment_modification':
+        // Handle appointment modifications through the booking handler
+        console.log("Detected appointment modification intent");
+        response = await handleBookingRequest(message, supabase, user_id, classification.entities);
+        break;
+        
       case 'jobSheet':
         console.log("Detected job sheet intent");
         response = await handleJobSheetQuery(message, supabase, userGarageId, classification.entities);
@@ -98,11 +104,13 @@ serve(async (req) => {
           1. Automotive questions and service inquiries
           2. Creating bookings for clients
           3. Providing information about upcoming appointments
+          4. Modifying existing appointments
           
           ${conversationContext ? `Context from previous conversation: ${conversationContext}` : ''}
           
           For bookings, tell users you can create bookings directly.
           For appointment queries, tell users you can check the schedule.
+          For appointment modifications, tell users you can move or reschedule appointments.
           
           IMPORTANT: NEVER say you don't have access to real-time data. You CAN access appointment data.
           If someone asks about appointments or bookings, you should ALWAYS try to provide real information.
@@ -110,7 +118,7 @@ serve(async (req) => {
 
         // Create a chat completion
         const openaiResponse = await openai.chat.completions.create({
-          model: "gpt-4",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: context },
             { role: "user", content: message }
@@ -144,6 +152,7 @@ serve(async (req) => {
           query_type: classification.intent,
           confidence: classification.confidence,
           entities: classification.entities,
+          context: conversationContext
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
