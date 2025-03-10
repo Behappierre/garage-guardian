@@ -25,20 +25,24 @@ export function SidebarNav({ links, collapsed = false, onNavigation }: SidebarNa
   };
 
   return (
-    <nav className="space-y-1">
+    <nav className="space-y-1 mt-8"> {/* Added mt-8 to move icons down */}
       {links.map((link) => (
         <Link
           key={link.href}
           to={link.href}
           onClick={onNavigation}
           className={cn(
-            "flex items-center py-2 px-3 text-sm rounded-md group w-full",
+            "flex items-center py-2 px-3 text-sm rounded-md group w-full relative",
             isActive(link.href, link.matches)
-              ? "bg-secondary/50 text-secondary-foreground font-medium"
+              ? "bg-secondary/50 text-secondary-foreground font-medium" 
               : "text-muted-foreground hover:bg-secondary/30",
             collapsed ? "justify-center" : ""
           )}
         >
+          {/* Active indicator bar */}
+          {isActive(link.href, link.matches) && (
+            <span className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-md" />
+          )}
           <span className={cn("mr-3", collapsed ? "mr-0" : "")}>{link.icon}</span>
           {!collapsed && <span>{link.label}</span>}
         </Link>

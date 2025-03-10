@@ -104,7 +104,7 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-3 top-16 bg-background border shadow-sm z-20"
+          className="absolute -right-3 top-10 bg-background border shadow-sm z-20"
           onClick={() => onCollapse(!isCollapsed)}
         >
           {isCollapsed ? (
