@@ -19,7 +19,7 @@ interface SidebarNavProps {
 
 export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavProps) => {
   return (
-    <nav className="flex-1 p-4">
+    <nav className="flex-1 p-4 pt-10"> {/* Added pt-10 to increase top padding */}
       <ul className="space-y-1">
         <li>
           <NavLink
