@@ -1,4 +1,3 @@
-
 import { Car, Plus, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +18,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/components/ui/use-toast";
 import { VehicleForm } from "@/components/forms/VehicleForm";
 
-// Updated to match the Vehicle interface in Clients.tsx
 interface Vehicle {
   id: string;
   client_id: string;
@@ -64,7 +62,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
     
     setIsDeleting(true);
     try {
-      // First check if the vehicle is used in any appointments
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from("appointments")
         .select("id")
@@ -73,7 +70,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
         
       if (appointmentsError) throw appointmentsError;
       
-      // If the vehicle is used in appointments, show warning toast
       if (appointmentsData && appointmentsData.length > 0) {
         toast({
           variant: "destructive",
@@ -85,7 +81,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
         return;
       }
       
-      // Check if vehicle is used in job tickets
       const { data: ticketsData, error: ticketsError } = await supabase
         .from("job_tickets")
         .select("id")
@@ -94,7 +89,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
         
       if (ticketsError) throw ticketsError;
       
-      // If the vehicle is used in job tickets, show warning toast
       if (ticketsData && ticketsData.length > 0) {
         toast({
           variant: "destructive",
@@ -106,7 +100,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
         return;
       }
 
-      // If no relationships, delete the vehicle
       const { error } = await supabase
         .from("vehicles")
         .delete()
@@ -114,7 +107,6 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
 
       if (error) throw error;
 
-      // Refresh vehicles data
       queryClient.invalidateQueries({ queryKey: ["vehicles", vehicleToDelete.client_id] });
       
       toast({
@@ -179,11 +171,10 @@ export const VehiclesList = ({ vehicles, onAddVehicle }: VehiclesListProps) => {
                 </div>
                 <div className="p-4 space-y-2">
                   {vehicle.license_plate && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">License Plate:</span>
-                      <Badge variant="outline" className="font-mono">
+                    <div className="mt-1">
+                      <span className="bg-[#FEF7CD] text-gray-700 px-2 py-0.5 rounded border border-gray-200 font-medium text-xs inline-block">
                         {vehicle.license_plate}
-                      </Badge>
+                      </span>
                     </div>
                   )}
                   {vehicle.vin && (

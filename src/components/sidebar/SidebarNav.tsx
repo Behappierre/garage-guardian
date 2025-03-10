@@ -17,9 +17,9 @@ export function SidebarNav({ links, collapsed = false, onNavigation }: SidebarNa
   const location = useLocation();
 
   const isActive = (href: string, matches?: string[]) => {
-    // Exact match for dashboard to prevent it from matching all /dashboard routes
-    if (href === "/dashboard" && location.pathname !== "/dashboard") {
-      return false;
+    // Exact match for dashboard only
+    if (href === "/dashboard") {
+      return location.pathname === "/dashboard";
     }
     
     // Exact match
