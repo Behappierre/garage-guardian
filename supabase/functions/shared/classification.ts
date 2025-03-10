@@ -87,6 +87,20 @@ export const createIntentPatterns = (extraBookingPatterns?: string[]) => {
         issue: /(?:issue|problem|broken|not working)\s*(?:with|is)?\s*([\w\s]+?)(?:\s|$)/i
       }
     },
+    // New job listing intent with patterns to detect listing requests
+    {
+      intent: 'jobListing',
+      patterns: [
+        'list jobs', 'show jobs', 'all jobs', 'jobs in progress', 'current jobs',
+        'active jobs', 'job list', 'job table', 'job report', 'job summary',
+        'work in progress', 'ongoing work', 'technician workload',
+        'give me a table', 'list all', 'show all', 'show me', 'display'
+      ],
+      extractors: {
+        status: /\b(in progress|active|pending|completed|finished|all)\s+(?:jobs|tickets|work|tasks)/i,
+        technicianName: /(?:by|for|assigned to)\s+(?:technician|tech)?\s+([A-Za-z\s]+)/i
+      }
+    },
     {
       intent: 'safety',
       patterns: [
@@ -137,6 +151,19 @@ export function determineQueryIntent(message: string, extraBookingPatterns?: str
     
     // Calculate score based on pattern matches
     score = matchedPatterns.length / intentPattern.patterns.length;
+    
+    // Apply special boost for specific job listing request
+    if (intentPattern.intent === 'jobListing') {
+      if (/(?:give|show)\s+me\s+a\s+table/i.test(message)) {
+        score += 0.3; // Significant boost for this very specific pattern
+      }
+      if (/(?:jobs|tickets|work)\s+(?:in\s+progress|ongoing)/i.test(message)) {
+        score += 0.2; // Boost for status-specific job requests
+      }
+      if (/(?:technician|assigned|worked on)/i.test(message)) {
+        score += 0.1; // Small boost for technician-related job requests
+      }
+    }
     
     // Extract entities if available
     const entities: Record<string, string> = {};

@@ -72,7 +72,8 @@ serve(async (req) => {
         response = await handleVehicleLookup(message, supabase, entities);
         break;
       case 'jobSheet':
-        response = await handleJobSheetQuery(message, supabase, entities);
+      case 'jobListing':
+        response = await handleJobSheetQuery(message, supabase, undefined, entities);
         break;
       default:
         response = "I'm not sure how to help with that. Could you please rephrase your question?";

@@ -10,6 +10,11 @@ export async function handleJobSheetQuery(
   console.log('Extracted entities:', entities);
   
   try {
+    // First check if this is a job listing request
+    if (isJobListingRequest(message)) {
+      return await handleJobListingRequest(message, supabase, garageId);
+    }
+    
     // Check if the message contains a job ticket ID or number
     let jobId = entities?.jobId;
     
@@ -104,6 +109,130 @@ export async function handleJobSheetQuery(
   } catch (error) {
     console.error('Error in handleJobSheetQuery:', error);
     return "I'm sorry, I encountered an error while processing your job ticket query.";
+  }
+}
+
+// Helper function to determine if a message is a job listing request
+function isJobListingRequest(message: string): boolean {
+  const listingPatterns = [
+    /(?:list|show|display|give me|get)\s+(?:all\s+)?(jobs|tickets|job tickets)/i,
+    /(?:jobs|tickets|work)\s+(?:in\s+progress|ongoing|active|current)/i,
+    /(?:table|list|report)\s+(?:of|with|for)\s+(?:jobs|tickets|work)/i,
+    /(?:give|show)\s+me\s+a\s+table/i
+  ];
+  
+  return listingPatterns.some(pattern => pattern.test(message));
+}
+
+// New handler for job listing requests
+async function handleJobListingRequest(message: string, supabase: any, garageId?: string): Promise<string> {
+  console.log('Handling job listing request:', message);
+  
+  try {
+    // Determine if we need to filter by status
+    let statusFilter = null;
+    if (/\b(?:in progress|ongoing|active)\b/i.test(message)) {
+      statusFilter = 'in_progress';
+    } else if (/\b(?:completed|finished|done)\b/i.test(message)) {
+      statusFilter = 'completed';
+    } else if (/\b(?:received|new|unassigned)\b/i.test(message)) {
+      statusFilter = 'received';
+    }
+    
+    // Determine if we need to filter by technician
+    let technicianFilter = null;
+    const technicianMatch = message.match(/\b(?:by|for|assigned to)\s+(?:technician|tech)?\s+([A-Za-z\s]+?)(?:\b|$)/i);
+    if (technicianMatch && technicianMatch[1]) {
+      technicianFilter = technicianMatch[1].trim();
+    }
+    
+    // Build the query
+    let query = supabase
+      .from('job_tickets')
+      .select(`
+        *,
+        client:clients(id, first_name, last_name),
+        vehicle:vehicles(id, make, model, license_plate),
+        technician:profiles(id, first_name, last_name)
+      `)
+      .order('created_at', { ascending: false });
+    
+    // Apply the garage filter if available
+    if (garageId) {
+      query = query.eq('garage_id', garageId);
+    }
+    
+    // Apply status filter if present
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+    
+    // Execute the query
+    const { data: jobTickets, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching job tickets:', error);
+      return "I'm sorry, there was an error retrieving the job tickets. Please try again later.";
+    }
+    
+    if (!jobTickets || jobTickets.length === 0) {
+      if (statusFilter) {
+        return `I couldn't find any ${statusFilter.replace('_', ' ')} job tickets.`;
+      } else {
+        return "I couldn't find any job tickets.";
+      }
+    }
+    
+    // If we have a technician filter, apply it after fetching the results
+    let filteredTickets = jobTickets;
+    if (technicianFilter) {
+      filteredTickets = jobTickets.filter(ticket => {
+        if (!ticket.technician) return false;
+        
+        const techName = `${ticket.technician.first_name} ${ticket.technician.last_name}`.toLowerCase();
+        return techName.includes(technicianFilter.toLowerCase());
+      });
+      
+      if (filteredTickets.length === 0) {
+        return `I couldn't find any job tickets assigned to ${technicianFilter}.`;
+      }
+    }
+    
+    // Create the response
+    let statusText = statusFilter ? statusFilter.replace('_', ' ') : 'all';
+    let response = `Here are the ${statusText} jobs`;
+    
+    if (technicianFilter) {
+      response += ` assigned to ${technicianFilter}`;
+    }
+    
+    response += `:\n\n`;
+    
+    // Format each job ticket
+    filteredTickets.forEach((ticket, index) => {
+      const ticketId = ticket.ticket_number || ticket.id;
+      const clientName = ticket.client ? `${ticket.client.first_name} ${ticket.client.last_name}` : 'Unknown Client';
+      const vehicleInfo = ticket.vehicle ? `${ticket.vehicle.make} ${ticket.vehicle.model}` : 'Unknown Vehicle';
+      const licensePlate = ticket.vehicle && ticket.vehicle.license_plate ? ` (${ticket.vehicle.license_plate})` : '';
+      const technicianName = ticket.technician ? `${ticket.technician.first_name} ${ticket.technician.last_name}` : 'Unassigned';
+      const status = ticket.status ? ticket.status.replace('_', ' ') : 'Unknown';
+      
+      response += `${ticketId} - ${status}\n`;
+      response += `Vehicle: ${vehicleInfo}${licensePlate}\n`;
+      response += `Client: ${clientName}\n`;
+      response += `Technician: ${technicianName}\n`;
+      response += `Issue: ${ticket.description ? (ticket.description.length > 50 ? ticket.description.substring(0, 47) + '...' : ticket.description) : 'No description'}\n`;
+      
+      // Add separator between tickets unless it's the last one
+      if (index < filteredTickets.length - 1) {
+        response += `\n${'-'.repeat(40)}\n\n`;
+      }
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('Error in handleJobListingRequest:', error);
+    return "I'm sorry, I encountered an error while retrieving the job listing.";
   }
 }
 
