@@ -25,7 +25,7 @@ export function SidebarNav({ links, collapsed = false, onNavigation }: SidebarNa
   };
 
   return (
-    <nav className="space-y-1 mt-8"> {/* Added mt-8 to move icons down */}
+    <nav className="space-y-1 mt-8">
       {links.map((link) => (
         <Link
           key={link.href}
@@ -39,11 +39,10 @@ export function SidebarNav({ links, collapsed = false, onNavigation }: SidebarNa
             collapsed ? "justify-center" : ""
           )}
         >
-          {/* Active indicator bar */}
           {isActive(link.href, link.matches) && (
             <span className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-md" />
           )}
-          <span className={cn("mr-3", collapsed ? "mr-0" : "")}>{link.icon}</span>
+          <span className={cn("shrink-0 w-5 h-5", collapsed ? "mr-0" : "mr-3")}>{link.icon}</span>
           {!collapsed && <span>{link.label}</span>}
         </Link>
       ))}
