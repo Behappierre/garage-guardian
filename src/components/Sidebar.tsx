@@ -59,13 +59,12 @@ export const Sidebar = ({ isCollapsed, onCollapse }: SidebarProps) => {
         </Button>
 
         <SidebarNav 
-          isCollapsed={isCollapsed} 
-          isAdmin={isAdmin} 
-          isTechnician={isTechnician} 
+          collapsed={isCollapsed} 
+          links={[]}
         />
         
         <SidebarFooter isCollapsed={isCollapsed} />
       </div>
     </div>
   );
-};
+}

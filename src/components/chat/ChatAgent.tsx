@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 
 export function ChatAgent() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isWide, setIsWide] = useState(false);
   const { user } = useAuth();
   const { 
     messages, 
@@ -30,6 +31,10 @@ export function ChatAgent() {
     setIsOpen(!isOpen);
   };
 
+  const toggleWidth = () => {
+    setIsWide(!isWide);
+  };
+
   // Show the chat UI only when logged in
   if (!user) {
     return null;
@@ -38,14 +43,22 @@ export function ChatAgent() {
   return (
     <>
       {isOpen ? (
-        <div className="fixed bottom-4 right-4 w-80 md:w-96 h-[600px] max-h-[80vh] bg-background shadow-xl rounded-lg border overflow-hidden flex flex-col z-50">
-          <ChatHeader onClose={() => setIsOpen(false)} onClear={clearMessages} />
+        <div className={`fixed bottom-4 right-4 ${isWide ? 'w-[600px]' : 'w-80 md:w-96'} h-[600px] max-h-[80vh] bg-background shadow-xl rounded-lg border overflow-hidden flex flex-col z-50`}>
+          <ChatHeader 
+            isWide={isWide} 
+            onToggleWidth={toggleWidth} 
+            onClearChat={clearMessages} 
+            onClose={() => setIsOpen(false)} 
+          />
           <ChatMessages 
             messages={messages} 
             isLoading={isLoading} 
             conversationContext={conversationContext}
           />
-          <ChatInput onSend={sendMessage} isLoading={isLoading} />
+          <ChatInput 
+            onSubmit={sendMessage} 
+            isLoading={isLoading} 
+          />
         </div>
       ) : (
         <ChatLauncher onClick={toggleChat} />
