@@ -1,144 +1,48 @@
 
-import { NavLink } from "react-router-dom";
-import {
-  Calendar,
-  Users,
-  LayoutDashboard,
-  Wrench,
-  UserCog,
-  Hammer,
-  HelpCircle,
-} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface SidebarNavProps {
-  isCollapsed: boolean;
-  isAdmin: boolean;
-  isTechnician: boolean;
+  links: {
+    href: string;
+    label: string;
+    icon: React.ReactNode;
+    matches?: string[];
+  }[];
+  collapsed?: boolean;
+  onNavigation?: () => void;
 }
 
-export const SidebarNav = ({ isCollapsed, isAdmin, isTechnician }: SidebarNavProps) => {
+export function SidebarNav({ links, collapsed = false, onNavigation }: SidebarNavProps) {
+  const location = useLocation();
+
+  const isActive = (href: string, matches?: string[]) => {
+    if (location.pathname === href) return true;
+    if (matches) {
+      return matches.some(match => location.pathname.startsWith(match));
+    }
+    return false;
+  };
+
   return (
-    <nav className="flex-1 p-4 pt-10"> {/* Added pt-10 to increase top padding */}
-      <ul className="space-y-1">
-        <li>
-          <NavLink
-            to="/dashboard"
-            end
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                isCollapsed && "justify-center px-2"
-              )
-            }
-            title="Dashboard"
-          >
-            <LayoutDashboard className="shrink-0 w-5 h-5" />
-            {!isCollapsed && <span>Dashboard</span>}
-          </NavLink>
-        </li>
-        {isTechnician && (
-          <li>
-            <NavLink
-              to="/dashboard/my-work"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                  isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                  isCollapsed && "justify-center px-2"
-                )
-              }
-              title="My Work"
-            >
-              <Hammer className="shrink-0 w-5 h-5" />
-              {!isCollapsed && <span>My Work</span>}
-            </NavLink>
-          </li>
-        )}
-        <li>
-          <NavLink
-            to="/dashboard/appointments"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                isCollapsed && "justify-center px-2"
-              )
-            }
-            title="Appointments"
-          >
-            <Calendar className="shrink-0 w-5 h-5" />
-            {!isCollapsed && <span>Appointments</span>}
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/dashboard/clients"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                isCollapsed && "justify-center px-2"
-              )
-            }
-            title="Clients"
-          >
-            <Users className="shrink-0 w-5 h-5" />
-            {!isCollapsed && <span>Clients</span>}
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/dashboard/job-tickets"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                isCollapsed && "justify-center px-2"
-              )
-            }
-            title="Job Tickets"
-          >
-            <Wrench className="shrink-0 w-5 h-5" />
-            {!isCollapsed && <span>Job Tickets</span>}
-          </NavLink>
-        </li>
-        {isAdmin && (
-          <li>
-            <NavLink
-              to="/dashboard/admin"
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                  isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                  isCollapsed && "justify-center px-2"
-                )
-              }
-              title="Admin"
-            >
-              <UserCog className="shrink-0 w-5 h-5" />
-              {!isCollapsed && <span>Admin</span>}
-            </NavLink>
-          </li>
-        )}
-        <li>
-          <NavLink
-            to="/dashboard/help"
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2 px-4 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors",
-                isActive ? "bg-sidebar-accent text-sidebar-primary border-l-4 border-primary font-medium" : "",
-                isCollapsed && "justify-center px-2"
-              )
-            }
-            title="Help"
-          >
-            <HelpCircle className="shrink-0 w-5 h-5" />
-            {!isCollapsed && <span>Help</span>}
-          </NavLink>
-        </li>
-      </ul>
+    <nav className="space-y-1">
+      {links.map((link) => (
+        <Link
+          key={link.href}
+          to={link.href}
+          onClick={onNavigation}
+          className={cn(
+            "flex items-center py-2 px-3 text-sm rounded-md group w-full",
+            isActive(link.href, link.matches)
+              ? "bg-secondary/50 text-secondary-foreground font-medium"
+              : "text-muted-foreground hover:bg-secondary/30",
+            collapsed ? "justify-center" : ""
+          )}
+        >
+          <span className={cn("mr-3", collapsed ? "mr-0" : "")}>{link.icon}</span>
+          {!collapsed && <span>{link.label}</span>}
+        </Link>
+      ))}
     </nav>
   );
-};
+}
