@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -536,6 +535,23 @@ export const AppointmentCalendar = ({
             .fc-dayGridMonth-view .fc-col-header-cell {
               overflow: hidden;
             }
+            
+            /* Add style for the timeGridWeek header to properly format the day and date */
+            .fc-timeGridWeek-view .fc-col-header-cell-cushion {
+              display: flex !important;
+              flex-direction: column;
+              align-items: center;
+              line-height: 1.2;
+              padding: 6px 0;
+            }
+            
+            .fc-timeGridWeek-view .fc-col-header-cell-cushion::after {
+              content: attr(data-date);
+              font-size: 0.75rem;
+              font-weight: 400;
+              color: #64748b;
+              margin-top: 2px;
+            }
           `}
         </style>
         <FullCalendar
@@ -563,6 +579,23 @@ export const AppointmentCalendar = ({
           datesSet={(dateInfo) => {
             setCalendarTitle(dateInfo.view.title);
             setCurrentView(dateInfo.view.type as CalendarViewType);
+            
+            if (dateInfo.view.type === 'timeGridWeek') {
+              setTimeout(() => {
+                const headerCells = document.querySelectorAll('.fc-timeGridWeek-view .fc-col-header-cell');
+                headerCells.forEach((cell) => {
+                  const dateAttr = cell.getAttribute('data-date');
+                  if (dateAttr) {
+                    const date = new Date(dateAttr);
+                    const formattedDate = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+                    const cushion = cell.querySelector('.fc-col-header-cell-cushion');
+                    if (cushion) {
+                      cushion.setAttribute('data-date', formattedDate);
+                    }
+                  }
+                });
+              }, 0);
+            }
           }}
         />
       </div>
