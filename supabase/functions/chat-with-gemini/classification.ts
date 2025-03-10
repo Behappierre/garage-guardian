@@ -1,17 +1,21 @@
 
-// Enhanced classification system for the chatbot
-import { determineQueryIntent as sharedDetermineQueryIntent, ClassificationResult } from "../shared/classification.ts";
+// Classification utilities for the chat bot
+import { determineQueryIntent as sharedDetermineQueryIntent } from "../shared/classification.ts";
 
-export { ClassificationResult };
+// Define the interface locally to eliminate the dependency
+export interface ClassificationResult {
+  intent: string;
+  confidence: number;
+  entities?: Record<string, string>;
+}
 
 export function determineQueryIntent(message: string): ClassificationResult {
-  // Use the shared implementation
+  // Get the enhanced result from shared implementation
   return sharedDetermineQueryIntent(message);
 }
 
-// Enhanced version of the original function that maintains the same API
-export async function determineQueryType(message: string): Promise<string> {
+// For backwards compatibility
+export function determineQueryType(message: string): string {
   const result = determineQueryIntent(message);
-  console.log('Query classification:', result);
   return result.intent;
 }

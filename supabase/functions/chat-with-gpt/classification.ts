@@ -1,6 +1,13 @@
 
 // Enhanced classification system for the chatbot
-import { determineQueryIntent as sharedDetermineQueryIntent, ClassificationResult } from "../shared/classification.ts";
+import { determineQueryIntent as sharedDetermineQueryIntent } from "../shared/classification.ts";
+
+// Define the interface locally to eliminate the dependency
+export interface ClassificationResult {
+  intent: string;
+  confidence: number;
+  entities?: Record<string, string>;
+}
 
 // Additional appointment check patterns specific to GPT version
 const appointmentCheckPatterns = [
@@ -8,8 +15,6 @@ const appointmentCheckPatterns = [
   'is there an appointment for', 'when is the appointment for',
   'check appointment', 'lookup appointment', 'find appointment'
 ];
-
-export { ClassificationResult };
 
 export function determineQueryIntent(message: string): ClassificationResult {
   // Use the shared implementation with our specific GPT extensions
