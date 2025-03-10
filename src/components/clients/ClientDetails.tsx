@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import { AppointmentsList } from "./AppointmentsList";
 import { VehiclesList } from "./VehiclesList";
@@ -50,7 +49,7 @@ export const ClientDetails = ({
   onAddService,
 }: ClientDetailsProps) => {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("vehicles");
 
   const { data: appointments, isLoading: isLoadingAppointments } = useQuery({
     queryKey: ["client-appointments", client.id],
@@ -88,7 +87,6 @@ export const ClientDetails = ({
 
       if (previousError) throw previousError;
 
-      // Process the job_tickets to ensure it's always an array
       const processAppointments = (appointments: any[]) => {
         return appointments.map(appointment => ({
           ...appointment,
@@ -132,6 +130,7 @@ export const ClientDetails = ({
           value={activeTab} 
           onValueChange={setActiveTab}
           className="mt-6"
+          defaultValue="vehicles"
         >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Details</TabsTrigger>
@@ -144,9 +143,7 @@ export const ClientDetails = ({
           </TabsList>
           
           <TabsContent value="details" className="mt-4 space-y-6">
-            {/* Empty content since client info is already displayed above */}
             <div className="grid grid-cols-1 gap-6">
-              {/* We can add additional client details here in the future if needed */}
               <div className="bg-white rounded-lg shadow-sm p-6 text-center text-gray-500">
                 <p>No additional details available</p>
               </div>
