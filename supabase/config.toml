@@ -3,3 +3,8 @@ project_id = "hcdchflecgmlsxkrmrkv"
 [functions.send-appointment-reminder]
 verify_jwt = false
 
+[functions.chat-with-gemini]
+verify_jwt = false
+
+[functions.chat-with-gpt]
+verify_jwt = false
